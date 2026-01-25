@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import {
   ArrowRight,
   Building2,
@@ -10,6 +11,7 @@ import {
   BarChart3,
   Target,
 } from "lucide-react";
+import stringLogo from "@/assets/string-logo.png";
 
 const features = [
   {
@@ -65,14 +67,12 @@ export default function Landing() {
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-sm font-bold text-primary-foreground">S</span>
-            </div>
-            <span className="font-semibold text-foreground">String</span>
+            <img src={stringLogo} alt="String" className="h-8 w-auto" />
           </Link>
-          <nav className="flex items-center gap-4">
+          <nav className="flex items-center gap-3">
+            <ThemeToggle />
             {user ? (
-              <Button asChild>
+              <Button asChild className="google-input-button">
                 <Link to={getDashboardLink()}>
                   Go to Dashboard
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -83,7 +83,7 @@ export default function Landing() {
                 <Button variant="ghost" asChild>
                   <Link to="/auth?mode=login">Sign in</Link>
                 </Button>
-                <Button asChild>
+                <Button asChild className="google-input-button">
                   <Link to="/auth?mode=signup">Get Started</Link>
                 </Button>
               </>
@@ -105,13 +105,13 @@ export default function Landing() {
             designed for growth.
           </p>
           <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
-            <Button size="lg" asChild>
+            <Button size="lg" asChild className="google-input-button h-12 px-8">
               <Link to="/auth?mode=signup">
                 Start for Free
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
-            <Button size="lg" variant="outline" asChild>
+            <Button size="lg" variant="outline" asChild className="google-input-button h-12 px-8">
               <Link to="/auth?mode=signup&type=business">For Businesses</Link>
             </Button>
           </div>
@@ -163,7 +163,7 @@ export default function Landing() {
             Join thousands of businesses and customers already using String to connect
             and grow together.
           </p>
-          <Button size="lg" asChild>
+          <Button size="lg" asChild className="google-input-button h-12 px-8">
             <Link to="/auth?mode=signup">
               Create your account
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -176,9 +176,7 @@ export default function Landing() {
       <footer className="border-t border-border py-8">
         <div className="container flex flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded bg-primary flex items-center justify-center">
-              <span className="text-xs font-bold text-primary-foreground">S</span>
-            </div>
+            <img src={stringLogo} alt="String" className="h-6 w-auto opacity-70" />
             <span className="text-sm text-muted-foreground">
               © 2025 String. All rights reserved.
             </span>
