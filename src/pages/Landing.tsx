@@ -65,25 +65,25 @@ export default function Landing() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-14 items-center justify-between">
+        <div className="container flex h-16 items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <img src={stringLogo} alt="String" className="h-8 w-auto" />
+            <img src={stringLogo} alt="String" className="h-12 w-auto logo-adaptive" />
           </Link>
           <nav className="flex items-center gap-3">
             <ThemeToggle />
             {user ? (
-              <Button asChild className="google-input-button">
+              <Button asChild className="rounded-full px-6">
                 <Link to={getDashboardLink()}>
-                  Go to Dashboard
+                  Dashboard
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
             ) : (
               <>
-                <Button variant="ghost" asChild>
+                <Button variant="ghost" asChild className="rounded-full">
                   <Link to="/auth?mode=login">Sign in</Link>
                 </Button>
-                <Button asChild className="google-input-button">
+                <Button asChild className="rounded-full px-6">
                   <Link to="/auth?mode=signup">Get Started</Link>
                 </Button>
               </>
@@ -97,7 +97,7 @@ export default function Landing() {
         <div className="mx-auto max-w-3xl text-center">
           <h1 className="mb-6 text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
             Connect businesses and customers{" "}
-            <span className="text-primary">intelligently</span>
+            <span className="text-muted-foreground">intelligently</span>
           </h1>
           <p className="mb-8 text-lg text-muted-foreground sm:text-xl">
             String is the platform that helps businesses reach their ideal customers
@@ -105,13 +105,13 @@ export default function Landing() {
             designed for growth.
           </p>
           <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
-            <Button size="lg" asChild className="google-input-button h-12 px-8">
+            <Button size="lg" asChild className="rounded-full h-12 px-8">
               <Link to="/auth?mode=signup">
                 Start for Free
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
-            <Button size="lg" variant="outline" asChild className="google-input-button h-12 px-8">
+            <Button size="lg" variant="outline" asChild className="rounded-full h-12 px-8">
               <Link to="/auth?mode=signup&type=business">For Businesses</Link>
             </Button>
           </div>
@@ -137,7 +137,7 @@ export default function Landing() {
                   key={feature.title}
                   className="dashboard-card group"
                 >
-                  <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
+                  <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-accent">
                     <Icon className="h-5 w-5 text-accent-foreground" />
                   </div>
                   <h3 className="mb-2 font-semibold text-foreground">
@@ -163,7 +163,7 @@ export default function Landing() {
             Join thousands of businesses and customers already using String to connect
             and grow together.
           </p>
-          <Button size="lg" asChild className="google-input-button h-12 px-8">
+          <Button size="lg" asChild className="rounded-full h-12 px-8">
             <Link to="/auth?mode=signup">
               Create your account
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -176,7 +176,7 @@ export default function Landing() {
       <footer className="border-t border-border py-8">
         <div className="container flex flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-2">
-            <img src={stringLogo} alt="String" className="h-6 w-auto opacity-70" />
+            <img src={stringLogo} alt="String" className="h-8 w-auto opacity-70 logo-adaptive" />
             <span className="text-sm text-muted-foreground">
               © 2025 String. All rights reserved.
             </span>
