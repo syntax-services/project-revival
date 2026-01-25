@@ -4,112 +4,112 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* String Design System - Professional SaaS Dashboard
+/* String Design System - Monochrome (White, Grey, Black only)
    Support for both light and dark modes */
 
 @layer base {
   :root {
-    /* Light mode - clean and professional */
+    /* Light mode - clean monochrome */
     --background: 0 0% 98%;
-    --foreground: 220 14% 10%;
+    --foreground: 0 0% 9%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 14% 10%;
+    --card-foreground: 0 0% 9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 14% 10%;
+    --popover-foreground: 0 0% 9%;
 
-    --primary: 173 58% 39%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 220 13% 95%;
-    --secondary-foreground: 220 14% 25%;
+    --secondary: 0 0% 94%;
+    --secondary-foreground: 0 0% 25%;
 
-    --muted: 220 13% 96%;
-    --muted-foreground: 220 10% 46%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
 
-    --accent: 173 58% 94%;
-    --accent-foreground: 173 58% 25%;
+    --accent: 0 0% 92%;
+    --accent-foreground: 0 0% 15%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 173 58% 39%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 0 0% 30%;
 
-    --radius: 0.75rem;
+    --radius: 1.5rem;
 
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 14% 35%;
-    --sidebar-primary: 173 58% 39%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 173 58% 96%;
-    --sidebar-accent-foreground: 173 58% 25%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 173 58% 39%;
+    --sidebar-foreground: 0 0% 35%;
+    --sidebar-primary: 0 0% 9%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 0 0% 94%;
+    --sidebar-accent-foreground: 0 0% 20%;
+    --sidebar-border: 0 0% 90%;
+    --sidebar-ring: 0 0% 30%;
 
-    /* Custom tokens */
-    --success: 160 60% 45%;
+    /* Custom tokens - monochrome */
+    --success: 0 0% 30%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
+    --warning: 0 0% 45%;
     --warning-foreground: 0 0% 100%;
-    --info: 199 89% 48%;
+    --info: 0 0% 50%;
     --info-foreground: 0 0% 100%;
 
-    --surface: 220 14% 98%;
+    --surface: 0 0% 98%;
     --surface-elevated: 0 0% 100%;
-    --surface-hover: 220 13% 96%;
+    --surface-hover: 0 0% 94%;
   }
 
   .dark {
-    --background: 222 20% 7%;
-    --foreground: 210 20% 96%;
+    --background: 0 0% 6%;
+    --foreground: 0 0% 95%;
 
-    --card: 222 18% 10%;
-    --card-foreground: 210 20% 96%;
+    --card: 0 0% 9%;
+    --card-foreground: 0 0% 95%;
 
-    --popover: 222 18% 10%;
-    --popover-foreground: 210 20% 96%;
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 95%;
 
-    --primary: 173 58% 45%;
-    --primary-foreground: 222 20% 7%;
+    --primary: 0 0% 95%;
+    --primary-foreground: 0 0% 9%;
 
-    --secondary: 222 15% 15%;
-    --secondary-foreground: 210 20% 80%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 80%;
 
-    --muted: 222 15% 15%;
-    --muted-foreground: 215 15% 55%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 55%;
 
-    --accent: 173 40% 15%;
-    --accent-foreground: 173 58% 70%;
+    --accent: 0 0% 18%;
+    --accent-foreground: 0 0% 90%;
 
     --destructive: 0 62% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 222 15% 18%;
-    --input: 222 15% 18%;
-    --ring: 173 58% 45%;
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 0 0% 70%;
 
-    --sidebar-background: 222 18% 8%;
-    --sidebar-foreground: 210 15% 70%;
-    --sidebar-primary: 173 58% 45%;
-    --sidebar-primary-foreground: 222 20% 7%;
-    --sidebar-accent: 173 30% 12%;
-    --sidebar-accent-foreground: 173 58% 70%;
-    --sidebar-border: 222 15% 15%;
-    --sidebar-ring: 173 58% 45%;
+    --sidebar-background: 0 0% 7%;
+    --sidebar-foreground: 0 0% 70%;
+    --sidebar-primary: 0 0% 95%;
+    --sidebar-primary-foreground: 0 0% 9%;
+    --sidebar-accent: 0 0% 14%;
+    --sidebar-accent-foreground: 0 0% 80%;
+    --sidebar-border: 0 0% 15%;
+    --sidebar-ring: 0 0% 70%;
 
-    --success: 160 60% 40%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
+    --success: 0 0% 60%;
+    --success-foreground: 0 0% 0%;
+    --warning: 0 0% 55%;
     --warning-foreground: 0 0% 0%;
-    --info: 199 89% 48%;
+    --info: 0 0% 50%;
     --info-foreground: 0 0% 100%;
 
-    --surface: 222 18% 10%;
-    --surface-elevated: 222 18% 12%;
-    --surface-hover: 222 15% 15%;
+    --surface: 0 0% 9%;
+    --surface-elevated: 0 0% 11%;
+    --surface-hover: 0 0% 14%;
   }
 }
 
@@ -132,7 +132,7 @@
 @layer components {
   /* Dashboard card styling */
   .dashboard-card {
-    @apply rounded-xl border border-border bg-card p-5 shadow-sm transition-all hover:shadow-md;
+    @apply rounded-2xl border border-border bg-card p-5 shadow-sm transition-all hover:shadow-md;
   }
 
   /* Stat card */
@@ -142,7 +142,7 @@
 
   /* Navigation item */
   .nav-item {
-    @apply flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground;
+    @apply flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground;
   }
   
   .nav-item-active {
@@ -171,13 +171,13 @@
     @apply inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-foreground;
   }
 
-  /* Google-style input buttons */
+  /* Google-style input buttons - very curved edges */
   .google-input {
-    @apply rounded-full border-border bg-card px-4 shadow-sm transition-all focus:shadow-md focus:ring-2 focus:ring-primary/20;
+    @apply rounded-full border-border bg-card px-5 shadow-sm transition-all focus:shadow-md focus:ring-2 focus:ring-ring/20;
   }
 
   .google-input-button {
-    @apply rounded-full border border-border bg-card px-4 py-2 shadow-sm transition-all hover:shadow-md hover:border-primary/50 active:scale-[0.98];
+    @apply rounded-full border border-border bg-card px-5 py-2.5 shadow-sm transition-all hover:shadow-md hover:bg-accent active:scale-[0.98];
   }
 
   /* Safe area for bottom nav */
@@ -187,13 +187,23 @@
 
   /* Main content with bottom nav spacing */
   .pb-safe-nav {
-    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Logo visibility filter for dark mode */
+  .logo-adaptive {
+    filter: none;
+    transition: filter 0.2s ease;
+  }
+  
+  .dark .logo-adaptive {
+    filter: brightness(0) invert(1);
   }
 
   /* Mobile optimizations */
   @media (max-width: 640px) {
     .dashboard-card {
-      @apply p-4 rounded-lg;
+      @apply p-4 rounded-xl;
     }
   }
 }
