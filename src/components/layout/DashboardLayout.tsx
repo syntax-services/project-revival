@@ -2,10 +2,12 @@ import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { BottomNav } from "./BottomNav";
 import {
   LayoutDashboard,
   Search,
-  MessageSquare,
+  MessageCircle,
   User,
   Bell,
   Users,
@@ -14,8 +16,10 @@ import {
   LogOut,
   Menu,
   X,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import stringLogo from "@/assets/string-logo.png";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -24,17 +28,19 @@ interface DashboardLayoutProps {
 const customerNavItems = [
   { href: "/customer", label: "Overview", icon: LayoutDashboard },
   { href: "/customer/discover", label: "Discover", icon: Search },
-  { href: "/customer/engagement", label: "Engagement", icon: MessageSquare },
-  { href: "/customer/profile", label: "Profile", icon: User },
+  { href: "/customer/messages", label: "Messages", icon: MessageCircle },
+  { href: "/customer/engagement", label: "Engagement", icon: User },
   { href: "/customer/notifications", label: "Notifications", icon: Bell },
+  { href: "/customer/settings", label: "Settings", icon: Settings },
 ];
 
 const businessNavItems = [
   { href: "/business", label: "Overview", icon: LayoutDashboard },
   { href: "/business/insights", label: "Customer Insights", icon: Users },
-  { href: "/business/leads", label: "Leads & Requests", icon: MessageSquare },
+  { href: "/business/messages", label: "Messages", icon: MessageCircle },
+  { href: "/business/leads", label: "Leads & Requests", icon: TrendingUp },
   { href: "/business/profile", label: "Business Profile", icon: Building2 },
-  { href: "/business/growth", label: "Strategy & Growth", icon: TrendingUp },
+  { href: "/business/settings", label: "Settings", icon: Settings },
 ];
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
@@ -53,20 +59,20 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
   return (
     <div className="min-h-screen bg-background">
       {/* Mobile header */}
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-background px-4 lg:hidden">
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-background/95 backdrop-blur-sm px-4 lg:hidden">
         <Link to="/" className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-sm font-bold text-primary-foreground">S</span>
-          </div>
-          <span className="font-semibold text-foreground">String</span>
+          <img src={stringLogo} alt="String" className="h-8 w-auto" />
         </Link>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        >
-          {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
       </header>
 
       {/* Mobile menu overlay */}
@@ -77,7 +83,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - Desktop only */}
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-40 w-64 transform border-r border-sidebar-border bg-sidebar transition-transform duration-200 ease-in-out lg:translate-x-0",
@@ -86,15 +92,15 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
       >
         <div className="flex h-full flex-col">
           {/* Logo */}
-          <div className="hidden h-14 items-center gap-2 border-b border-sidebar-border px-4 lg:flex">
-            <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
-              <span className="text-sm font-bold text-sidebar-primary-foreground">S</span>
-            </div>
-            <span className="font-semibold text-sidebar-foreground">String</span>
+          <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4">
+            <Link to="/" className="flex items-center gap-2">
+              <img src={stringLogo} alt="String" className="h-8 w-auto" />
+            </Link>
+            <ThemeToggle />
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-1 p-4">
+          <nav className="flex-1 space-y-1 p-4 overflow-y-auto scrollbar-thin">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.href;
@@ -145,11 +151,14 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
       </aside>
 
       {/* Main content */}
-      <main className="lg:pl-64">
+      <main className="lg:pl-64 pb-20 lg:pb-0">
         <div className="container py-6 lg:py-8 animate-fade-in">
           {children}
         </div>
       </main>
+
+      {/* Bottom Nav - Mobile only */}
+      <BottomNav />
     </div>
   );
 };

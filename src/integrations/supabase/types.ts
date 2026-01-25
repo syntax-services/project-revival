@@ -38,6 +38,42 @@ export type Database = {
         }
         Relationships: []
       }
+      business_likes: {
+        Row: {
+          business_id: string
+          created_at: string
+          customer_id: string
+          id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          customer_id: string
+          id?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_likes_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_likes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
           budget_range: string | null
@@ -46,12 +82,15 @@ export type Database = {
           company_name: string
           company_size: string | null
           competitive_landscape: string | null
+          cover_image_url: string | null
           created_at: string
           expectations_from_string: string | null
           growth_strategy: string | null
           id: string
           industry: string | null
           internal_capacity: string | null
+          latitude: number | null
+          longitude: number | null
           marketing_channels: string[] | null
           monthly_customer_volume: string | null
           operating_region: string | null
@@ -72,12 +111,15 @@ export type Database = {
           company_name: string
           company_size?: string | null
           competitive_landscape?: string | null
+          cover_image_url?: string | null
           created_at?: string
           expectations_from_string?: string | null
           growth_strategy?: string | null
           id?: string
           industry?: string | null
           internal_capacity?: string | null
+          latitude?: number | null
+          longitude?: number | null
           marketing_channels?: string[] | null
           monthly_customer_volume?: string | null
           operating_region?: string | null
@@ -98,12 +140,15 @@ export type Database = {
           company_name?: string
           company_size?: string | null
           competitive_landscape?: string | null
+          cover_image_url?: string | null
           created_at?: string
           expectations_from_string?: string | null
           growth_strategy?: string | null
           id?: string
           industry?: string | null
           internal_capacity?: string | null
+          latitude?: number | null
+          longitude?: number | null
           marketing_channels?: string[] | null
           monthly_customer_volume?: string | null
           operating_region?: string | null
@@ -119,6 +164,83 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          read: boolean
+          sender_id: string
+          sender_type: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          read?: boolean
+          sender_id: string
+          sender_type: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          read?: boolean
+          sender_id?: string
+          sender_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          business_id: string
+          created_at: string
+          customer_id: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           age_range: string | null
@@ -128,8 +250,10 @@ export type Database = {
           id: string
           improvement_wishes: string | null
           interests: string[] | null
+          latitude: number | null
           lifestyle_preferences: string[] | null
           location: string | null
+          longitude: number | null
           pain_points: string[] | null
           preferred_categories: string[] | null
           purchase_frequency: string | null
@@ -146,8 +270,10 @@ export type Database = {
           id?: string
           improvement_wishes?: string | null
           interests?: string[] | null
+          latitude?: number | null
           lifestyle_preferences?: string[] | null
           location?: string | null
+          longitude?: number | null
           pain_points?: string[] | null
           preferred_categories?: string[] | null
           purchase_frequency?: string | null
@@ -164,8 +290,10 @@ export type Database = {
           id?: string
           improvement_wishes?: string | null
           interests?: string[] | null
+          latitude?: number | null
           lifestyle_preferences?: string[] | null
           location?: string | null
+          longitude?: number | null
           pain_points?: string[] | null
           preferred_categories?: string[] | null
           purchase_frequency?: string | null
@@ -206,6 +334,50 @@ export type Database = {
         }
         Relationships: []
       }
+      products: {
+        Row: {
+          business_id: string
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          in_stock: boolean
+          name: string
+          price: number | null
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          in_stock?: boolean
+          name: string
+          price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          in_stock?: boolean
+          name?: string
+          price?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -213,6 +385,8 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          latitude: number | null
+          longitude: number | null
           onboarding_completed: boolean | null
           phone: string | null
           updated_at: string
@@ -225,6 +399,8 @@ export type Database = {
           email: string
           full_name: string
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           onboarding_completed?: boolean | null
           phone?: string | null
           updated_at?: string
@@ -237,6 +413,8 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           onboarding_completed?: boolean | null
           phone?: string | null
           updated_at?: string
