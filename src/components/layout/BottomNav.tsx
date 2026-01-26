@@ -7,7 +7,7 @@ import {
   Bell,
   Settings,
   Users,
-  TrendingUp,
+  Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +23,7 @@ const businessNavItems = [
   { href: "/business", label: "Home", icon: Home },
   { href: "/business/insights", label: "Insights", icon: Users },
   { href: "/business/messages", label: "Chat", icon: MessageCircle },
-  { href: "/business/leads", label: "Leads", icon: TrendingUp },
+  { href: "/business/products", label: "Products", icon: Package },
   { href: "/business/settings", label: "Settings", icon: Settings },
 ];
 

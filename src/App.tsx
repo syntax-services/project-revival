@@ -35,6 +35,7 @@ const CustomerMessages = lazy(() => import("./pages/customer/CustomerMessages"))
 const BusinessOverview = lazy(() => import("./pages/business/BusinessOverview"));
 const BusinessInsights = lazy(() => import("./pages/business/BusinessInsights"));
 const BusinessLeads = lazy(() => import("./pages/business/BusinessLeads"));
+const BusinessProducts = lazy(() => import("./pages/business/BusinessProducts"));
 const BusinessProfile = lazy(() => import("./pages/business/BusinessProfile"));
 const BusinessGrowth = lazy(() => import("./pages/business/BusinessGrowth"));
 const BusinessSettings = lazy(() => import("./pages/business/BusinessSettings"));
@@ -85,6 +86,7 @@ const App = () => (
                 <Route path="/business" element={<ProtectedRoute requiredUserType="business"><BusinessOverview /></ProtectedRoute>} />
                 <Route path="/business/insights" element={<ProtectedRoute requiredUserType="business"><BusinessInsights /></ProtectedRoute>} />
                 <Route path="/business/leads" element={<ProtectedRoute requiredUserType="business"><BusinessLeads /></ProtectedRoute>} />
+                <Route path="/business/products" element={<ProtectedRoute requiredUserType="business"><BusinessProducts /></ProtectedRoute>} />
                 <Route path="/business/profile" element={<ProtectedRoute requiredUserType="business"><BusinessProfile /></ProtectedRoute>} />
                 <Route path="/business/growth" element={<ProtectedRoute requiredUserType="business"><BusinessGrowth /></ProtectedRoute>} />
                 <Route path="/business/settings" element={<ProtectedRoute requiredUserType="business"><BusinessSettings /></ProtectedRoute>} />
