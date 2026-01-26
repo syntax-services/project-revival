@@ -5,6 +5,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft,
   Heart,
@@ -14,8 +25,13 @@ import {
   Briefcase,
   Globe,
   Package,
+  Wrench,
+  ShoppingCart,
+  Plus,
+  Minus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface Business {
   id: string;
@@ -25,6 +41,10 @@ interface Business {
   products_services: string | null;
   website: string | null;
   cover_image_url: string | null;
+  business_type: string | null;
+  reputation_score: number | null;
+  verified: boolean | null;
+  service_radius_km: number | null;
 }
 
 interface Product {
@@ -34,57 +54,75 @@ interface Product {
   price: number | null;
   image_url: string | null;
   in_stock: boolean;
+  category: string | null;
+  nicknames: string[] | null;
+}
+
+interface Service {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  price_type: string;
+  price_min: number | null;
+  price_max: number | null;
+  duration_estimate: string | null;
+  availability: string;
+}
+
+interface CartItem {
+  product: Product;
+  quantity: number;
 }
 
 export default function BusinessPublicProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, profile } = useAuth();
-  const { toast } = useToast();
+  const { toast: showToast } = useToast();
 
   const [business, setBusiness] = useState<Business | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // Cart state
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [showCart, setShowCart] = useState(false);
+  const [orderNotes, setOrderNotes] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "delivery">("pickup");
+  const [submittingOrder, setSubmittingOrder] = useState(false);
+
+  // Service request state
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [jobTitle, setJobTitle] = useState("");
+  const [jobDescription, setJobDescription] = useState("");
+  const [jobLocation, setJobLocation] = useState("");
+  const [budgetMin, setBudgetMin] = useState("");
+  const [budgetMax, setBudgetMax] = useState("");
+  const [submittingJob, setSubmittingJob] = useState(false);
+
   useEffect(() => {
     const fetchData = async () => {
       if (!id) return;
 
-      // Fetch business
-      const { data: businessData } = await supabase
-        .from("businesses")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const [businessRes, productsRes, servicesRes, likesRes] = await Promise.all([
+        supabase.from("businesses").select("*").eq("id", id).single(),
+        supabase.from("products").select("*").eq("business_id", id).order("created_at", { ascending: false }),
+        supabase.from("services").select("*").eq("business_id", id).order("created_at", { ascending: false }),
+        supabase.from("business_likes").select("*", { count: "exact", head: true }).eq("business_id", id),
+      ]);
 
-      if (businessData) {
-        setBusiness(businessData);
-      }
+      if (businessRes.data) setBusiness(businessRes.data);
+      if (productsRes.data) setProducts(productsRes.data);
+      if (servicesRes.data) setServices(servicesRes.data);
+      setLikesCount(likesRes.count || 0);
 
-      // Fetch products
-      const { data: productData } = await supabase
-        .from("products")
-        .select("*")
-        .eq("business_id", id)
-        .order("created_at", { ascending: false });
-
-      if (productData) {
-        setProducts(productData);
-      }
-
-      // Fetch likes count
-      const { count } = await supabase
-        .from("business_likes")
-        .select("*", { count: "exact", head: true })
-        .eq("business_id", id);
-
-      setLikesCount(count || 0);
-
-      // If logged in as customer, check saved/liked status
       if (user && profile?.user_type === "customer") {
         const { data: customer } = await supabase
           .from("customers")
@@ -95,25 +133,13 @@ export default function BusinessPublicProfile() {
         if (customer) {
           setCustomerId(customer.id);
 
-          // Check if saved
-          const { data: saved } = await supabase
-            .from("saved_businesses")
-            .select("id")
-            .eq("customer_id", customer.id)
-            .eq("business_id", id)
-            .maybeSingle();
+          const [savedRes, likedRes] = await Promise.all([
+            supabase.from("saved_businesses").select("id").eq("customer_id", customer.id).eq("business_id", id).maybeSingle(),
+            supabase.from("business_likes").select("id").eq("customer_id", customer.id).eq("business_id", id).maybeSingle(),
+          ]);
 
-          setIsSaved(!!saved);
-
-          // Check if liked
-          const { data: liked } = await supabase
-            .from("business_likes")
-            .select("id")
-            .eq("customer_id", customer.id)
-            .eq("business_id", id)
-            .maybeSingle();
-
-          setIsLiked(!!liked);
+          setIsSaved(!!savedRes.data);
+          setIsLiked(!!likedRes.data);
         }
       }
 
@@ -128,23 +154,16 @@ export default function BusinessPublicProfile() {
 
     try {
       if (isSaved) {
-        await supabase
-          .from("saved_businesses")
-          .delete()
-          .eq("customer_id", customerId)
-          .eq("business_id", id);
+        await supabase.from("saved_businesses").delete().eq("customer_id", customerId).eq("business_id", id);
         setIsSaved(false);
-        toast({ title: "Removed from favorites" });
+        showToast({ title: "Removed from favorites" });
       } else {
-        await supabase.from("saved_businesses").insert({
-          customer_id: customerId,
-          business_id: id,
-        });
+        await supabase.from("saved_businesses").insert({ customer_id: customerId, business_id: id });
         setIsSaved(true);
-        toast({ title: "Saved to favorites" });
+        showToast({ title: "Saved to favorites" });
       }
     } catch (error) {
-      toast({ variant: "destructive", title: "Action failed" });
+      showToast({ variant: "destructive", title: "Action failed" });
     }
   };
 
@@ -153,37 +172,26 @@ export default function BusinessPublicProfile() {
 
     try {
       if (isLiked) {
-        await supabase
-          .from("business_likes")
-          .delete()
-          .eq("customer_id", customerId)
-          .eq("business_id", id);
+        await supabase.from("business_likes").delete().eq("customer_id", customerId).eq("business_id", id);
         setIsLiked(false);
         setLikesCount((prev) => prev - 1);
       } else {
-        await supabase.from("business_likes").insert({
-          customer_id: customerId,
-          business_id: id,
-        });
+        await supabase.from("business_likes").insert({ customer_id: customerId, business_id: id });
         setIsLiked(true);
         setLikesCount((prev) => prev + 1);
       }
     } catch (error) {
-      toast({ variant: "destructive", title: "Action failed" });
+      showToast({ variant: "destructive", title: "Action failed" });
     }
   };
 
   const startChat = async () => {
     if (!customerId || !id) {
-      toast({
-        variant: "destructive",
-        title: "Please log in as a customer to message",
-      });
+      showToast({ variant: "destructive", title: "Please log in as a customer to message" });
       return;
     }
 
     try {
-      // Check if conversation exists
       let { data: existingConv } = await supabase
         .from("conversations")
         .select("id")
@@ -192,30 +200,137 @@ export default function BusinessPublicProfile() {
         .maybeSingle();
 
       if (!existingConv) {
-        // Create new conversation
-        const { data: newConv } = await supabase
-          .from("conversations")
-          .insert({
-            customer_id: customerId,
-            business_id: id,
-          })
-          .select("id")
-          .single();
-
-        existingConv = newConv;
+        await supabase.from("conversations").insert({ customer_id: customerId, business_id: id });
       }
 
       navigate("/customer/messages");
     } catch (error) {
-      toast({ variant: "destructive", title: "Failed to start chat" });
+      showToast({ variant: "destructive", title: "Failed to start chat" });
     }
+  };
+
+  // Cart functions
+  const addToCart = (product: Product) => {
+    if (!product.in_stock) return;
+    
+    setCart((prev) => {
+      const existing = prev.find((item) => item.product.id === product.id);
+      if (existing) {
+        return prev.map((item) =>
+          item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      }
+      return [...prev, { product, quantity: 1 }];
+    });
+    toast.success(`Added ${product.name} to cart`);
+  };
+
+  const updateCartQuantity = (productId: string, delta: number) => {
+    setCart((prev) =>
+      prev
+        .map((item) =>
+          item.product.id === productId
+            ? { ...item, quantity: Math.max(0, item.quantity + delta) }
+            : item
+        )
+        .filter((item) => item.quantity > 0)
+    );
+  };
+
+  const cartTotal = cart.reduce((sum, item) => sum + (item.product.price || 0) * item.quantity, 0);
+
+  const submitOrder = async () => {
+    if (!customerId || !id || cart.length === 0) return;
+
+    setSubmittingOrder(true);
+    try {
+      const orderItems = cart.map((item) => ({
+        product_id: item.product.id,
+        name: item.product.name,
+        quantity: item.quantity,
+        price: item.product.price || 0,
+      }));
+
+      const { error } = await supabase.from("orders").insert({
+        customer_id: customerId,
+        business_id: id,
+        items: orderItems,
+        subtotal: cartTotal,
+        total: cartTotal,
+        delivery_method: deliveryMethod,
+        delivery_address: deliveryMethod === "delivery" ? deliveryAddress : null,
+        notes: orderNotes || null,
+      });
+
+      if (error) throw error;
+
+      toast.success("Order placed successfully!");
+      setCart([]);
+      setShowCart(false);
+      setOrderNotes("");
+      setDeliveryAddress("");
+      navigate("/customer/orders");
+    } catch (error) {
+      toast.error("Failed to place order");
+    } finally {
+      setSubmittingOrder(false);
+    }
+  };
+
+  // Service request functions
+  const openServiceRequest = (service: Service) => {
+    setSelectedService(service);
+    setJobTitle(`Request for ${service.name}`);
+  };
+
+  const submitJobRequest = async () => {
+    if (!customerId || !id || !selectedService) return;
+
+    setSubmittingJob(true);
+    try {
+      const { error } = await supabase.from("jobs").insert({
+        customer_id: customerId,
+        business_id: id,
+        service_id: selectedService.id,
+        title: jobTitle,
+        description: jobDescription || null,
+        location: jobLocation || null,
+        budget_min: budgetMin ? parseFloat(budgetMin) : null,
+        budget_max: budgetMax ? parseFloat(budgetMax) : null,
+      });
+
+      if (error) throw error;
+
+      toast.success("Service request submitted!");
+      setSelectedService(null);
+      setJobTitle("");
+      setJobDescription("");
+      setJobLocation("");
+      setBudgetMin("");
+      setBudgetMax("");
+      navigate("/customer/jobs");
+    } catch (error) {
+      toast.error("Failed to submit request");
+    } finally {
+      setSubmittingJob(false);
+    }
+  };
+
+  const getPriceDisplay = (service: Service) => {
+    if (service.price_type === "quote") return "Quote on request";
+    if (service.price_type === "hourly" && service.price_min) return `₦${Number(service.price_min).toLocaleString()}/hr`;
+    if (service.price_type === "range" && service.price_min && service.price_max) {
+      return `₦${Number(service.price_min).toLocaleString()} - ₦${Number(service.price_max).toLocaleString()}`;
+    }
+    if (service.price_min) return `₦${Number(service.price_min).toLocaleString()}`;
+    return "—";
   };
 
   if (loading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+          <div className="animate-spin h-8 w-8 border-2 border-foreground border-t-transparent rounded-full" />
         </div>
       </DashboardLayout>
     );
@@ -235,29 +350,29 @@ export default function BusinessPublicProfile() {
     );
   }
 
+  const businessType = business.business_type || "goods";
+  const showProducts = businessType === "goods" || businessType === "both";
+  const showServices = businessType === "services" || businessType === "both";
+
   return (
     <DashboardLayout>
       <div className="space-y-6 pb-20 lg:pb-6">
-        {/* Back Button */}
         <Button variant="ghost" onClick={() => navigate(-1)} className="-ml-2">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
 
         {/* Cover Image */}
-        <div className="relative h-48 md:h-64 rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">
+        <div className="relative h-48 md:h-64 rounded-xl overflow-hidden bg-gradient-to-br from-muted to-muted/50">
           {business.cover_image_url ? (
-            <img
-              src={business.cover_image_url}
-              alt={business.company_name}
-              className="h-full w-full object-cover"
-            />
+            <img src={business.cover_image_url} alt={business.company_name} className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full items-center justify-center">
-              <span className="text-6xl font-bold text-primary/30">
-                {business.company_name.charAt(0)}
-              </span>
+              <span className="text-6xl font-bold text-muted-foreground/30">{business.company_name.charAt(0)}</span>
             </div>
+          )}
+          {business.verified && (
+            <Badge className="absolute top-3 left-3">Verified</Badge>
           )}
         </div>
 
@@ -265,9 +380,15 @@ export default function BusinessPublicProfile() {
         <div className="dashboard-card">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-semibold text-foreground">
-                {business.company_name}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-semibold text-foreground">{business.company_name}</h1>
+                {business.reputation_score && business.reputation_score > 0 && (
+                  <div className="flex items-center gap-1 text-sm">
+                    <Star className="h-4 w-4 fill-foreground text-foreground" />
+                    <span>{business.reputation_score.toFixed(1)}</span>
+                  </div>
+                )}
+              </div>
               <div className="mt-2 space-y-1">
                 {business.industry && (
                   <div className="flex items-center gap-2 text-muted-foreground">
@@ -282,12 +403,7 @@ export default function BusinessPublicProfile() {
                   </div>
                 )}
                 {business.website && (
-                  <a
-                    href={business.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-primary hover:underline"
-                  >
+                  <a href={business.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-foreground hover:underline">
                     <Globe className="h-4 w-4" />
                     <span>{business.website}</span>
                   </a>
@@ -295,36 +411,17 @@ export default function BusinessPublicProfile() {
               </div>
             </div>
 
-            {/* Actions */}
             {profile?.user_type === "customer" && (
               <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  onClick={toggleSave}
-                  className="google-input-button"
-                >
-                  <Heart
-                    className={cn(
-                      "h-4 w-4 mr-2",
-                      isSaved && "fill-pink-500 text-pink-500"
-                    )}
-                  />
+                <Button variant="outline" onClick={toggleSave}>
+                  <Heart className={cn("h-4 w-4 mr-2", isSaved && "fill-foreground")} />
                   {isSaved ? "Saved" : "Save"}
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={toggleLike}
-                  className="google-input-button"
-                >
-                  <Star
-                    className={cn(
-                      "h-4 w-4 mr-2",
-                      isLiked && "fill-yellow-500 text-yellow-500"
-                    )}
-                  />
+                <Button variant="outline" onClick={toggleLike}>
+                  <Star className={cn("h-4 w-4 mr-2", isLiked && "fill-foreground")} />
                   {likesCount}
                 </Button>
-                <Button onClick={startChat} className="google-input-button">
+                <Button onClick={startChat}>
                   <MessageCircle className="h-4 w-4 mr-2" />
                   Message
                 </Button>
@@ -340,56 +437,233 @@ export default function BusinessPublicProfile() {
           )}
         </div>
 
-        {/* Products */}
-        {products.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-semibold text-foreground">
-                Products & Services
-              </h2>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {products.map((product) => (
-                <div key={product.id} className="dashboard-card">
-                  {product.image_url && (
-                    <div className="relative -mx-5 -mt-5 mb-4 h-40 overflow-hidden rounded-t-lg">
-                      <img
-                        src={product.image_url}
-                        alt={product.name}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                  )}
-                  <h3 className="font-medium text-foreground">{product.name}</h3>
-                  {product.description && (
-                    <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-                      {product.description}
-                    </p>
-                  )}
-                  <div className="mt-3 flex items-center justify-between">
-                    {product.price && (
-                      <span className="font-semibold text-primary">
-                        ${product.price.toFixed(2)}
-                      </span>
-                    )}
-                    <span
-                      className={cn(
-                        "text-xs px-2 py-1 rounded-full",
-                        product.in_stock
-                          ? "bg-success/10 text-success"
-                          : "bg-destructive/10 text-destructive"
-                      )}
-                    >
-                      {product.in_stock ? "In Stock" : "Out of Stock"}
-                    </span>
+        {/* Products & Services Tabs */}
+        {(showProducts || showServices) && (
+          <Tabs defaultValue={showProducts ? "products" : "services"} className="w-full">
+            <TabsList>
+              {showProducts && (
+                <TabsTrigger value="products" className="flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Products ({products.length})
+                </TabsTrigger>
+              )}
+              {showServices && (
+                <TabsTrigger value="services" className="flex items-center gap-2">
+                  <Wrench className="h-4 w-4" />
+                  Services ({services.length})
+                </TabsTrigger>
+              )}
+            </TabsList>
+
+            {showProducts && (
+              <TabsContent value="products" className="mt-4">
+                {products.length === 0 ? (
+                  <div className="dashboard-card text-center py-8">
+                    <Package className="mx-auto h-10 w-10 text-muted-foreground" />
+                    <p className="mt-2 text-muted-foreground">No products listed</p>
                   </div>
-                </div>
-              ))}
-            </div>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {products.map((product) => (
+                      <div key={product.id} className="dashboard-card">
+                        {product.image_url && (
+                          <div className="relative -mx-5 -mt-5 mb-4 h-40 overflow-hidden rounded-t-lg">
+                            <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+                          </div>
+                        )}
+                        <h3 className="font-medium text-foreground">{product.name}</h3>
+                        {product.category && (
+                          <p className="text-xs text-muted-foreground">{product.category}</p>
+                        )}
+                        {product.description && (
+                          <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{product.description}</p>
+                        )}
+                        <div className="mt-3 flex items-center justify-between">
+                          {product.price && (
+                            <span className="font-semibold text-foreground">₦{Number(product.price).toLocaleString()}</span>
+                          )}
+                          <Badge variant={product.in_stock ? "default" : "secondary"}>
+                            {product.in_stock ? "In Stock" : "Out of Stock"}
+                          </Badge>
+                        </div>
+                        {profile?.user_type === "customer" && product.in_stock && (
+                          <Button className="w-full mt-3" onClick={() => addToCart(product)} size="sm">
+                            <ShoppingCart className="h-4 w-4 mr-2" />
+                            Add to Cart
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            )}
+
+            {showServices && (
+              <TabsContent value="services" className="mt-4">
+                {services.length === 0 ? (
+                  <div className="dashboard-card text-center py-8">
+                    <Wrench className="mx-auto h-10 w-10 text-muted-foreground" />
+                    <p className="mt-2 text-muted-foreground">No services listed</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {services.map((service) => (
+                      <div key={service.id} className="dashboard-card">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium text-foreground">{service.name}</h3>
+                              <Badge variant={service.availability === "available" ? "default" : "secondary"}>
+                                {service.availability}
+                              </Badge>
+                            </div>
+                            {service.category && (
+                              <p className="text-xs text-muted-foreground">{service.category}</p>
+                            )}
+                            {service.description && (
+                              <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{service.description}</p>
+                            )}
+                            <p className="mt-2 font-medium text-foreground">{getPriceDisplay(service)}</p>
+                            {service.duration_estimate && (
+                              <p className="text-xs text-muted-foreground">Est. duration: {service.duration_estimate}</p>
+                            )}
+                          </div>
+                        </div>
+                        {profile?.user_type === "customer" && service.availability === "available" && (
+                          <Button className="w-full mt-3" onClick={() => openServiceRequest(service)} size="sm">
+                            Request Service
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            )}
+          </Tabs>
+        )}
+
+        {/* Floating Cart Button */}
+        {cart.length > 0 && (
+          <div className="fixed bottom-20 left-4 right-4 lg:bottom-6 lg:left-auto lg:right-6 lg:w-auto z-40">
+            <Button onClick={() => setShowCart(true)} className="w-full lg:w-auto shadow-lg">
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              View Cart ({cart.reduce((sum, item) => sum + item.quantity, 0)} items) • ₦{cartTotal.toLocaleString()}
+            </Button>
           </div>
         )}
       </div>
+
+      {/* Cart Dialog */}
+      <Dialog open={showCart} onOpenChange={setShowCart}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Your Cart</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {cart.map((item) => (
+              <div key={item.product.id} className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-foreground truncate">{item.product.name}</p>
+                  <p className="text-sm text-muted-foreground">₦{(item.product.price || 0).toLocaleString()} each</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateCartQuantity(item.product.id, -1)}>
+                    <Minus className="h-3 w-3" />
+                  </Button>
+                  <span className="w-8 text-center">{item.quantity}</span>
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateCartQuantity(item.product.id, 1)}>
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+
+            <div className="border-t pt-4">
+              <div className="flex justify-between font-medium">
+                <span>Total</span>
+                <span>₦{cartTotal.toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div>
+              <Label>Delivery Method</Label>
+              <div className="flex gap-2 mt-1">
+                <Button variant={deliveryMethod === "pickup" ? "default" : "outline"} size="sm" onClick={() => setDeliveryMethod("pickup")} className="flex-1">
+                  Pickup
+                </Button>
+                <Button variant={deliveryMethod === "delivery" ? "default" : "outline"} size="sm" onClick={() => setDeliveryMethod("delivery")} className="flex-1">
+                  Delivery
+                </Button>
+              </div>
+            </div>
+
+            {deliveryMethod === "delivery" && (
+              <div>
+                <Label htmlFor="address">Delivery Address</Label>
+                <Textarea id="address" value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)} placeholder="Enter your delivery address" className="mt-1" />
+              </div>
+            )}
+
+            <div>
+              <Label htmlFor="notes">Order Notes (optional)</Label>
+              <Textarea id="notes" value={orderNotes} onChange={(e) => setOrderNotes(e.target.value)} placeholder="Any special instructions?" className="mt-1" />
+            </div>
+
+            <Button className="w-full" onClick={submitOrder} disabled={submittingOrder || (deliveryMethod === "delivery" && !deliveryAddress)}>
+              {submittingOrder ? "Placing Order..." : "Place Order"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Service Request Dialog */}
+      <Dialog open={!!selectedService} onOpenChange={() => setSelectedService(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Request Service</DialogTitle>
+          </DialogHeader>
+          {selectedService && (
+            <div className="space-y-4">
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="font-medium">{selectedService.name}</p>
+                <p className="text-sm text-muted-foreground">{getPriceDisplay(selectedService)}</p>
+              </div>
+
+              <div>
+                <Label htmlFor="jobTitle">Request Title</Label>
+                <Input id="jobTitle" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} className="mt-1" />
+              </div>
+
+              <div>
+                <Label htmlFor="jobDesc">Description</Label>
+                <Textarea id="jobDesc" value={jobDescription} onChange={(e) => setJobDescription(e.target.value)} placeholder="Describe what you need done" className="mt-1" rows={3} />
+              </div>
+
+              <div>
+                <Label htmlFor="jobLoc">Location</Label>
+                <Input id="jobLoc" value={jobLocation} onChange={(e) => setJobLocation(e.target.value)} placeholder="Where is the work needed?" className="mt-1" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="budgetMin">Budget Min (₦)</Label>
+                  <Input id="budgetMin" type="number" value={budgetMin} onChange={(e) => setBudgetMin(e.target.value)} className="mt-1" />
+                </div>
+                <div>
+                  <Label htmlFor="budgetMax">Budget Max (₦)</Label>
+                  <Input id="budgetMax" type="number" value={budgetMax} onChange={(e) => setBudgetMax(e.target.value)} className="mt-1" />
+                </div>
+              </div>
+
+              <Button className="w-full" onClick={submitJobRequest} disabled={submittingJob || !jobTitle}>
+                {submittingJob ? "Submitting..." : "Submit Request"}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

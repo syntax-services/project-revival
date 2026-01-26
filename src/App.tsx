@@ -25,6 +25,8 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 // Customer pages
 const CustomerOverview = lazy(() => import("./pages/customer/CustomerOverview"));
 const CustomerDiscover = lazy(() => import("./pages/customer/CustomerDiscover"));
+const CustomerOrders = lazy(() => import("./pages/customer/CustomerOrders"));
+const CustomerJobs = lazy(() => import("./pages/customer/CustomerJobs"));
 const CustomerEngagement = lazy(() => import("./pages/customer/CustomerEngagement"));
 const CustomerProfile = lazy(() => import("./pages/customer/CustomerProfile"));
 const CustomerNotifications = lazy(() => import("./pages/customer/CustomerNotifications"));
@@ -36,6 +38,9 @@ const BusinessOverview = lazy(() => import("./pages/business/BusinessOverview"))
 const BusinessInsights = lazy(() => import("./pages/business/BusinessInsights"));
 const BusinessLeads = lazy(() => import("./pages/business/BusinessLeads"));
 const BusinessProducts = lazy(() => import("./pages/business/BusinessProducts"));
+const BusinessServices = lazy(() => import("./pages/business/BusinessServices"));
+const BusinessOrders = lazy(() => import("./pages/business/BusinessOrders"));
+const BusinessJobs = lazy(() => import("./pages/business/BusinessJobs"));
 const BusinessProfile = lazy(() => import("./pages/business/BusinessProfile"));
 const BusinessGrowth = lazy(() => import("./pages/business/BusinessGrowth"));
 const BusinessSettings = lazy(() => import("./pages/business/BusinessSettings"));
@@ -76,6 +81,8 @@ const App = () => (
                 {/* Customer Routes */}
                 <Route path="/customer" element={<ProtectedRoute requiredUserType="customer"><CustomerOverview /></ProtectedRoute>} />
                 <Route path="/customer/discover" element={<ProtectedRoute requiredUserType="customer"><CustomerDiscover /></ProtectedRoute>} />
+                <Route path="/customer/orders" element={<ProtectedRoute requiredUserType="customer"><CustomerOrders /></ProtectedRoute>} />
+                <Route path="/customer/jobs" element={<ProtectedRoute requiredUserType="customer"><CustomerJobs /></ProtectedRoute>} />
                 <Route path="/customer/engagement" element={<ProtectedRoute requiredUserType="customer"><CustomerEngagement /></ProtectedRoute>} />
                 <Route path="/customer/profile" element={<ProtectedRoute requiredUserType="customer"><CustomerProfile /></ProtectedRoute>} />
                 <Route path="/customer/notifications" element={<ProtectedRoute requiredUserType="customer"><CustomerNotifications /></ProtectedRoute>} />
@@ -87,6 +94,9 @@ const App = () => (
                 <Route path="/business/insights" element={<ProtectedRoute requiredUserType="business"><BusinessInsights /></ProtectedRoute>} />
                 <Route path="/business/leads" element={<ProtectedRoute requiredUserType="business"><BusinessLeads /></ProtectedRoute>} />
                 <Route path="/business/products" element={<ProtectedRoute requiredUserType="business"><BusinessProducts /></ProtectedRoute>} />
+                <Route path="/business/services" element={<ProtectedRoute requiredUserType="business"><BusinessServices /></ProtectedRoute>} />
+                <Route path="/business/orders" element={<ProtectedRoute requiredUserType="business"><BusinessOrders /></ProtectedRoute>} />
+                <Route path="/business/jobs" element={<ProtectedRoute requiredUserType="business"><BusinessJobs /></ProtectedRoute>} />
                 <Route path="/business/profile" element={<ProtectedRoute requiredUserType="business"><BusinessProfile /></ProtectedRoute>} />
                 <Route path="/business/growth" element={<ProtectedRoute requiredUserType="business"><BusinessGrowth /></ProtectedRoute>} />
                 <Route path="/business/settings" element={<ProtectedRoute requiredUserType="business"><BusinessSettings /></ProtectedRoute>} />

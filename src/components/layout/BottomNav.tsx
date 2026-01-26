@@ -6,24 +6,25 @@ import {
   MessageCircle,
   Bell,
   Settings,
-  Users,
   Package,
+  Briefcase,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const customerNavItems = [
   { href: "/customer", label: "Home", icon: Home },
   { href: "/customer/discover", label: "Discover", icon: Search },
+  { href: "/customer/orders", label: "Orders", icon: ClipboardList },
   { href: "/customer/messages", label: "Chat", icon: MessageCircle },
-  { href: "/customer/notifications", label: "Alerts", icon: Bell },
   { href: "/customer/settings", label: "Settings", icon: Settings },
 ];
 
 const businessNavItems = [
   { href: "/business", label: "Home", icon: Home },
-  { href: "/business/insights", label: "Insights", icon: Users },
-  { href: "/business/messages", label: "Chat", icon: MessageCircle },
-  { href: "/business/products", label: "Products", icon: Package },
+  { href: "/business/orders", label: "Orders", icon: ClipboardList },
+  { href: "/business/jobs", label: "Jobs", icon: Briefcase },
+  { href: "/business/products", label: "Catalog", icon: Package },
   { href: "/business/settings", label: "Settings", icon: Settings },
 ];
 
