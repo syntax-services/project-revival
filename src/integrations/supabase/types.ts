@@ -343,6 +343,7 @@ export type Database = {
           image_url: string | null
           in_stock: boolean
           name: string
+          nicknames: string[] | null
           price: number | null
           updated_at: string
         }
@@ -354,6 +355,7 @@ export type Database = {
           image_url?: string | null
           in_stock?: boolean
           name: string
+          nicknames?: string[] | null
           price?: number | null
           updated_at?: string
         }
@@ -365,6 +367,7 @@ export type Database = {
           image_url?: string | null
           in_stock?: boolean
           name?: string
+          nicknames?: string[] | null
           price?: number | null
           updated_at?: string
         }
