@@ -76,14 +76,17 @@ export type Database = {
       }
       businesses: {
         Row: {
+          average_response_time: string | null
           budget_range: string | null
           business_goals: string[] | null
           business_location: string | null
+          business_type: Database["public"]["Enums"]["business_type"] | null
           company_name: string
           company_size: string | null
           competitive_landscape: string | null
           cover_image_url: string | null
           created_at: string
+          delivery_available: boolean | null
           expectations_from_string: string | null
           growth_strategy: string | null
           id: string
@@ -95,24 +98,33 @@ export type Database = {
           monthly_customer_volume: string | null
           operating_region: string | null
           pain_points: string[] | null
+          pickup_available: boolean | null
           products_services: string | null
+          reputation_score: number | null
+          service_radius_km: number | null
           social_links: Json | null
           strategic_notes: string | null
           target_customer_type: string | null
+          total_completed_orders: number | null
+          total_reviews: number | null
           updated_at: string
           user_id: string
+          verified: boolean | null
           website: string | null
           years_in_operation: string | null
         }
         Insert: {
+          average_response_time?: string | null
           budget_range?: string | null
           business_goals?: string[] | null
           business_location?: string | null
+          business_type?: Database["public"]["Enums"]["business_type"] | null
           company_name: string
           company_size?: string | null
           competitive_landscape?: string | null
           cover_image_url?: string | null
           created_at?: string
+          delivery_available?: boolean | null
           expectations_from_string?: string | null
           growth_strategy?: string | null
           id?: string
@@ -124,24 +136,33 @@ export type Database = {
           monthly_customer_volume?: string | null
           operating_region?: string | null
           pain_points?: string[] | null
+          pickup_available?: boolean | null
           products_services?: string | null
+          reputation_score?: number | null
+          service_radius_km?: number | null
           social_links?: Json | null
           strategic_notes?: string | null
           target_customer_type?: string | null
+          total_completed_orders?: number | null
+          total_reviews?: number | null
           updated_at?: string
           user_id: string
+          verified?: boolean | null
           website?: string | null
           years_in_operation?: string | null
         }
         Update: {
+          average_response_time?: string | null
           budget_range?: string | null
           business_goals?: string[] | null
           business_location?: string | null
+          business_type?: Database["public"]["Enums"]["business_type"] | null
           company_name?: string
           company_size?: string | null
           competitive_landscape?: string | null
           cover_image_url?: string | null
           created_at?: string
+          delivery_available?: boolean | null
           expectations_from_string?: string | null
           growth_strategy?: string | null
           id?: string
@@ -153,12 +174,18 @@ export type Database = {
           monthly_customer_volume?: string | null
           operating_region?: string | null
           pain_points?: string[] | null
+          pickup_available?: boolean | null
           products_services?: string | null
+          reputation_score?: number | null
+          service_radius_km?: number | null
           social_links?: Json | null
           strategic_notes?: string | null
           target_customer_type?: string | null
+          total_completed_orders?: number | null
+          total_reviews?: number | null
           updated_at?: string
           user_id?: string
+          verified?: boolean | null
           website?: string | null
           years_in_operation?: string | null
         }
@@ -304,6 +331,112 @@ export type Database = {
         }
         Relationships: []
       }
+      jobs: {
+        Row: {
+          accepted_at: string | null
+          attachments: string[] | null
+          budget_max: number | null
+          budget_min: number | null
+          business_id: string
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          completed_at: string | null
+          created_at: string
+          customer_id: string
+          description: string | null
+          final_price: number | null
+          id: string
+          job_number: string
+          location: string | null
+          notes: string | null
+          quoted_at: string | null
+          quoted_price: number | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          service_id: string | null
+          started_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          attachments?: string[] | null
+          budget_max?: number | null
+          budget_min?: number | null
+          business_id: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          customer_id: string
+          description?: string | null
+          final_price?: number | null
+          id?: string
+          job_number?: string
+          location?: string | null
+          notes?: string | null
+          quoted_at?: string | null
+          quoted_price?: number | null
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          service_id?: string | null
+          started_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          attachments?: string[] | null
+          budget_max?: number | null
+          budget_min?: number | null
+          business_id?: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          customer_id?: string
+          description?: string | null
+          final_price?: number | null
+          id?: string
+          job_number?: string
+          location?: string | null
+          notes?: string | null
+          quoted_at?: string | null
+          quoted_price?: number | null
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          service_id?: string | null
+          started_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
@@ -334,42 +467,153 @@ export type Database = {
         }
         Relationships: []
       }
-      products: {
+      orders: {
         Row: {
           business_id: string
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          confirmed_at: string | null
           created_at: string
-          description: string | null
+          customer_id: string
+          delivered_at: string | null
+          delivery_address: string | null
+          delivery_fee: number | null
+          delivery_method: string | null
+          estimated_delivery: string | null
           id: string
-          image_url: string | null
-          in_stock: boolean
-          name: string
-          nicknames: string[] | null
-          price: number | null
+          items: Json
+          notes: string | null
+          order_number: string
+          shipped_at: string | null
+          status: string
+          subtotal: number
+          total: number
           updated_at: string
         }
         Insert: {
           business_id: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          confirmed_at?: string | null
           created_at?: string
-          description?: string | null
+          customer_id: string
+          delivered_at?: string | null
+          delivery_address?: string | null
+          delivery_fee?: number | null
+          delivery_method?: string | null
+          estimated_delivery?: string | null
           id?: string
-          image_url?: string | null
-          in_stock?: boolean
-          name: string
-          nicknames?: string[] | null
-          price?: number | null
+          items?: Json
+          notes?: string | null
+          order_number?: string
+          shipped_at?: string | null
+          status?: string
+          subtotal?: number
+          total?: number
           updated_at?: string
         }
         Update: {
           business_id?: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          customer_id?: string
+          delivered_at?: string | null
+          delivery_address?: string | null
+          delivery_fee?: number | null
+          delivery_method?: string | null
+          estimated_delivery?: string | null
+          id?: string
+          items?: Json
+          notes?: string | null
+          order_number?: string
+          shipped_at?: string | null
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          business_id: string
+          category: string | null
+          created_at: string
+          description: string | null
+          dimensions: Json | null
+          id: string
+          image_url: string | null
+          in_stock: boolean
+          is_featured: boolean | null
+          min_order_quantity: number | null
+          name: string
+          nicknames: string[] | null
+          price: number | null
+          sku: string | null
+          total_orders: number | null
+          total_views: number | null
+          unit: string | null
+          updated_at: string
+          weight: number | null
+        }
+        Insert: {
+          business_id: string
+          category?: string | null
           created_at?: string
           description?: string | null
+          dimensions?: Json | null
           id?: string
           image_url?: string | null
           in_stock?: boolean
+          is_featured?: boolean | null
+          min_order_quantity?: number | null
+          name: string
+          nicknames?: string[] | null
+          price?: number | null
+          sku?: string | null
+          total_orders?: number | null
+          total_views?: number | null
+          unit?: string | null
+          updated_at?: string
+          weight?: number | null
+        }
+        Update: {
+          business_id?: string
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          dimensions?: Json | null
+          id?: string
+          image_url?: string | null
+          in_stock?: boolean
+          is_featured?: boolean | null
+          min_order_quantity?: number | null
           name?: string
           nicknames?: string[] | null
           price?: number | null
+          sku?: string | null
+          total_orders?: number | null
+          total_views?: number | null
+          unit?: string | null
           updated_at?: string
+          weight?: number | null
         }
         Relationships: [
           {
@@ -474,6 +718,105 @@ export type Database = {
           },
         ]
       }
+      reviews: {
+        Row: {
+          business_id: string | null
+          content: string | null
+          created_at: string
+          helpful_count: number | null
+          id: string
+          images: string[] | null
+          job_id: string | null
+          order_id: string | null
+          product_id: string | null
+          rating: number
+          response: string | null
+          response_at: string | null
+          reviewer_id: string
+          reviewer_type: string
+          service_id: string | null
+          title: string | null
+          updated_at: string
+          verified_purchase: boolean | null
+        }
+        Insert: {
+          business_id?: string | null
+          content?: string | null
+          created_at?: string
+          helpful_count?: number | null
+          id?: string
+          images?: string[] | null
+          job_id?: string | null
+          order_id?: string | null
+          product_id?: string | null
+          rating: number
+          response?: string | null
+          response_at?: string | null
+          reviewer_id: string
+          reviewer_type: string
+          service_id?: string | null
+          title?: string | null
+          updated_at?: string
+          verified_purchase?: boolean | null
+        }
+        Update: {
+          business_id?: string | null
+          content?: string | null
+          created_at?: string
+          helpful_count?: number | null
+          id?: string
+          images?: string[] | null
+          job_id?: string | null
+          order_id?: string | null
+          product_id?: string | null
+          rating?: number
+          response?: string | null
+          response_at?: string | null
+          reviewer_id?: string
+          reviewer_type?: string
+          service_id?: string | null
+          title?: string | null
+          updated_at?: string
+          verified_purchase?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_businesses: {
         Row: {
           business_id: string
@@ -506,6 +849,74 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          availability: string | null
+          business_id: string
+          category: string | null
+          created_at: string
+          description: string | null
+          duration_estimate: string | null
+          id: string
+          is_featured: boolean | null
+          location_coverage: string[] | null
+          name: string
+          portfolio_images: string[] | null
+          price_max: number | null
+          price_min: number | null
+          price_type: string
+          total_jobs: number | null
+          total_views: number | null
+          updated_at: string
+        }
+        Insert: {
+          availability?: string | null
+          business_id: string
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          duration_estimate?: string | null
+          id?: string
+          is_featured?: boolean | null
+          location_coverage?: string[] | null
+          name: string
+          portfolio_images?: string[] | null
+          price_max?: number | null
+          price_min?: number | null
+          price_type?: string
+          total_jobs?: number | null
+          total_views?: number | null
+          updated_at?: string
+        }
+        Update: {
+          availability?: string | null
+          business_id?: string
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          duration_estimate?: string | null
+          id?: string
+          is_featured?: boolean | null
+          location_coverage?: string[] | null
+          name?: string
+          portfolio_images?: string[] | null
+          price_max?: number | null
+          price_min?: number | null
+          price_type?: string
+          total_jobs?: number | null
+          total_views?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
         ]
@@ -550,6 +961,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      business_type: "goods" | "services" | "both"
       user_role: "customer" | "business"
     }
     CompositeTypes: {
@@ -679,6 +1091,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      business_type: ["goods", "services", "both"],
       user_role: ["customer", "business"],
     },
   },
