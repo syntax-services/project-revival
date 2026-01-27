@@ -6,23 +6,20 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useUserLocation, calculateDistance } from "@/hooks/useLocation";
+import { useSmartMatching, detectLowQualitySignals } from "@/hooks/useSmartMatching";
+import { BusinessCard } from "@/components/business/BusinessCard";
 import {
   Search,
-  Heart,
   Building2,
-  MapPin,
-  Briefcase,
-  Star,
-  MessageCircle,
   Navigation,
   Package,
   Wrench,
   Filter,
+  Star,
+  AlertTriangle,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -43,6 +40,20 @@ interface Business {
   business_type: string | null;
   reputation_score: number | null;
   verified: boolean | null;
+  total_reviews: number | null;
+  total_completed_orders: number | null;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  business_id: string;
+}
+
+interface Service {
+  id: string;
+  name: string;
+  business_id: string;
 }
 
 interface EnrichedBusiness extends Business {
@@ -50,8 +61,9 @@ interface EnrichedBusiness extends Business {
   is_liked: boolean;
   is_saved: boolean;
   distance: number | null;
-  products_count: number;
-  services_count: number;
+  products: Product[];
+  services: Service[];
+  warnings: string[];
 }
 
 export default function CustomerDiscover() {
@@ -66,7 +78,7 @@ export default function CustomerDiscover() {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<string>("distance");
+  const [sortBy, setSortBy] = useState<string>("smart");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -88,7 +100,7 @@ export default function CustomerDiscover() {
 
         const { data: businessList } = await supabase
           .from("businesses")
-          .select("id, company_name, industry, business_location, products_services, cover_image_url, latitude, longitude, business_type, reputation_score, verified")
+          .select("id, company_name, industry, business_location, products_services, cover_image_url, latitude, longitude, business_type, reputation_score, verified, total_reviews, total_completed_orders")
           .order("created_at", { ascending: false });
 
         if (businessList && customer) {
@@ -98,8 +110,8 @@ export default function CustomerDiscover() {
                 supabase.from("business_likes").select("*", { count: "exact", head: true }).eq("business_id", biz.id),
                 supabase.from("business_likes").select("id").eq("business_id", biz.id).eq("customer_id", customer.id).maybeSingle(),
                 supabase.from("saved_businesses").select("id").eq("business_id", biz.id).eq("customer_id", customer.id).maybeSingle(),
-                supabase.from("products").select("id", { count: "exact", head: true }).eq("business_id", biz.id),
-                supabase.from("services").select("id", { count: "exact", head: true }).eq("business_id", biz.id),
+                supabase.from("products").select("id, name, business_id").eq("business_id", biz.id).limit(3),
+                supabase.from("services").select("id, name, business_id").eq("business_id", biz.id).limit(3),
               ]);
 
               let distance: number | null = null;
@@ -107,14 +119,17 @@ export default function CustomerDiscover() {
                 distance = calculateDistance(customer.latitude, customer.longitude, biz.latitude, biz.longitude);
               }
 
+              const warnings = detectLowQualitySignals(biz);
+
               return {
                 ...biz,
                 likes_count: likesRes.count || 0,
                 is_liked: !!likedRes.data,
                 is_saved: !!savedRes.data,
                 distance,
-                products_count: productsRes.count || 0,
-                services_count: servicesRes.count || 0,
+                products: productsRes.data || [],
+                services: servicesRes.data || [],
+                warnings,
               };
             })
           );
@@ -192,36 +207,49 @@ export default function CustomerDiscover() {
     }
   };
 
-  // Filter and sort
-  let filteredBusinesses = businesses.filter((b) => {
+  // Apply smart matching
+  const smartMatched = useSmartMatching(businesses, {
+    userLatitude: userLocation?.lat,
+    userLongitude: userLocation?.lng,
+    preferredType: typeFilter === "all" ? "all" : typeFilter as "goods" | "services",
+  });
+
+  // Filter by search and type
+  let filteredBusinesses = smartMatched.filter((b) => {
+    // Search across business name, products, and services
+    const searchLower = search.toLowerCase();
     const matchesSearch = 
-      b.company_name.toLowerCase().includes(search.toLowerCase()) ||
-      b.industry?.toLowerCase().includes(search.toLowerCase()) ||
-      b.business_location?.toLowerCase().includes(search.toLowerCase());
+      b.company_name.toLowerCase().includes(searchLower) ||
+      b.industry?.toLowerCase().includes(searchLower) ||
+      b.business_location?.toLowerCase().includes(searchLower) ||
+      b.products.some((p) => p.name.toLowerCase().includes(searchLower)) ||
+      b.services.some((s) => s.name.toLowerCase().includes(searchLower));
     
     if (!matchesSearch) return false;
     
-    if (typeFilter === "goods") return b.business_type === "goods" || b.products_count > 0;
-    if (typeFilter === "services") return b.business_type === "services" || b.services_count > 0;
+    if (typeFilter === "goods") return b.business_type === "goods" || b.products.length > 0;
+    if (typeFilter === "services") return b.business_type === "services" || b.services.length > 0;
     
     return true;
   });
 
   // Sort
-  filteredBusinesses = [...filteredBusinesses].sort((a, b) => {
-    if (sortBy === "distance") {
-      if (a.distance === null) return 1;
-      if (b.distance === null) return -1;
-      return a.distance - b.distance;
-    }
-    if (sortBy === "rating") {
-      return (b.reputation_score || 0) - (a.reputation_score || 0);
-    }
-    if (sortBy === "popular") {
-      return b.likes_count - a.likes_count;
-    }
-    return 0;
-  });
+  if (sortBy !== "smart") {
+    filteredBusinesses = [...filteredBusinesses].sort((a, b) => {
+      if (sortBy === "distance") {
+        if (a.distance === null) return 1;
+        if (b.distance === null) return -1;
+        return a.distance - b.distance;
+      }
+      if (sortBy === "rating") {
+        return (b.reputation_score || 0) - (a.reputation_score || 0);
+      }
+      if (sortBy === "popular") {
+        return b.likes_count - a.likes_count;
+      }
+      return 0;
+    });
+  }
 
   return (
     <DashboardLayout>
@@ -252,7 +280,7 @@ export default function CustomerDiscover() {
         <div className="relative">
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search by name, industry, or location..."
+            placeholder="Search businesses, products, or services..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-11 h-12"
@@ -274,10 +302,16 @@ export default function CustomerDiscover() {
           </Select>
 
           <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="smart">
+                <span className="flex items-center gap-2">
+                  <Star className="h-3 w-3" />
+                  Best Match
+                </span>
+              </SelectItem>
               <SelectItem value="distance">Nearest</SelectItem>
               <SelectItem value="rating">Top Rated</SelectItem>
               <SelectItem value="popular">Most Popular</SelectItem>
@@ -313,6 +347,7 @@ export default function CustomerDiscover() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredBusinesses.map((business) => (
               <div key={business.id} className="dashboard-card group overflow-hidden">
+                {/* Cover Image */}
                 <div
                   className="relative -mx-5 -mt-5 mb-4 h-32 bg-gradient-to-br from-muted to-muted/50 cursor-pointer"
                   onClick={() => navigate(`/business/${business.id}`)}
@@ -324,7 +359,7 @@ export default function CustomerDiscover() {
                       <span className="text-4xl font-bold text-muted-foreground/30">{business.company_name.charAt(0)}</span>
                     </div>
                   )}
-                  <div className="absolute top-2 right-2 flex gap-1">
+                  <div className="absolute top-2 right-2 flex gap-1 flex-wrap">
                     {business.distance !== null && (
                       <span className="bg-background/90 backdrop-blur-sm text-xs px-2 py-1 rounded-full text-foreground">
                         {business.distance < 1 ? `${Math.round(business.distance * 1000)}m` : `${business.distance.toFixed(1)}km`}
@@ -334,57 +369,88 @@ export default function CustomerDiscover() {
                       <Badge variant="default" className="text-xs">Verified</Badge>
                     )}
                   </div>
-                </div>
-
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate(`/business/${business.id}`)}>
-                    <h3 className="font-medium text-foreground hover:text-foreground/80 transition-colors truncate">
-                      {business.company_name}
-                    </h3>
-                    {business.industry && (
-                      <div className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
-                        <Briefcase className="h-3 w-3 flex-shrink-0" />
-                        <span className="truncate">{business.industry}</span>
+                  {/* Warnings indicator */}
+                  {business.warnings.length > 0 && (
+                    <div className="absolute top-2 left-2">
+                      <div className="bg-background/90 backdrop-blur-sm px-2 py-1 rounded-full flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">{business.warnings[0]}</span>
                       </div>
-                    )}
-                    {business.business_location && (
-                      <div className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
-                        <MapPin className="h-3 w-3 flex-shrink-0" />
-                        <span className="truncate">{business.business_location}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <Button variant="ghost" size="icon" onClick={() => toggleSave(business.id)} className="flex-shrink-0">
-                    <Heart className={cn("h-4 w-4 transition-colors", business.is_saved && "fill-foreground")} />
-                  </Button>
-                </div>
-
-                {/* Type indicators */}
-                <div className="flex gap-2 mt-3">
-                  {business.products_count > 0 && (
-                    <Badge variant="secondary" className="text-xs">
-                      <Package className="h-3 w-3 mr-1" />
-                      {business.products_count} products
-                    </Badge>
-                  )}
-                  {business.services_count > 0 && (
-                    <Badge variant="secondary" className="text-xs">
-                      <Wrench className="h-3 w-3 mr-1" />
-                      {business.services_count} services
-                    </Badge>
+                    </div>
                   )}
                 </div>
 
-                {/* Rating & Actions */}
+                {/* Business Info */}
+                <div className="cursor-pointer" onClick={() => navigate(`/business/${business.id}`)}>
+                  <h3 className="font-medium text-foreground hover:text-foreground/80 transition-colors">
+                    {business.company_name}
+                  </h3>
+                  {business.reputation_score && business.reputation_score > 0 && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <Star className="h-3 w-3 fill-foreground text-foreground" />
+                      <span className="text-sm text-foreground">{business.reputation_score.toFixed(1)}</span>
+                      {business.total_reviews && business.total_reviews > 0 && (
+                        <span className="text-xs text-muted-foreground">({business.total_reviews} reviews)</span>
+                      )}
+                    </div>
+                  )}
+                  {business.industry && (
+                    <p className="mt-1 text-sm text-muted-foreground truncate">{business.industry}</p>
+                  )}
+                </div>
+
+                {/* Dynamic Product/Service Names */}
+                <div className="mt-3 space-y-2">
+                  {business.products.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      <Package className="h-3 w-3 text-muted-foreground mt-0.5" />
+                      <div className="flex-1 flex flex-wrap gap-1">
+                        {business.products.map((product) => (
+                          <Badge key={product.id} variant="secondary" className="text-xs">
+                            {product.name}
+                          </Badge>
+                        ))}
+                        {business.products.length >= 3 && (
+                          <span className="text-xs text-muted-foreground">+more</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {business.services.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      <Wrench className="h-3 w-3 text-muted-foreground mt-0.5" />
+                      <div className="flex-1 flex flex-wrap gap-1">
+                        {business.services.map((service) => (
+                          <Badge key={service.id} variant="outline" className="text-xs">
+                            {service.name}
+                          </Badge>
+                        ))}
+                        {business.services.length >= 3 && (
+                          <span className="text-xs text-muted-foreground">+more</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
                 <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-                  <button onClick={() => toggleLike(business.id)} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    <Star className={cn("h-4 w-4", business.is_liked && "fill-foreground text-foreground")} />
-                    <span>{business.likes_count} {business.likes_count === 1 ? "like" : "likes"}</span>
-                  </button>
-
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={() => toggleLike(business.id)} 
+                      className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Star className={`h-4 w-4 ${business.is_liked ? "fill-foreground text-foreground" : ""}`} />
+                      <span>{business.likes_count}</span>
+                    </button>
+                    <button
+                      onClick={() => toggleSave(business.id)}
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {business.is_saved ? "Saved" : "Save"}
+                    </button>
+                  </div>
                   <Button variant="outline" size="sm" onClick={() => startChat(business.id)}>
-                    <MessageCircle className="h-3.5 w-3.5 mr-1" />
                     Message
                   </Button>
                 </div>
