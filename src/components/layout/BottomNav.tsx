@@ -4,11 +4,12 @@ import {
   Home,
   Search,
   MessageCircle,
-  Bell,
   Settings,
   Package,
   Briefcase,
   ClipboardList,
+  BarChart3,
+  Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,8 +24,8 @@ const customerNavItems = [
 const businessNavItems = [
   { href: "/business", label: "Home", icon: Home },
   { href: "/business/orders", label: "Orders", icon: ClipboardList },
-  { href: "/business/jobs", label: "Jobs", icon: Briefcase },
-  { href: "/business/products", label: "Catalog", icon: Package },
+  { href: "/business/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/business/reviews", label: "Reviews", icon: Star },
   { href: "/business/settings", label: "Settings", icon: Settings },
 ];
 

@@ -46,6 +46,11 @@ const BusinessGrowth = lazy(() => import("./pages/business/BusinessGrowth"));
 const BusinessSettings = lazy(() => import("./pages/business/BusinessSettings"));
 const BusinessMessages = lazy(() => import("./pages/business/BusinessMessages"));
 const BusinessPublicProfile = lazy(() => import("./pages/business/BusinessPublicProfile"));
+const BusinessAnalytics = lazy(() => import("./pages/business/BusinessAnalytics"));
+const BusinessReviews = lazy(() => import("./pages/business/BusinessReviews"));
+
+// Admin pages
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 
 // Protected route component - lazy loaded
 const ProtectedRoute = lazy(() => import("@/components/auth/ProtectedRoute").then(m => ({ default: m.ProtectedRoute })));
@@ -101,9 +106,14 @@ const App = () => (
                 <Route path="/business/growth" element={<ProtectedRoute requiredUserType="business"><BusinessGrowth /></ProtectedRoute>} />
                 <Route path="/business/settings" element={<ProtectedRoute requiredUserType="business"><BusinessSettings /></ProtectedRoute>} />
                 <Route path="/business/messages" element={<ProtectedRoute requiredUserType="business"><BusinessMessages /></ProtectedRoute>} />
+                <Route path="/business/analytics" element={<ProtectedRoute requiredUserType="business"><BusinessAnalytics /></ProtectedRoute>} />
+                <Route path="/business/reviews" element={<ProtectedRoute requiredUserType="business"><BusinessReviews /></ProtectedRoute>} />
                 
                 {/* Public business profile - accessible to logged-in customers */}
                 <Route path="/business/:id" element={<ProtectedRoute requiredUserType="customer"><BusinessPublicProfile /></ProtectedRoute>} />
+
+                {/* Admin Routes */}
+                <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
