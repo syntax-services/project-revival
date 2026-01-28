@@ -76,6 +76,7 @@ export type Database = {
       }
       businesses: {
         Row: {
+          area_name: string | null
           average_response_time: string | null
           budget_range: string | null
           business_goals: string[] | null
@@ -93,6 +94,9 @@ export type Database = {
           industry: string | null
           internal_capacity: string | null
           latitude: number | null
+          location_verified: boolean | null
+          location_verified_at: string | null
+          location_verified_by: string | null
           longitude: number | null
           marketing_channels: string[] | null
           monthly_customer_volume: string | null
@@ -104,6 +108,7 @@ export type Database = {
           service_radius_km: number | null
           social_links: Json | null
           strategic_notes: string | null
+          street_address: string | null
           target_customer_type: string | null
           total_completed_orders: number | null
           total_reviews: number | null
@@ -114,6 +119,7 @@ export type Database = {
           years_in_operation: string | null
         }
         Insert: {
+          area_name?: string | null
           average_response_time?: string | null
           budget_range?: string | null
           business_goals?: string[] | null
@@ -131,6 +137,9 @@ export type Database = {
           industry?: string | null
           internal_capacity?: string | null
           latitude?: number | null
+          location_verified?: boolean | null
+          location_verified_at?: string | null
+          location_verified_by?: string | null
           longitude?: number | null
           marketing_channels?: string[] | null
           monthly_customer_volume?: string | null
@@ -142,6 +151,7 @@ export type Database = {
           service_radius_km?: number | null
           social_links?: Json | null
           strategic_notes?: string | null
+          street_address?: string | null
           target_customer_type?: string | null
           total_completed_orders?: number | null
           total_reviews?: number | null
@@ -152,6 +162,7 @@ export type Database = {
           years_in_operation?: string | null
         }
         Update: {
+          area_name?: string | null
           average_response_time?: string | null
           budget_range?: string | null
           business_goals?: string[] | null
@@ -169,6 +180,9 @@ export type Database = {
           industry?: string | null
           internal_capacity?: string | null
           latitude?: number | null
+          location_verified?: boolean | null
+          location_verified_at?: string | null
+          location_verified_by?: string | null
           longitude?: number | null
           marketing_channels?: string[] | null
           monthly_customer_volume?: string | null
@@ -180,6 +194,7 @@ export type Database = {
           service_radius_km?: number | null
           social_links?: Json | null
           strategic_notes?: string | null
+          street_address?: string | null
           target_customer_type?: string | null
           total_completed_orders?: number | null
           total_reviews?: number | null
@@ -271,6 +286,7 @@ export type Database = {
       customers: {
         Row: {
           age_range: string | null
+          area_name: string | null
           created_at: string
           custom_preferences: string | null
           gender: string | null
@@ -280,17 +296,22 @@ export type Database = {
           latitude: number | null
           lifestyle_preferences: string[] | null
           location: string | null
+          location_verified: boolean | null
+          location_verified_at: string | null
+          location_verified_by: string | null
           longitude: number | null
           pain_points: string[] | null
           preferred_categories: string[] | null
           purchase_frequency: string | null
           service_expectations: string | null
           spending_habits: string | null
+          street_address: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           age_range?: string | null
+          area_name?: string | null
           created_at?: string
           custom_preferences?: string | null
           gender?: string | null
@@ -300,17 +321,22 @@ export type Database = {
           latitude?: number | null
           lifestyle_preferences?: string[] | null
           location?: string | null
+          location_verified?: boolean | null
+          location_verified_at?: string | null
+          location_verified_by?: string | null
           longitude?: number | null
           pain_points?: string[] | null
           preferred_categories?: string[] | null
           purchase_frequency?: string | null
           service_expectations?: string | null
           spending_habits?: string | null
+          street_address?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           age_range?: string | null
+          area_name?: string | null
           created_at?: string
           custom_preferences?: string | null
           gender?: string | null
@@ -320,16 +346,58 @@ export type Database = {
           latitude?: number | null
           lifestyle_preferences?: string[] | null
           location?: string | null
+          location_verified?: boolean | null
+          location_verified_at?: string | null
+          location_verified_by?: string | null
           longitude?: number | null
           pain_points?: string[] | null
           preferred_categories?: string[] | null
           purchase_frequency?: string | null
           service_expectations?: string | null
           spending_habits?: string | null
+          street_address?: string | null
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      delivery_options: {
+        Row: {
+          created_at: string
+          delivery_fee: number
+          delivery_instructions: string | null
+          delivery_type: string
+          estimated_delivery_hours: number | null
+          id: string
+          order_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          delivery_fee?: number
+          delivery_instructions?: string | null
+          delivery_type?: string
+          estimated_delivery_hours?: number | null
+          id?: string
+          order_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          delivery_fee?: number
+          delivery_instructions?: string | null
+          delivery_type?: string
+          estimated_delivery_hours?: number | null
+          id?: string
+          order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_options_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       jobs: {
         Row: {
@@ -437,6 +505,54 @@ export type Database = {
           },
         ]
       }
+      location_requests: {
+        Row: {
+          admin_notes: string | null
+          area_name: string | null
+          created_at: string
+          id: string
+          status: string
+          street_address: string
+          updated_at: string
+          user_id: string
+          user_type: string
+          verified_at: string | null
+          verified_by: string | null
+          verified_latitude: number | null
+          verified_longitude: number | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          area_name?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          street_address: string
+          updated_at?: string
+          user_id: string
+          user_type: string
+          verified_at?: string | null
+          verified_by?: string | null
+          verified_latitude?: number | null
+          verified_longitude?: number | null
+        }
+        Update: {
+          admin_notes?: string | null
+          area_name?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          street_address?: string
+          updated_at?: string
+          user_id?: string
+          user_type?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          verified_latitude?: number | null
+          verified_longitude?: number | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -472,6 +588,7 @@ export type Database = {
           business_id: string
           cancellation_reason: string | null
           cancelled_at: string | null
+          commission_amount: number | null
           confirmed_at: string | null
           created_at: string
           customer_id: string
@@ -479,11 +596,13 @@ export type Database = {
           delivery_address: string | null
           delivery_fee: number | null
           delivery_method: string | null
+          delivery_type: string | null
           estimated_delivery: string | null
           id: string
           items: Json
           notes: string | null
           order_number: string
+          platform_fee: number | null
           shipped_at: string | null
           status: string
           subtotal: number
@@ -494,6 +613,7 @@ export type Database = {
           business_id: string
           cancellation_reason?: string | null
           cancelled_at?: string | null
+          commission_amount?: number | null
           confirmed_at?: string | null
           created_at?: string
           customer_id: string
@@ -501,11 +621,13 @@ export type Database = {
           delivery_address?: string | null
           delivery_fee?: number | null
           delivery_method?: string | null
+          delivery_type?: string | null
           estimated_delivery?: string | null
           id?: string
           items?: Json
           notes?: string | null
           order_number?: string
+          platform_fee?: number | null
           shipped_at?: string | null
           status?: string
           subtotal?: number
@@ -516,6 +638,7 @@ export type Database = {
           business_id?: string
           cancellation_reason?: string | null
           cancelled_at?: string | null
+          commission_amount?: number | null
           confirmed_at?: string | null
           created_at?: string
           customer_id?: string
@@ -523,11 +646,13 @@ export type Database = {
           delivery_address?: string | null
           delivery_fee?: number | null
           delivery_method?: string | null
+          delivery_type?: string | null
           estimated_delivery?: string | null
           id?: string
           items?: Json
           notes?: string | null
           order_number?: string
+          platform_fee?: number | null
           shipped_at?: string | null
           status?: string
           subtotal?: number
@@ -551,10 +676,67 @@ export type Database = {
           },
         ]
       }
+      payment_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          metadata: Json | null
+          order_id: string | null
+          paid_at: string | null
+          payment_method: string | null
+          paystack_access_code: string | null
+          paystack_reference: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          metadata?: Json | null
+          order_id?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          paystack_access_code?: string | null
+          paystack_reference?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          metadata?: Json | null
+          order_id?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          paystack_access_code?: string | null
+          paystack_reference?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           business_id: string
           category: string | null
+          commission_percent: number | null
           created_at: string
           description: string | null
           dimensions: Json | null
@@ -562,6 +744,7 @@ export type Database = {
           image_url: string | null
           in_stock: boolean
           is_featured: boolean | null
+          is_rare: boolean | null
           min_order_quantity: number | null
           name: string
           nicknames: string[] | null
@@ -576,6 +759,7 @@ export type Database = {
         Insert: {
           business_id: string
           category?: string | null
+          commission_percent?: number | null
           created_at?: string
           description?: string | null
           dimensions?: Json | null
@@ -583,6 +767,7 @@ export type Database = {
           image_url?: string | null
           in_stock?: boolean
           is_featured?: boolean | null
+          is_rare?: boolean | null
           min_order_quantity?: number | null
           name: string
           nicknames?: string[] | null
@@ -597,6 +782,7 @@ export type Database = {
         Update: {
           business_id?: string
           category?: string | null
+          commission_percent?: number | null
           created_at?: string
           description?: string | null
           dimensions?: Json | null
@@ -604,6 +790,7 @@ export type Database = {
           image_url?: string | null
           in_stock?: boolean
           is_featured?: boolean | null
+          is_rare?: boolean | null
           min_order_quantity?: number | null
           name?: string
           nicknames?: string[] | null
