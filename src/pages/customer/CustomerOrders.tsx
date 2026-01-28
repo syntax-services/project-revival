@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { useState } from "react";
+import { OrderConfirmation } from "@/components/orders/OrderConfirmation";
+import { useQueryClient } from "@tanstack/react-query";
 
 type OrderStatus = "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded";
 
@@ -36,12 +38,18 @@ export default function CustomerOrders() {
   const { data: customer } = useCustomer();
   const { data: orders = [], isLoading } = useCustomerOrders(customer?.id);
   const [selectedOrder, setSelectedOrder] = useState<typeof orders[0] | null>(null);
+  const queryClient = useQueryClient();
 
   const filterOrders = (status: string) => {
     if (status === "all") return orders;
     if (status === "active") return orders.filter(o => ["pending", "confirmed", "processing", "shipped"].includes(o.status));
     if (status === "completed") return orders.filter(o => o.status === "delivered");
     return orders.filter(o => o.status === status);
+  };
+
+  // Check if order can be confirmed (shipped status)
+  const canConfirmOrder = (order: typeof orders[0]) => {
+    return order.status === "shipped";
   };
 
   const OrderCard = ({ order }: { order: typeof orders[0] }) => {
@@ -54,7 +62,7 @@ export default function CustomerOrders() {
       <div className="dashboard-card">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="font-medium text-foreground">{order.businesses?.company_name || "Order"}</span>
               <Badge variant={config.variant} className="flex items-center gap-1">
                 <StatusIcon className="h-3 w-3" />
@@ -68,9 +76,23 @@ export default function CustomerOrders() {
               {format(new Date(order.created_at), "MMM d, yyyy 'at' h:mm a")}
             </p>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => setSelectedOrder(order)}>
-            <Eye className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            {canConfirmOrder(order) && customer && (
+              <OrderConfirmation
+                orderId={order.id}
+                businessId={order.business_id}
+                customerId={customer.id}
+                orderNumber={order.order_number}
+                onConfirmed={() => {
+                  queryClient.invalidateQueries({ queryKey: ["customer-orders"] });
+                  setSelectedOrder(null);
+                }}
+              />
+            )}
+            <Button variant="ghost" size="sm" onClick={() => setSelectedOrder(order)}>
+              <Eye className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -81,7 +103,7 @@ export default function CustomerOrders() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">My Orders</h1>
-          <p className="mt-1 text-muted-foreground">Track your product orders</p>
+          <p className="mt-1 text-muted-foreground">Track your product orders and confirm deliveries</p>
         </div>
 
         <Tabs defaultValue="all" className="w-full">
@@ -205,6 +227,22 @@ export default function CustomerOrders() {
                   )}
                 </div>
               </div>
+
+              {/* Confirm Receipt Button in Dialog */}
+              {canConfirmOrder(selectedOrder) && customer && (
+                <div className="pt-4 border-t">
+                  <OrderConfirmation
+                    orderId={selectedOrder.id}
+                    businessId={selectedOrder.business_id}
+                    customerId={customer.id}
+                    orderNumber={selectedOrder.order_number}
+                    onConfirmed={() => {
+                      queryClient.invalidateQueries({ queryKey: ["customer-orders"] });
+                      setSelectedOrder(null);
+                    }}
+                  />
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
