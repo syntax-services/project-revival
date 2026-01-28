@@ -1,7 +1,7 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness, useBusinessStats } from "@/hooks/useBusiness";
-import { Users, MessageSquare, TrendingUp, Package, Briefcase, Star, DollarSign, Clock } from "lucide-react";
+import { MessageSquare, Package, Briefcase, Star, DollarSign } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 
