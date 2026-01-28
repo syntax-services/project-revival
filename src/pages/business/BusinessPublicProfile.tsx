@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CheckoutFlow } from "@/components/checkout/CheckoutFlow";
 import {
   ArrowLeft,
   Heart,
@@ -56,6 +57,7 @@ interface Product {
   in_stock: boolean;
   category: string | null;
   nicknames: string[] | null;
+  commission_percent?: number | null;
 }
 
 interface Service {
@@ -93,10 +95,7 @@ export default function BusinessPublicProfile() {
   // Cart state
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCart, setShowCart] = useState(false);
-  const [orderNotes, setOrderNotes] = useState("");
-  const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "delivery">("pickup");
-  const [submittingOrder, setSubmittingOrder] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
 
   // Service request state
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -113,7 +112,7 @@ export default function BusinessPublicProfile() {
 
       const [businessRes, productsRes, servicesRes, likesRes] = await Promise.all([
         supabase.from("businesses").select("*").eq("id", id).single(),
-        supabase.from("products").select("*").eq("business_id", id).order("created_at", { ascending: false }),
+        supabase.from("products").select("*, commission_percent").eq("business_id", id).order("created_at", { ascending: false }),
         supabase.from("services").select("*").eq("business_id", id).order("created_at", { ascending: false }),
         supabase.from("business_likes").select("*", { count: "exact", head: true }).eq("business_id", id),
       ]);
@@ -239,42 +238,14 @@ export default function BusinessPublicProfile() {
 
   const cartTotal = cart.reduce((sum, item) => sum + (item.product.price || 0) * item.quantity, 0);
 
-  const submitOrder = async () => {
-    if (!customerId || !id || cart.length === 0) return;
+  const proceedToCheckout = () => {
+    setShowCart(false);
+    setShowCheckout(true);
+  };
 
-    setSubmittingOrder(true);
-    try {
-      const orderItems = cart.map((item) => ({
-        product_id: item.product.id,
-        name: item.product.name,
-        quantity: item.quantity,
-        price: item.product.price || 0,
-      }));
-
-      const { error } = await supabase.from("orders").insert({
-        customer_id: customerId,
-        business_id: id,
-        items: orderItems,
-        subtotal: cartTotal,
-        total: cartTotal,
-        delivery_method: deliveryMethod,
-        delivery_address: deliveryMethod === "delivery" ? deliveryAddress : null,
-        notes: orderNotes || null,
-      });
-
-      if (error) throw error;
-
-      toast.success("Order placed successfully!");
-      setCart([]);
-      setShowCart(false);
-      setOrderNotes("");
-      setDeliveryAddress("");
-      navigate("/customer/orders");
-    } catch (error) {
-      toast.error("Failed to place order");
-    } finally {
-      setSubmittingOrder(false);
-    }
+  const handleCheckoutSuccess = () => {
+    setCart([]);
+    navigate("/customer/orders");
   };
 
   // Service request functions
@@ -582,41 +553,39 @@ export default function BusinessPublicProfile() {
 
             <div className="border-t pt-4">
               <div className="flex justify-between font-medium">
-                <span>Total</span>
+                <span>Subtotal</span>
                 <span>₦{cartTotal.toLocaleString()}</span>
               </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Delivery fees and service charges will be added at checkout
+              </p>
             </div>
 
-            <div>
-              <Label>Delivery Method</Label>
-              <div className="flex gap-2 mt-1">
-                <Button variant={deliveryMethod === "pickup" ? "default" : "outline"} size="sm" onClick={() => setDeliveryMethod("pickup")} className="flex-1">
-                  Pickup
-                </Button>
-                <Button variant={deliveryMethod === "delivery" ? "default" : "outline"} size="sm" onClick={() => setDeliveryMethod("delivery")} className="flex-1">
-                  Delivery
-                </Button>
-              </div>
-            </div>
-
-            {deliveryMethod === "delivery" && (
-              <div>
-                <Label htmlFor="address">Delivery Address</Label>
-                <Textarea id="address" value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)} placeholder="Enter your delivery address" className="mt-1" />
-              </div>
-            )}
-
-            <div>
-              <Label htmlFor="notes">Order Notes (optional)</Label>
-              <Textarea id="notes" value={orderNotes} onChange={(e) => setOrderNotes(e.target.value)} placeholder="Any special instructions?" className="mt-1" />
-            </div>
-
-            <Button className="w-full" onClick={submitOrder} disabled={submittingOrder || (deliveryMethod === "delivery" && !deliveryAddress)}>
-              {submittingOrder ? "Placing Order..." : "Place Order"}
+            <Button className="w-full" onClick={proceedToCheckout} disabled={cart.length === 0}>
+              Proceed to Checkout
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Checkout Flow */}
+      {business && (
+        <CheckoutFlow
+          isOpen={showCheckout}
+          onClose={() => setShowCheckout(false)}
+          businessId={business.id}
+          businessName={business.company_name}
+          cartItems={cart.map((item) => ({
+            productId: item.product.id,
+            name: item.product.name,
+            price: item.product.price || 0,
+            quantity: item.quantity,
+            imageUrl: item.product.image_url || undefined,
+            commissionPercent: item.product.commission_percent || undefined,
+          }))}
+          onSuccess={handleCheckoutSuccess}
+        />
+      )}
 
       {/* Service Request Dialog */}
       <Dialog open={!!selectedService} onOpenChange={() => setSelectedService(null)}>
