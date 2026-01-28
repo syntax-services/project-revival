@@ -22,6 +22,7 @@ const steps = [
   { id: 1, title: "Basic Info" },
   { id: 2, title: "Account Type" },
   { id: 3, title: "Profile Details" },
+  { id: 4, title: "Location" },
 ];
 
 // Options
@@ -105,6 +106,8 @@ export default function Onboarding() {
     internalCapacity: "",
     expectationsFromString: "",
     strategicNotes: "",
+    streetAddress: "",
+    areaName: "",
   });
 
   // Step 3: Customer Profile
@@ -121,6 +124,8 @@ export default function Onboarding() {
     improvementWishes: "",
     purchaseFrequency: "",
     customPreferences: "",
+    streetAddress: "",
+    areaName: "",
   });
 
   useEffect(() => {
@@ -157,6 +162,15 @@ export default function Onboarding() {
     if (currentStep === 3) {
       if (userType === "business" && !businessData.companyName) {
         setErrors({ companyName: "Company name is required" });
+        return false;
+      }
+      return true;
+    }
+    if (currentStep === 4) {
+      // Location is mandatory
+      const address = userType === "business" ? businessData.streetAddress : customerData.streetAddress;
+      if (!address?.trim()) {
+        setErrors({ streetAddress: "Location is required for accurate delivery and discovery" });
         return false;
       }
       return true;
@@ -224,6 +238,9 @@ export default function Onboarding() {
           internal_capacity: businessData.internalCapacity || null,
           expectations_from_string: businessData.expectationsFromString || null,
           strategic_notes: businessData.strategicNotes || null,
+          street_address: businessData.streetAddress || null,
+          area_name: businessData.areaName || null,
+          location_verified: false,
         });
 
         if (businessError) throw businessError;
@@ -242,9 +259,25 @@ export default function Onboarding() {
           improvement_wishes: customerData.improvementWishes || null,
           purchase_frequency: customerData.purchaseFrequency || null,
           custom_preferences: customerData.customPreferences || null,
+          street_address: customerData.streetAddress || null,
+          area_name: customerData.areaName || null,
+          location_verified: false,
         });
 
         if (customerError) throw customerError;
+      }
+
+      // Create location verification request
+      const streetAddress = userType === "business" ? businessData.streetAddress : customerData.streetAddress;
+      const areaName = userType === "business" ? businessData.areaName : customerData.areaName;
+      
+      if (streetAddress) {
+        await supabase.from("location_requests").insert({
+          user_id: user.id,
+          user_type: userType,
+          street_address: streetAddress,
+          area_name: areaName || null,
+        });
       }
 
       await refreshProfile();
@@ -704,6 +737,73 @@ export default function Onboarding() {
     return renderCustomerStep3();
   };
 
+  const renderStep4 = () => {
+    const data = userType === "business" ? businessData : customerData;
+    const setData = userType === "business" 
+      ? (updates: Partial<typeof businessData>) => setBusinessData({ ...businessData, ...updates })
+      : (updates: Partial<typeof customerData>) => setCustomerData({ ...customerData, ...updates });
+
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-foreground">
+            Your Location
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {userType === "business" 
+              ? "Enter your business address for customers to find you"
+              : "Enter your location for accurate delivery and nearby businesses"}
+          </p>
+        </div>
+
+        <div className="space-y-4 pt-4">
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+            <p className="text-sm text-muted-foreground">
+              📍 <strong>Important:</strong> Enter your exact street address including landmarks. 
+              Our team will verify it on Google Maps for accurate delivery services.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="streetAddress">Street Address *</Label>
+            <Textarea
+              id="streetAddress"
+              placeholder={userType === "business" 
+                ? "E.g., Shop 5, Behind GTBank, OOU Main Gate Road, Ago-Iwoye"
+                : "E.g., Block C, Room 215, Hall 3, OOU Campus, Ago-Iwoye"}
+              value={data.streetAddress}
+              onChange={(e) => setData({ streetAddress: e.target.value })}
+              rows={3}
+            />
+            {errors.streetAddress && (
+              <p className="text-sm text-destructive">{errors.streetAddress}</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Include building number, floor, landmarks, and street name
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="areaName">Area / Neighborhood</Label>
+            <Input
+              id="areaName"
+              placeholder="E.g., Campus Area, Town, Off-Campus"
+              value={data.areaName}
+              onChange={(e) => setData({ areaName: e.target.value })}
+            />
+          </div>
+
+          <div className="rounded-lg bg-muted/50 p-3">
+            <p className="text-xs text-muted-foreground">
+              🔒 Your location will be verified by our team within 24 hours. 
+              This ensures accurate delivery and helps customers find nearby businesses.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <main className="flex flex-1 items-center justify-center p-4">
@@ -714,6 +814,7 @@ export default function Onboarding() {
             {currentStep === 1 && renderStep1()}
             {currentStep === 2 && renderStep2()}
             {currentStep === 3 && renderStep3()}
+            {currentStep === 4 && renderStep4()}
 
             <div className="mt-8 flex justify-between gap-4">
               {currentStep > 1 ? (
