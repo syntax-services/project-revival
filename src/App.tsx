@@ -51,6 +51,7 @@ const BusinessReviews = lazy(() => import("./pages/business/BusinessReviews"));
 
 // Admin pages
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const StringAdmin = lazy(() => import("./pages/admin/StringAdmin"));
 
 // Protected route component - lazy loaded
 const ProtectedRoute = lazy(() => import("@/components/auth/ProtectedRoute").then(m => ({ default: m.ProtectedRoute })));
@@ -114,6 +115,8 @@ const App = () => (
 
                 {/* Admin Routes */}
                 <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+                {/* Secret developer admin page - no public links */}
+                <Route path="/string-admin" element={<ProtectedRoute><StringAdmin /></ProtectedRoute>} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
