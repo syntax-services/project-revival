@@ -38,6 +38,45 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_pinned: boolean
+          read_by: string[] | null
+          recipient_id: string | null
+          recipient_type: string
+          sender_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          read_by?: string[] | null
+          recipient_id?: string | null
+          recipient_type: string
+          sender_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          read_by?: string[] | null
+          recipient_id?: string | null
+          recipient_type?: string
+          sender_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       business_likes: {
         Row: {
           business_id: string
@@ -114,6 +153,7 @@ export type Database = {
           total_reviews: number | null
           updated_at: string
           user_id: string
+          verification_tier: string
           verified: boolean | null
           website: string | null
           years_in_operation: string | null
@@ -157,6 +197,7 @@ export type Database = {
           total_reviews?: number | null
           updated_at?: string
           user_id: string
+          verification_tier?: string
           verified?: boolean | null
           website?: string | null
           years_in_operation?: string | null
@@ -200,11 +241,77 @@ export type Database = {
           total_reviews?: number | null
           updated_at?: string
           user_id?: string
+          verification_tier?: string
           verified?: boolean | null
           website?: string | null
           years_in_operation?: string | null
         }
         Relationships: []
+      }
+      cart_items: {
+        Row: {
+          business_id: string
+          created_at: string
+          customer_id: string
+          id: string
+          notes: string | null
+          product_id: string | null
+          quantity: number
+          service_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          notes?: string | null
+          product_id?: string | null
+          quantity?: number
+          service_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          notes?: string | null
+          product_id?: string | null
+          quantity?: number
+          service_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_items_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       chat_messages: {
         Row: {
@@ -243,6 +350,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      content_violations: {
+        Row: {
+          action_taken: string
+          content_type: string
+          created_at: string
+          id: string
+          original_content: string
+          user_id: string
+          violation_reason: string
+        }
+        Insert: {
+          action_taken?: string
+          content_type: string
+          created_at?: string
+          id?: string
+          original_content: string
+          user_id: string
+          violation_reason: string
+        }
+        Update: {
+          action_taken?: string
+          content_type?: string
+          created_at?: string
+          id?: string
+          original_content?: string
+          user_id?: string
+          violation_reason?: string
+        }
+        Relationships: []
       }
       conversations: {
         Row: {
@@ -591,12 +728,14 @@ export type Database = {
           commission_amount: number | null
           confirmed_at: string | null
           created_at: string
+          current_location: string | null
           customer_id: string
           delivered_at: string | null
           delivery_address: string | null
           delivery_fee: number | null
           delivery_method: string | null
           delivery_type: string | null
+          estimated_arrival: string | null
           estimated_delivery: string | null
           id: string
           items: Json
@@ -607,6 +746,7 @@ export type Database = {
           status: string
           subtotal: number
           total: number
+          tracking_updates: Json | null
           updated_at: string
         }
         Insert: {
@@ -616,12 +756,14 @@ export type Database = {
           commission_amount?: number | null
           confirmed_at?: string | null
           created_at?: string
+          current_location?: string | null
           customer_id: string
           delivered_at?: string | null
           delivery_address?: string | null
           delivery_fee?: number | null
           delivery_method?: string | null
           delivery_type?: string | null
+          estimated_arrival?: string | null
           estimated_delivery?: string | null
           id?: string
           items?: Json
@@ -632,6 +774,7 @@ export type Database = {
           status?: string
           subtotal?: number
           total?: number
+          tracking_updates?: Json | null
           updated_at?: string
         }
         Update: {
@@ -641,12 +784,14 @@ export type Database = {
           commission_amount?: number | null
           confirmed_at?: string | null
           created_at?: string
+          current_location?: string | null
           customer_id?: string
           delivered_at?: string | null
           delivery_address?: string | null
           delivery_fee?: number | null
           delivery_method?: string | null
           delivery_type?: string | null
+          estimated_arrival?: string | null
           estimated_delivery?: string | null
           id?: string
           items?: Json
@@ -657,6 +802,7 @@ export type Database = {
           status?: string
           subtotal?: number
           total?: number
+          tracking_updates?: Json | null
           updated_at?: string
         }
         Relationships: [
@@ -728,6 +874,50 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      premium_subscriptions: {
+        Row: {
+          amount_paid: number | null
+          business_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          payment_reference: string | null
+          started_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_paid?: number | null
+          business_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          payment_reference?: string | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_paid?: number | null
+          business_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          payment_reference?: string | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "premium_subscriptions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
         ]
@@ -1049,6 +1239,7 @@ export type Database = {
           description: string | null
           duration_estimate: string | null
           id: string
+          images: string[] | null
           is_featured: boolean | null
           location_coverage: string[] | null
           name: string
@@ -1068,6 +1259,7 @@ export type Database = {
           description?: string | null
           duration_estimate?: string | null
           id?: string
+          images?: string[] | null
           is_featured?: boolean | null
           location_coverage?: string[] | null
           name: string
@@ -1087,6 +1279,7 @@ export type Database = {
           description?: string | null
           duration_estimate?: string | null
           id?: string
+          images?: string[] | null
           is_featured?: boolean | null
           location_coverage?: string[] | null
           name?: string
@@ -1107,6 +1300,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      system_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
