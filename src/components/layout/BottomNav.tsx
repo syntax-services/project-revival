@@ -4,12 +4,12 @@ import {
   Home,
   Search,
   MessageCircle,
-  Settings,
+  User,
   Package,
   Briefcase,
   ClipboardList,
   BarChart3,
-  Star,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,16 +17,16 @@ const customerNavItems = [
   { href: "/customer", label: "Home", icon: Home },
   { href: "/customer/discover", label: "Discover", icon: Search },
   { href: "/customer/orders", label: "Orders", icon: ClipboardList },
-  { href: "/customer/messages", label: "Chat", icon: MessageCircle },
-  { href: "/customer/settings", label: "Settings", icon: Settings },
+  { href: "/customer/messages", label: "Messages", icon: MessageCircle },
+  { href: "/customer/profile", label: "Profile", icon: User },
 ];
 
 const businessNavItems = [
   { href: "/business", label: "Home", icon: Home },
-  { href: "/business/orders", label: "Orders", icon: ClipboardList },
-  { href: "/business/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/business/reviews", label: "Reviews", icon: Star },
-  { href: "/business/settings", label: "Settings", icon: Settings },
+  { href: "/business/discover", label: "Discover", icon: Search },
+  { href: "/business/upload", label: "Upload", icon: Plus },
+  { href: "/business/messages", label: "Messages", icon: MessageCircle },
+  { href: "/business/profile", label: "Profile", icon: User },
 ];
 
 export function BottomNav() {
