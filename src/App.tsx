@@ -48,6 +48,8 @@ const BusinessMessages = lazy(() => import("./pages/business/BusinessMessages"))
 const BusinessPublicProfile = lazy(() => import("./pages/business/BusinessPublicProfile"));
 const BusinessAnalytics = lazy(() => import("./pages/business/BusinessAnalytics"));
 const BusinessReviews = lazy(() => import("./pages/business/BusinessReviews"));
+const BusinessUpload = lazy(() => import("./pages/business/BusinessUpload"));
+const BusinessDiscover = lazy(() => import("./pages/business/BusinessDiscover"));
 
 // Admin pages
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -109,6 +111,8 @@ const App = () => (
                 <Route path="/business/messages" element={<ProtectedRoute requiredUserType="business"><BusinessMessages /></ProtectedRoute>} />
                 <Route path="/business/analytics" element={<ProtectedRoute requiredUserType="business"><BusinessAnalytics /></ProtectedRoute>} />
                 <Route path="/business/reviews" element={<ProtectedRoute requiredUserType="business"><BusinessReviews /></ProtectedRoute>} />
+                <Route path="/business/upload" element={<ProtectedRoute requiredUserType="business"><BusinessUpload /></ProtectedRoute>} />
+                <Route path="/business/discover" element={<ProtectedRoute requiredUserType="business"><BusinessDiscover /></ProtectedRoute>} />
                 
                 {/* Public business profile - accessible to logged-in customers */}
                 <Route path="/business/:id" element={<ProtectedRoute requiredUserType="customer"><BusinessPublicProfile /></ProtectedRoute>} />
