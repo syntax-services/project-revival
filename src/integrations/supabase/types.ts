@@ -720,6 +720,111 @@ export type Database = {
         }
         Relationships: []
       }
+      offer_responses: {
+        Row: {
+          business_id: string
+          created_at: string
+          estimated_delivery: string | null
+          id: string
+          message: string | null
+          offer_id: string
+          proposed_price: number | null
+          status: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          estimated_delivery?: string | null
+          id?: string
+          message?: string | null
+          offer_id: string
+          proposed_price?: number | null
+          status?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          estimated_delivery?: string | null
+          id?: string
+          message?: string | null
+          offer_id?: string
+          proposed_price?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_responses_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_responses_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offers: {
+        Row: {
+          budget_max: number | null
+          budget_min: number | null
+          created_at: string
+          description: string | null
+          id: string
+          images: string[] | null
+          location: string | null
+          offer_type: string
+          responses_count: number | null
+          status: string
+          title: string
+          updated_at: string
+          urgency: string | null
+          user_id: string
+          user_type: string
+          video_url: string | null
+        }
+        Insert: {
+          budget_max?: number | null
+          budget_min?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          images?: string[] | null
+          location?: string | null
+          offer_type: string
+          responses_count?: number | null
+          status?: string
+          title: string
+          updated_at?: string
+          urgency?: string | null
+          user_id: string
+          user_type: string
+          video_url?: string | null
+        }
+        Update: {
+          budget_max?: number | null
+          budget_min?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          images?: string[] | null
+          location?: string | null
+          offer_type?: string
+          responses_count?: number | null
+          status?: string
+          title?: string
+          updated_at?: string
+          urgency?: string | null
+          user_id?: string
+          user_type?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           business_id: string
