@@ -26,6 +26,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const CustomerOverview = lazy(() => import("./pages/customer/CustomerOverview"));
 const CustomerDiscover = lazy(() => import("./pages/customer/CustomerDiscover"));
 const CustomerOrders = lazy(() => import("./pages/customer/CustomerOrders"));
+const CustomerOffers = lazy(() => import("./pages/customer/CustomerOffers"));
 const CustomerJobs = lazy(() => import("./pages/customer/CustomerJobs"));
 const CustomerEngagement = lazy(() => import("./pages/customer/CustomerEngagement"));
 const CustomerProfile = lazy(() => import("./pages/customer/CustomerProfile"));
@@ -90,6 +91,7 @@ const App = () => (
                 <Route path="/customer" element={<ProtectedRoute requiredUserType="customer"><CustomerOverview /></ProtectedRoute>} />
                 <Route path="/customer/discover" element={<ProtectedRoute requiredUserType="customer"><CustomerDiscover /></ProtectedRoute>} />
                 <Route path="/customer/orders" element={<ProtectedRoute requiredUserType="customer"><CustomerOrders /></ProtectedRoute>} />
+                <Route path="/customer/offers" element={<ProtectedRoute requiredUserType="customer"><CustomerOffers /></ProtectedRoute>} />
                 <Route path="/customer/jobs" element={<ProtectedRoute requiredUserType="customer"><CustomerJobs /></ProtectedRoute>} />
                 <Route path="/customer/engagement" element={<ProtectedRoute requiredUserType="customer"><CustomerEngagement /></ProtectedRoute>} />
                 <Route path="/customer/profile" element={<ProtectedRoute requiredUserType="customer"><CustomerProfile /></ProtectedRoute>} />

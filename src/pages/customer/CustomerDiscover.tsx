@@ -48,12 +48,18 @@ interface Product {
   id: string;
   name: string;
   business_id: string;
+  nicknames?: string[] | null;
+  price?: number | null;
+  image_url?: string | null;
 }
 
 interface Service {
   id: string;
   name: string;
   business_id: string;
+  images?: string[] | null;
+  price_min?: number | null;
+  price_max?: number | null;
 }
 
 interface EnrichedBusiness extends Business {
@@ -110,8 +116,8 @@ export default function CustomerDiscover() {
                 supabase.from("business_likes").select("*", { count: "exact", head: true }).eq("business_id", biz.id),
                 supabase.from("business_likes").select("id").eq("business_id", biz.id).eq("customer_id", customer.id).maybeSingle(),
                 supabase.from("saved_businesses").select("id").eq("business_id", biz.id).eq("customer_id", customer.id).maybeSingle(),
-                supabase.from("products").select("id, name, business_id").eq("business_id", biz.id).limit(3),
-                supabase.from("services").select("id, name, business_id").eq("business_id", biz.id).limit(3),
+                supabase.from("products").select("id, name, business_id, nicknames, price, image_url").eq("business_id", biz.id).limit(5),
+                supabase.from("services").select("id, name, business_id, images, price_min, price_max").eq("business_id", biz.id).limit(5),
               ]);
 
               let distance: number | null = null;
@@ -216,13 +222,16 @@ export default function CustomerDiscover() {
 
   // Filter by search and type
   let filteredBusinesses = smartMatched.filter((b) => {
-    // Search across business name, products, and services
+    // Search across business name, products, services, and product nicknames
     const searchLower = search.toLowerCase();
     const matchesSearch = 
       b.company_name.toLowerCase().includes(searchLower) ||
       b.industry?.toLowerCase().includes(searchLower) ||
       b.business_location?.toLowerCase().includes(searchLower) ||
-      b.products.some((p) => p.name.toLowerCase().includes(searchLower)) ||
+      b.products.some((p) => 
+        p.name.toLowerCase().includes(searchLower) ||
+        (p.nicknames || []).some(nick => nick.toLowerCase().includes(searchLower))
+      ) ||
       b.services.some((s) => s.name.toLowerCase().includes(searchLower));
     
     if (!matchesSearch) return false;

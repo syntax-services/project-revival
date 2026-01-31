@@ -5,18 +5,15 @@ import {
   Search,
   MessageCircle,
   User,
-  Package,
-  Briefcase,
-  ClipboardList,
-  BarChart3,
   Plus,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const customerNavItems = [
   { href: "/customer", label: "Home", icon: Home },
   { href: "/customer/discover", label: "Discover", icon: Search },
-  { href: "/customer/orders", label: "Orders", icon: ClipboardList },
+  { href: "/customer/offers", label: "Requests", icon: Plus },
   { href: "/customer/messages", label: "Messages", icon: MessageCircle },
   { href: "/customer/profile", label: "Profile", icon: User },
 ];
@@ -29,14 +26,23 @@ const businessNavItems = [
   { href: "/business/profile", label: "Profile", icon: User },
 ];
 
-export function BottomNav() {
+interface BottomNavProps {
+  isVisible?: boolean;
+}
+
+export function BottomNav({ isVisible = true }: BottomNavProps) {
   const { profile } = useAuth();
   const location = useLocation();
 
   const navItems = profile?.user_type === "business" ? businessNavItems : customerNavItems;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/98 backdrop-blur-md safe-area-bottom">
+    <nav 
+      className={cn(
+        "fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/98 backdrop-blur-md safe-area-bottom transition-transform duration-300",
+        !isVisible && "translate-y-full"
+      )}
+    >
       <div className="flex items-center justify-around h-[4.5rem] px-1 max-w-lg mx-auto">
         {navItems.map((item) => {
           const Icon = item.icon;

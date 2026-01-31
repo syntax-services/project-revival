@@ -100,7 +100,7 @@ export function CartPopup() {
                       {items.map((item) => {
                         const name = item.products?.name || item.services?.name || "Item";
                         const price = item.products?.price || item.services?.price_min || 0;
-                        const imageUrl = item.products?.image_url;
+                        const imageUrl = item.products?.image_url || (item.services?.images?.[0] ?? null);
 
                         return (
                           <div
