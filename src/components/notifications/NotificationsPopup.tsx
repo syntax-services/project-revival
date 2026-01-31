@@ -12,9 +12,10 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Bell, Pin, Check, CheckCheck, Info, AlertTriangle, ShoppingBag, Briefcase, MessageCircle } from "lucide-react";
+import { Bell, Pin, Check, CheckCheck, Info, AlertTriangle, ShoppingBag, Briefcase, MessageCircle, Reply } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { useAdminMessages } from "@/hooks/useAdminMessages";
+import { AdminMessageReply } from "@/components/messages/AdminMessageReply";
 
 interface Notification {
   id: string;
@@ -164,8 +165,7 @@ export function NotificationsPopup() {
                 {pinnedMessages.map((msg) => (
                   <div
                     key={msg.id}
-                    className="p-3 bg-primary/5 border border-primary/20 rounded-lg cursor-pointer"
-                    onClick={() => markAdminRead.mutate(msg.id)}
+                    className="p-3 bg-primary/5 border border-primary/20 rounded-lg"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
@@ -178,6 +178,21 @@ export function NotificationsPopup() {
                         </p>
                       </div>
                       <Pin className="h-4 w-4 text-primary shrink-0" />
+                    </div>
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-primary/10">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-xs"
+                        onClick={() => markAdminRead.mutate(msg.id)}
+                      >
+                        Mark as read
+                      </Button>
+                      <AdminMessageReply
+                        messageId={msg.id}
+                        messageTitle={msg.title}
+                        messageContent={msg.content}
+                      />
                     </div>
                   </div>
                 ))}

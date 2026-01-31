@@ -4,7 +4,7 @@ import { useBusiness, useBusinessServices } from "@/hooks/useBusiness";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Wrench, Plus, Pencil, Trash2, ImagePlus, X } from "lucide-react";
+import { Wrench, Plus, Pencil, Trash2, ImagePlus, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,6 +46,7 @@ interface ServiceFormData {
   duration_estimate: string;
   availability: "available" | "busy" | "unavailable";
   location_coverage: string[];
+  images: string[];
 }
 
 const defaultFormData: ServiceFormData = {
@@ -58,6 +59,7 @@ const defaultFormData: ServiceFormData = {
   duration_estimate: "",
   availability: "available",
   location_coverage: [],
+  images: [],
 };
 
 const serviceCategories = [
@@ -81,7 +83,48 @@ export default function BusinessServices() {
   const [editingService, setEditingService] = useState<typeof services[0] | null>(null);
   const [formData, setFormData] = useState<ServiceFormData>(defaultFormData);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [locationInput, setLocationInput] = useState("");
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    if (!business?.id) return null;
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${business.id}/services/${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("business-images")
+      .upload(fileName, file);
+
+    if (uploadError) {
+      toast.error("Failed to upload image");
+      return null;
+    }
+
+    const { data } = supabase.storage.from("business-images").getPublicUrl(fileName);
+    return data.publicUrl;
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !business?.id) return;
+
+    setUploading(true);
+    const newUrls: string[] = [];
+
+    for (let i = 0; i < Math.min(files.length, 5 - formData.images.length); i++) {
+      const file = files[i];
+      if (file.size > 5 * 1024 * 1024) continue;
+      const url = await uploadImage(file);
+      if (url) newUrls.push(url);
+    }
+
+    setFormData({ ...formData, images: [...formData.images, ...newUrls] });
+    setUploading(false);
+  };
+
+  const removeImage = (idx: number) => {
+    setFormData({ ...formData, images: formData.images.filter((_, i) => i !== idx) });
+  };
 
   const openCreateDialog = () => {
     setEditingService(null);
@@ -101,6 +144,7 @@ export default function BusinessServices() {
       duration_estimate: service.duration_estimate || "",
       availability: service.availability as ServiceFormData["availability"],
       location_coverage: service.location_coverage || [],
+      images: service.images || [],
     });
     setIsDialogOpen(true);
   };
@@ -122,6 +166,7 @@ export default function BusinessServices() {
         duration_estimate: formData.duration_estimate || null,
         availability: formData.availability,
         location_coverage: formData.location_coverage,
+        images: formData.images,
       };
 
       if (editingService) {
@@ -207,6 +252,45 @@ export default function BusinessServices() {
                 <DialogTitle>{editingService ? "Edit Service" : "Add Service"}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Service Images */}
+                <div>
+                  <Label>Service Images (up to 5)</Label>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {formData.images.map((url, idx) => (
+                      <div key={idx} className="relative">
+                        <img
+                          src={url}
+                          alt={`Service ${idx + 1}`}
+                          className="h-16 w-16 object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                          onClick={() => removeImage(idx)}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                    {formData.images.length < 5 && (
+                      <label className="h-16 w-16 border-2 border-dashed border-border rounded-lg flex items-center justify-center cursor-pointer hover:border-muted-foreground">
+                        {uploading ? (
+                          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        ) : (
+                          <ImagePlus className="h-5 w-5 text-muted-foreground" />
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+
                 <div>
                   <Label htmlFor="name">Service Name *</Label>
                   <Input
@@ -384,53 +468,88 @@ export default function BusinessServices() {
           <div className="grid gap-4 sm:grid-cols-2">
             {services.map((service) => (
               <div key={service.id} className="dashboard-card">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium text-foreground truncate">{service.name}</h3>
-                      <Badge variant={service.availability === "available" ? "default" : "secondary"}>
-                        {service.availability}
-                      </Badge>
+                <div className="flex gap-4">
+                  {/* Service Image */}
+                  {service.images && service.images.length > 0 ? (
+                    <div className="h-20 w-20 rounded-xl overflow-hidden flex-shrink-0">
+                      <img
+                        src={service.images[0]}
+                        alt={service.name}
+                        className="h-full w-full object-cover"
+                      />
                     </div>
-                    {service.category && (
-                      <p className="text-sm text-muted-foreground">{service.category}</p>
-                    )}
-                    <p className="text-sm font-medium text-foreground mt-1">
-                      {getPriceDisplay(service)}
-                    </p>
-                    {service.duration_estimate && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Est. duration: {service.duration_estimate}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => openEditDialog(service)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <Trash2 className="h-4 w-4" />
+                  ) : (
+                    <div className="h-20 w-20 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+                      <Wrench className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-medium text-foreground truncate">{service.name}</h3>
+                          <Badge variant={service.availability === "available" ? "default" : "secondary"}>
+                            {service.availability}
+                          </Badge>
+                        </div>
+                        {service.category && (
+                          <p className="text-sm text-muted-foreground">{service.category}</p>
+                        )}
+                        <p className="text-sm font-medium text-foreground mt-1">
+                          {getPriceDisplay(service)}
+                        </p>
+                        {service.duration_estimate && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Est. duration: {service.duration_estimate}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => openEditDialog(service)}>
+                          <Pencil className="h-4 w-4" />
                         </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Service</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete "{service.name}"? This cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteService(service.id)}>
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Service</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete "{service.name}"? This cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deleteService(service.id)}>
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
                   </div>
                 </div>
+
+                {/* Additional images preview */}
+                {service.images && service.images.length > 1 && (
+                  <div className="flex gap-1 mt-3">
+                    {service.images.slice(1, 4).map((img, idx) => (
+                      <div key={idx} className="h-12 w-12 rounded-lg overflow-hidden">
+                        <img src={img} alt="" className="h-full w-full object-cover" />
+                      </div>
+                    ))}
+                    {service.images.length > 4 && (
+                      <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center text-xs">
+                        +{service.images.length - 4}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
