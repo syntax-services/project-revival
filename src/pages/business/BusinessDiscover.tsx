@@ -7,6 +7,7 @@ import { useBusiness } from "@/hooks/useBusiness";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import {
   Search,
   Building2,
@@ -27,6 +28,7 @@ import { VerificationBadge } from "@/components/business/VerificationBadge";
 
 interface Business {
   id: string;
+  user_id: string;
   company_name: string;
   industry: string | null;
   business_location: string | null;
@@ -50,6 +52,7 @@ interface Service {
   name: string;
   business_id: string;
   price_min: number | null;
+  images: string[] | null;
 }
 
 export default function BusinessDiscover() {
@@ -71,7 +74,7 @@ export default function BusinessDiscover() {
         const [businessesRes, productsRes, servicesRes] = await Promise.all([
           supabase
             .from("businesses")
-            .select("id, company_name, industry, business_location, cover_image_url, business_type, reputation_score, verification_tier, total_reviews")
+            .select("id, user_id, company_name, industry, business_location, cover_image_url, business_type, reputation_score, verification_tier, total_reviews")
             .neq("id", myBusiness?.id || "")
             .order("verification_tier", { ascending: false })
             .order("reputation_score", { ascending: false }),
@@ -83,7 +86,7 @@ export default function BusinessDiscover() {
             .limit(50),
           supabase
             .from("services")
-            .select("id, name, business_id, price_min")
+            .select("id, name, business_id, price_min, images")
             .eq("availability", "available")
             .order("created_at", { ascending: false })
             .limit(50),
@@ -105,9 +108,31 @@ export default function BusinessDiscover() {
     fetchData();
   }, [myBusiness?.id]);
 
-  const startChat = async (businessId: string) => {
-    if (!myBusiness?.id) return;
-    navigate("/business/messages");
+  // Start B2B conversation
+  const startB2BChat = async (otherBusinessUserId: string, otherBusinessName: string) => {
+    if (!myBusiness?.id || !user?.id) {
+      toast.error("You need a business profile to message");
+      return;
+    }
+
+    // For B2B messaging, we'll create a notification to the other business
+    // and navigate to messages (in a real app, you'd have a B2B conversations table)
+    try {
+      // Create a notification for the other business
+      const { error } = await supabase.from("notifications").insert({
+        user_id: otherBusinessUserId,
+        title: "New Business Inquiry",
+        message: `${myBusiness.company_name} wants to connect with you. Check your messages!`,
+        type: "message",
+      });
+
+      if (error) throw error;
+      
+      toast.success(`Message request sent to ${otherBusinessName}`);
+      navigate("/business/messages");
+    } catch (error) {
+      toast.error("Failed to start conversation");
+    }
   };
 
   // Filter based on search
@@ -236,7 +261,7 @@ export default function BusinessDiscover() {
                       variant="outline" 
                       size="sm" 
                       className="flex-1"
-                      onClick={() => startChat(business.id)}
+                      onClick={() => startB2BChat(business.user_id, business.company_name)}
                     >
                       <MessageCircle className="h-4 w-4 mr-1" />
                       Message
@@ -256,7 +281,7 @@ export default function BusinessDiscover() {
             ) : (
               filteredProducts.map((product) => (
                 <div key={product.id} className="dashboard-card">
-                  <div className="relative -mx-5 -mt-5 mb-4 h-32 bg-muted">
+                  <div className="relative -mx-5 -mt-5 mb-4 h-32 bg-muted rounded-t-xl overflow-hidden">
                     {product.image_url ? (
                       <img
                         src={product.image_url}
@@ -287,6 +312,19 @@ export default function BusinessDiscover() {
             ) : (
               filteredServices.map((service) => (
                 <div key={service.id} className="dashboard-card">
+                  <div className="relative -mx-5 -mt-5 mb-4 h-32 bg-muted rounded-t-xl overflow-hidden">
+                    {service.images && service.images.length > 0 ? (
+                      <img
+                        src={service.images[0]}
+                        alt={service.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center">
+                        <Wrench className="h-10 w-10 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
                   <h3 className="font-medium">{service.name}</h3>
                   {service.price_min && (
                     <p className="text-sm font-medium mt-1">From ₦{service.price_min.toLocaleString()}</p>

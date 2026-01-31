@@ -51,7 +51,7 @@ export default function CustomerProfile() {
   const menuItems = [
     { icon: Package, label: "My Orders", href: "/customer/orders", count: stats?.orders },
     { icon: Briefcase, label: "My Jobs", href: "/customer/jobs", count: stats?.jobs },
-    { icon: Heart, label: "Saved Businesses", href: "/customer/engagement", count: stats?.saved },
+    { icon: Heart, label: "Saved Businesses", href: "/customer/saved", count: stats?.saved },
     { icon: Star, label: "My Reviews", href: "/customer/engagement", count: stats?.reviews },
     { icon: Settings, label: "Settings", href: "/customer/settings" },
   ];

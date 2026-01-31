@@ -1,6 +1,6 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useCustomer, useCustomerOrders } from "@/hooks/useCustomer";
-import { Package, Clock, CheckCircle, Truck, XCircle, Eye } from "lucide-react";
+import { Package, Clock, CheckCircle, Truck, XCircle, Eye, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,6 +13,7 @@ import {
 import { format } from "date-fns";
 import { useState } from "react";
 import { OrderConfirmation } from "@/components/orders/OrderConfirmation";
+import { PostPurchaseReview } from "@/components/reviews/PostPurchaseReview";
 import { useQueryClient } from "@tanstack/react-query";
 
 type OrderStatus = "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded";
@@ -77,6 +78,14 @@ export default function CustomerOrders() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {/* Show review button for delivered orders */}
+            {order.status === "delivered" && order.businesses && (
+              <PostPurchaseReview
+                orderId={order.id}
+                businessId={order.business_id}
+                businessName={order.businesses.company_name || "Business"}
+              />
+            )}
             {canConfirmOrder(order) && customer && (
               <OrderConfirmation
                 orderId={order.id}
