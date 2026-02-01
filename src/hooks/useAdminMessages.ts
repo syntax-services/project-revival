@@ -16,6 +16,15 @@ interface AdminMessage {
   updated_at: string;
 }
 
+interface MessageReply {
+  id: string;
+  message_id: string;
+  sender_id: string;
+  sender_type: string;
+  content: string;
+  created_at: string;
+}
+
 export function useAdminMessages() {
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
@@ -35,7 +44,10 @@ export function useAdminMessages() {
     enabled: !!user?.id,
   });
 
+  // Get all messages (pinned and unpinned)
+  const allMessages = messages;
   const pinnedMessages = messages.filter(m => m.is_pinned);
+  const unpinnedMessages = messages.filter(m => !m.is_pinned);
   const unreadMessages = messages.filter(m => !m.read_by?.includes(user?.id || ''));
 
   const markAsRead = useMutation({
@@ -126,7 +138,9 @@ export function useAdminMessages() {
 
   return {
     messages,
+    allMessages,
     pinnedMessages,
+    unpinnedMessages,
     unreadMessages,
     unreadCount: unreadMessages.length,
     isLoading,
@@ -135,4 +149,77 @@ export function useAdminMessages() {
     togglePin,
     deleteMessage,
   };
+}
+
+// Hook to fetch replies for a specific message
+export function useMessageReplies(messageId: string | undefined) {
+  return useQuery({
+    queryKey: ["message-replies", messageId],
+    queryFn: async () => {
+      if (!messageId) return [];
+      
+      const { data, error } = await supabase
+        .from("admin_message_replies")
+        .select("*, profiles:sender_id (full_name, user_type)")
+        .eq("message_id", messageId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!messageId,
+  });
+}
+
+// Hook to send a reply to an admin message
+export function useSendMessageReply() {
+  const queryClient = useQueryClient();
+  const { user, profile } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({
+      messageId,
+      content,
+    }: {
+      messageId: string;
+      content: string;
+    }) => {
+      if (!user?.id) throw new Error("Not authenticated");
+
+      const senderType = profile?.user_type || 'customer';
+
+      const { error } = await supabase.from("admin_message_replies").insert({
+        message_id: messageId,
+        sender_id: user.id,
+        sender_type: senderType,
+        content,
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["message-replies", variables.messageId] });
+      toast.success("Reply sent");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to send reply");
+    },
+  });
+}
+
+// Admin hook to get all replies for monitoring
+export function useAllMessageReplies() {
+  return useQuery({
+    queryKey: ["all-message-replies"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("admin_message_replies")
+        .select("*, profiles:sender_id (full_name, email, user_type), admin_messages:message_id (title)")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      return data;
+    },
+  });
 }

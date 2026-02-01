@@ -38,6 +38,41 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_message_replies: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          message_id: string
+          sender_id: string
+          sender_type: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          message_id: string
+          sender_id: string
+          sender_type: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          message_id?: string
+          sender_id?: string
+          sender_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_message_replies_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "admin_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_messages: {
         Row: {
           content: string
@@ -116,6 +151,7 @@ export type Database = {
       businesses: {
         Row: {
           area_name: string | null
+          available_balance: number | null
           average_response_time: string | null
           budget_range: string | null
           business_goals: string[] | null
@@ -141,6 +177,7 @@ export type Database = {
           monthly_customer_volume: string | null
           operating_region: string | null
           pain_points: string[] | null
+          pending_balance: number | null
           pickup_available: boolean | null
           products_services: string | null
           reputation_score: number | null
@@ -151,6 +188,7 @@ export type Database = {
           target_customer_type: string | null
           total_completed_orders: number | null
           total_reviews: number | null
+          total_withdrawn: number | null
           updated_at: string
           user_id: string
           verification_tier: string
@@ -160,6 +198,7 @@ export type Database = {
         }
         Insert: {
           area_name?: string | null
+          available_balance?: number | null
           average_response_time?: string | null
           budget_range?: string | null
           business_goals?: string[] | null
@@ -185,6 +224,7 @@ export type Database = {
           monthly_customer_volume?: string | null
           operating_region?: string | null
           pain_points?: string[] | null
+          pending_balance?: number | null
           pickup_available?: boolean | null
           products_services?: string | null
           reputation_score?: number | null
@@ -195,6 +235,7 @@ export type Database = {
           target_customer_type?: string | null
           total_completed_orders?: number | null
           total_reviews?: number | null
+          total_withdrawn?: number | null
           updated_at?: string
           user_id: string
           verification_tier?: string
@@ -204,6 +245,7 @@ export type Database = {
         }
         Update: {
           area_name?: string | null
+          available_balance?: number | null
           average_response_time?: string | null
           budget_range?: string | null
           business_goals?: string[] | null
@@ -229,6 +271,7 @@ export type Database = {
           monthly_customer_volume?: string | null
           operating_region?: string | null
           pain_points?: string[] | null
+          pending_balance?: number | null
           pickup_available?: boolean | null
           products_services?: string | null
           reputation_score?: number | null
@@ -239,6 +282,7 @@ export type Database = {
           target_customer_type?: string | null
           total_completed_orders?: number | null
           total_reviews?: number | null
+          total_withdrawn?: number | null
           updated_at?: string
           user_id?: string
           verification_tier?: string
@@ -1346,12 +1390,14 @@ export type Database = {
           id: string
           images: string[] | null
           is_featured: boolean | null
+          is_promoted: boolean | null
           location_coverage: string[] | null
           name: string
           portfolio_images: string[] | null
           price_max: number | null
           price_min: number | null
           price_type: string
+          promotion_expires_at: string | null
           total_jobs: number | null
           total_views: number | null
           updated_at: string
@@ -1366,12 +1412,14 @@ export type Database = {
           id?: string
           images?: string[] | null
           is_featured?: boolean | null
+          is_promoted?: boolean | null
           location_coverage?: string[] | null
           name: string
           portfolio_images?: string[] | null
           price_max?: number | null
           price_min?: number | null
           price_type?: string
+          promotion_expires_at?: string | null
           total_jobs?: number | null
           total_views?: number | null
           updated_at?: string
@@ -1386,12 +1434,14 @@ export type Database = {
           id?: string
           images?: string[] | null
           is_featured?: boolean | null
+          is_promoted?: boolean | null
           location_coverage?: string[] | null
           name?: string
           portfolio_images?: string[] | null
           price_max?: number | null
           price_min?: number | null
           price_type?: string
+          promotion_expires_at?: string | null
           total_jobs?: number | null
           total_views?: number | null
           updated_at?: string
@@ -1450,6 +1500,59 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      withdrawal_requests: {
+        Row: {
+          account_name: string
+          account_number: string
+          admin_notes: string | null
+          amount: number
+          bank_name: string
+          business_id: string
+          created_at: string
+          id: string
+          processed_at: string | null
+          processed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          admin_notes?: string | null
+          amount: number
+          bank_name: string
+          business_id: string
+          created_at?: string
+          id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          admin_notes?: string | null
+          amount?: number
+          bank_name?: string
+          business_id?: string
+          created_at?: string
+          id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "withdrawal_requests_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
