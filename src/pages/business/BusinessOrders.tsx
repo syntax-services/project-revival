@@ -84,7 +84,7 @@ export default function BusinessOrders() {
 
   const OrderCard = ({ order }: { order: typeof orders[0] }) => {
     const status = order.status as OrderStatus;
-    const config = statusConfig[status];
+    const config = statusConfig[status] || statusConfig.pending;
     const StatusIcon = config.icon;
     const items = (order.items as unknown as OrderItem[]) || [];
 
@@ -93,7 +93,7 @@ export default function BusinessOrders() {
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <span className="font-medium text-foreground">{order.order_number}</span>
+              <span className="font-medium text-foreground">Order #{order.id.slice(0, 8)}</span>
               <Badge variant={config.variant} className="flex items-center gap-1">
                 <StatusIcon className="h-3 w-3" />
                 {config.label}
@@ -164,24 +164,20 @@ export default function BusinessOrders() {
       <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Order {selectedOrder?.order_number}</DialogTitle>
+            <DialogTitle>Order #{selectedOrder?.id.slice(0, 8)}</DialogTitle>
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">Status</p>
-                  <Badge variant={statusConfig[selectedOrder.status as OrderStatus].variant}>
-                    {statusConfig[selectedOrder.status as OrderStatus].label}
+                  <Badge variant={statusConfig[selectedOrder.status as OrderStatus]?.variant || "secondary"}>
+                    {statusConfig[selectedOrder.status as OrderStatus]?.label || selectedOrder.status}
                   </Badge>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Total</p>
                   <p className="font-medium">₦{Number(selectedOrder.total).toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Delivery Method</p>
-                  <p className="font-medium capitalize">{selectedOrder.delivery_method}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Created</p>
@@ -208,10 +204,10 @@ export default function BusinessOrders() {
                 </div>
               </div>
 
-              {selectedOrder.notes && (
+              {selectedOrder.delivery_notes && (
                 <div>
                   <p className="text-sm text-muted-foreground">Notes</p>
-                  <p className="text-sm">{selectedOrder.notes}</p>
+                  <p className="text-sm">{selectedOrder.delivery_notes}</p>
                 </div>
               )}
 

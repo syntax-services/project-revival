@@ -15,22 +15,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 
-type JobStatus = "requested" | "quoted" | "accepted" | "ongoing" | "completed" | "cancelled" | "disputed";
+type JobStatus = "requested" | "quoted" | "accepted" | "rejected" | "ongoing" | "completed" | "cancelled" | "disputed";
 
 const statusConfig: Record<JobStatus, { label: string; icon: typeof Clock; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   requested: { label: "Requested", icon: Clock, variant: "secondary" },
   quoted: { label: "Quote Sent", icon: Send, variant: "default" },
   accepted: { label: "Accepted", icon: CheckCircle, variant: "default" },
+  rejected: { label: "Rejected", icon: XCircle, variant: "destructive" },
   ongoing: { label: "In Progress", icon: Play, variant: "default" },
   completed: { label: "Completed", icon: CheckCircle, variant: "default" },
   cancelled: { label: "Cancelled", icon: XCircle, variant: "destructive" },
@@ -50,7 +44,6 @@ export default function BusinessJobs() {
     try {
       const updateData: Record<string, unknown> = { status: newStatus, ...additionalData };
       
-      if (newStatus === "quoted") updateData.quoted_at = new Date().toISOString();
       if (newStatus === "accepted") updateData.accepted_at = new Date().toISOString();
       if (newStatus === "ongoing") updateData.started_at = new Date().toISOString();
       if (newStatus === "completed") updateData.completed_at = new Date().toISOString();
@@ -87,7 +80,7 @@ export default function BusinessJobs() {
 
   const JobCard = ({ job }: { job: typeof jobs[0] }) => {
     const status = job.status as JobStatus;
-    const config = statusConfig[status];
+    const config = statusConfig[status] || statusConfig.requested;
     const StatusIcon = config.icon;
 
     return (
@@ -95,16 +88,18 @@ export default function BusinessJobs() {
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <span className="font-medium text-foreground truncate">{job.title}</span>
+              <span className="font-medium text-foreground truncate">
+                {job.services?.name || "Service Request"}
+              </span>
               <Badge variant={config.variant} className="flex items-center gap-1 shrink-0">
                 <StatusIcon className="h-3 w-3" />
                 {config.label}
               </Badge>
             </div>
-            <p className="text-sm text-muted-foreground">{job.job_number}</p>
-            {job.budget_min && job.budget_max && (
+            <p className="text-sm text-muted-foreground">Job #{job.id.slice(0, 8)}</p>
+            {job.quoted_price && (
               <p className="text-sm text-muted-foreground">
-                Budget: ₦{Number(job.budget_min).toLocaleString()} - ₦{Number(job.budget_max).toLocaleString()}
+                Quote: ₦{Number(job.quoted_price).toLocaleString()}
               </p>
             )}
             <p className="text-xs text-muted-foreground mt-1">
@@ -169,33 +164,31 @@ export default function BusinessJobs() {
       <Dialog open={!!selectedJob} onOpenChange={() => { setSelectedJob(null); setQuotePrice(""); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{selectedJob?.title}</DialogTitle>
+            <DialogTitle>{selectedJob?.services?.name || "Service Request"}</DialogTitle>
           </DialogHeader>
           {selectedJob && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">Status</p>
-                  <Badge variant={statusConfig[selectedJob.status as JobStatus].variant}>
-                    {statusConfig[selectedJob.status as JobStatus].label}
+                  <Badge variant={statusConfig[selectedJob.status as JobStatus]?.variant || "secondary"}>
+                    {statusConfig[selectedJob.status as JobStatus]?.label || selectedJob.status}
                   </Badge>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Job Number</p>
-                  <p className="font-medium">{selectedJob.job_number}</p>
+                  <p className="text-muted-foreground">Job ID</p>
+                  <p className="font-medium">#{selectedJob.id.slice(0, 8)}</p>
                 </div>
-                {selectedJob.budget_min && (
-                  <div>
-                    <p className="text-muted-foreground">Customer Budget</p>
-                    <p className="font-medium">
-                      ₦{Number(selectedJob.budget_min).toLocaleString()} - ₦{Number(selectedJob.budget_max).toLocaleString()}
-                    </p>
-                  </div>
-                )}
                 {selectedJob.quoted_price && (
                   <div>
                     <p className="text-muted-foreground">Your Quote</p>
                     <p className="font-medium">₦{Number(selectedJob.quoted_price).toLocaleString()}</p>
+                  </div>
+                )}
+                {selectedJob.final_price && (
+                  <div>
+                    <p className="text-muted-foreground">Final Price</p>
+                    <p className="font-medium">₦{Number(selectedJob.final_price).toLocaleString()}</p>
                   </div>
                 )}
                 {selectedJob.location && (
@@ -217,8 +210,7 @@ export default function BusinessJobs() {
                 <div>
                   <p className="text-sm text-muted-foreground">Scheduled</p>
                   <p className="text-sm font-medium">
-                    {format(new Date(selectedJob.scheduled_date), "MMM d, yyyy")}
-                    {selectedJob.scheduled_time && ` at ${selectedJob.scheduled_time}`}
+                    {format(new Date(selectedJob.scheduled_date), "MMM d, yyyy 'at' h:mm a")}
                   </p>
                 </div>
               )}
@@ -244,7 +236,7 @@ export default function BusinessJobs() {
                   <Button 
                     variant="destructive" 
                     className="w-full"
-                    onClick={() => updateJobStatus(selectedJob.id, "cancelled")}
+                    onClick={() => updateJobStatus(selectedJob.id, "rejected")}
                     disabled={updating}
                   >
                     Decline Request

@@ -139,10 +139,6 @@ export default function BusinessOverview() {
                   <span className="font-medium">{business.industry || "—"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Service Radius</span>
-                  <span className="font-medium">{business.service_radius_km || 50} km</span>
-                </div>
-                <div className="flex justify-between">
                   <span className="text-muted-foreground">Verified</span>
                   <span className="font-medium">{business.verified ? "Yes" : "No"}</span>
                 </div>

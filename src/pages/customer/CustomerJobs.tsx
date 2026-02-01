@@ -16,12 +16,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-type JobStatus = "requested" | "quoted" | "accepted" | "ongoing" | "completed" | "cancelled" | "disputed";
+type JobStatus = "requested" | "quoted" | "accepted" | "rejected" | "ongoing" | "completed" | "cancelled" | "disputed";
 
 const statusConfig: Record<JobStatus, { label: string; icon: typeof Clock; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   requested: { label: "Requested", icon: Clock, variant: "secondary" },
   quoted: { label: "Quote Received", icon: Send, variant: "default" },
   accepted: { label: "Accepted", icon: CheckCircle, variant: "default" },
+  rejected: { label: "Rejected", icon: XCircle, variant: "destructive" },
   ongoing: { label: "In Progress", icon: Play, variant: "default" },
   completed: { label: "Completed", icon: CheckCircle, variant: "default" },
   cancelled: { label: "Cancelled", icon: XCircle, variant: "destructive" },
@@ -82,7 +83,7 @@ export default function CustomerJobs() {
 
   const JobCard = ({ job }: { job: typeof jobs[0] }) => {
     const status = job.status as JobStatus;
-    const config = statusConfig[status];
+    const config = statusConfig[status] || statusConfig.requested;
     const StatusIcon = config.icon;
 
     return (
@@ -90,14 +91,16 @@ export default function CustomerJobs() {
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <span className="font-medium text-foreground truncate">{job.title}</span>
+              <span className="font-medium text-foreground truncate">
+                {job.services?.name || "Service Request"}
+              </span>
               <Badge variant={config.variant} className="flex items-center gap-1 shrink-0">
                 <StatusIcon className="h-3 w-3" />
                 {config.label}
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground">
-              {job.businesses?.company_name} • {job.job_number}
+              {job.businesses?.company_name} • #{job.id.slice(0, 8)}
             </p>
             {job.quoted_price && job.status !== "requested" && (
               <p className="text-sm font-medium text-foreground mt-1">
@@ -170,29 +173,23 @@ export default function CustomerJobs() {
           {selectedJob && (
             <div className="space-y-4">
               <div>
-                <h3 className="font-medium text-foreground">{selectedJob.title}</h3>
+                <h3 className="font-medium text-foreground">
+                  {selectedJob.services?.name || "Service Request"}
+                </h3>
                 <p className="text-sm text-muted-foreground">{selectedJob.businesses?.company_name}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">Status</p>
-                  <Badge variant={statusConfig[selectedJob.status as JobStatus].variant}>
-                    {statusConfig[selectedJob.status as JobStatus].label}
+                  <Badge variant={statusConfig[selectedJob.status as JobStatus]?.variant || "secondary"}>
+                    {statusConfig[selectedJob.status as JobStatus]?.label || selectedJob.status}
                   </Badge>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Job Number</p>
-                  <p className="font-medium">{selectedJob.job_number}</p>
+                  <p className="text-muted-foreground">Job ID</p>
+                  <p className="font-medium">#{selectedJob.id.slice(0, 8)}</p>
                 </div>
-                {selectedJob.budget_min && (
-                  <div>
-                    <p className="text-muted-foreground">Your Budget</p>
-                    <p className="font-medium">
-                      ₦{Number(selectedJob.budget_min).toLocaleString()} - ₦{Number(selectedJob.budget_max).toLocaleString()}
-                    </p>
-                  </div>
-                )}
                 {selectedJob.quoted_price && (
                   <div>
                     <p className="text-muted-foreground">Provider's Quote</p>
