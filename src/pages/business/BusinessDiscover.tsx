@@ -6,7 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/hooks/useBusiness";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   Search,
@@ -76,8 +75,7 @@ export default function BusinessDiscover() {
             .from("businesses")
             .select("id, user_id, company_name, industry, business_location, cover_image_url, business_type, reputation_score, verification_tier, total_reviews")
             .neq("id", myBusiness?.id || "")
-            .order("verification_tier", { ascending: false })
-            .order("reputation_score", { ascending: false }),
+            .order("reputation_score", { ascending: false, nullsFirst: false }),
           supabase
             .from("products")
             .select("id, name, business_id, price, image_url")
@@ -87,7 +85,7 @@ export default function BusinessDiscover() {
           supabase
             .from("services")
             .select("id, name, business_id, price_min, images")
-            .eq("availability", "available")
+            .eq("is_available", true)
             .order("created_at", { ascending: false })
             .limit(50),
         ]);
@@ -116,9 +114,7 @@ export default function BusinessDiscover() {
     }
 
     // For B2B messaging, we'll create a notification to the other business
-    // and navigate to messages (in a real app, you'd have a B2B conversations table)
     try {
-      // Create a notification for the other business
       const { error } = await supabase.from("notifications").insert({
         user_id: otherBusinessUserId,
         title: "New Business Inquiry",
@@ -175,7 +171,7 @@ export default function BusinessDiscover() {
 
         {/* Filters */}
         <div className="flex flex-wrap gap-3">
-          <Select value={viewMode} onValueChange={(v) => setViewMode(v as any)}>
+          <Select value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)}>
             <SelectTrigger className="w-[140px]">
               <SelectValue />
             </SelectTrigger>
@@ -248,7 +244,7 @@ export default function BusinessDiscover() {
                     {business.reputation_score && business.reputation_score > 0 && (
                       <div className="flex items-center gap-1 mt-1">
                         <Star className="h-3 w-3 fill-foreground text-foreground" />
-                        <span className="text-sm">{business.reputation_score.toFixed(1)}</span>
+                        <span className="text-sm">{Number(business.reputation_score).toFixed(1)}</span>
                       </div>
                     )}
                     {business.industry && (

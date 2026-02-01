@@ -24,7 +24,7 @@ interface Message {
   content: string;
   sender_type: "customer" | "business";
   created_at: string;
-  read: boolean;
+  read_at: string | null;
 }
 
 export default function BusinessMessages() {
@@ -61,10 +61,10 @@ export default function BusinessMessages() {
         .select(`
           id,
           customer_id,
-          updated_at
+          last_message_at
         `)
         .eq("business_id", businessId)
-        .order("updated_at", { ascending: false });
+        .order("last_message_at", { ascending: false });
 
       if (convs) {
         const enriched = await Promise.all(
@@ -87,7 +87,7 @@ export default function BusinessMessages() {
             }
 
             const { data: lastMsg } = await supabase
-              .from("chat_messages")
+              .from("messages")
               .select("content, created_at")
               .eq("conversation_id", conv.id)
               .order("created_at", { ascending: false })
@@ -95,18 +95,18 @@ export default function BusinessMessages() {
               .maybeSingle();
 
             const { count } = await supabase
-              .from("chat_messages")
+              .from("messages")
               .select("*", { count: "exact", head: true })
               .eq("conversation_id", conv.id)
               .eq("sender_type", "customer")
-              .eq("read", false);
+              .is("read_at", null);
 
             return {
               id: conv.id,
               customer_id: conv.customer_id,
               customer_name: customerName,
               last_message: lastMsg?.content || null,
-              last_message_at: lastMsg?.created_at || conv.updated_at,
+              last_message_at: lastMsg?.created_at || conv.last_message_at,
               unread_count: count || 0,
             };
           })
@@ -125,8 +125,8 @@ export default function BusinessMessages() {
 
     const fetchMessages = async () => {
       const { data } = await supabase
-        .from("chat_messages")
-        .select("*")
+        .from("messages")
+        .select("id, content, sender_type, created_at, read_at")
         .eq("conversation_id", selectedConversation.id)
         .order("created_at", { ascending: true });
 
@@ -135,10 +135,11 @@ export default function BusinessMessages() {
         
         // Mark messages as read
         await supabase
-          .from("chat_messages")
-          .update({ read: true })
+          .from("messages")
+          .update({ read_at: new Date().toISOString() })
           .eq("conversation_id", selectedConversation.id)
-          .eq("sender_type", "customer");
+          .eq("sender_type", "customer")
+          .is("read_at", null);
       }
     };
 
@@ -152,7 +153,7 @@ export default function BusinessMessages() {
         {
           event: "INSERT",
           schema: "public",
-          table: "chat_messages",
+          table: "messages",
           filter: `conversation_id=eq.${selectedConversation.id}`,
         },
         (payload) => {
@@ -171,22 +172,16 @@ export default function BusinessMessages() {
   }, [messages]);
 
   const handleSend = async () => {
-    if (!newMessage.trim() || !selectedConversation || !businessId) return;
+    if (!newMessage.trim() || !selectedConversation || !user) return;
 
     setSending(true);
     try {
-      await supabase.from("chat_messages").insert({
+      await supabase.from("messages").insert({
         conversation_id: selectedConversation.id,
-        sender_id: businessId,
+        sender_id: user.id,
         sender_type: "business",
         content: newMessage.trim(),
       });
-
-      // Update conversation timestamp
-      await supabase
-        .from("conversations")
-        .update({ updated_at: new Date().toISOString() })
-        .eq("id", selectedConversation.id);
 
       setNewMessage("");
     } catch (error) {
@@ -257,13 +252,13 @@ export default function BusinessMessages() {
                       key={conv.id}
                       onClick={() => setSelectedConversation(conv)}
                       className={cn(
-                        "w-full p-4 text-left hover:bg-surface-hover transition-colors",
-                        selectedConversation?.id === conv.id && "bg-surface-hover"
+                        "w-full p-4 text-left hover:bg-accent transition-colors",
+                        selectedConversation?.id === conv.id && "bg-accent"
                       )}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
-                          <User className="h-5 w-5 text-accent-foreground" />
+                        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                          <User className="h-5 w-5 text-muted-foreground" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
@@ -356,7 +351,7 @@ export default function BusinessMessages() {
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       placeholder="Type a message..."
-                      className="google-input flex-1"
+                      className="flex-1"
                     />
                     <Button
                       type="submit"

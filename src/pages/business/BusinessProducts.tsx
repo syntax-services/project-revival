@@ -20,7 +20,7 @@ interface Product {
   price: number | null;
   image_url: string | null;
   in_stock: boolean;
-  nicknames: string[] | null;
+  tags: string[] | null;
 }
 
 export default function BusinessProducts() {
@@ -34,7 +34,7 @@ export default function BusinessProducts() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
-  const [nicknames, setNicknames] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
   const [inStock, setInStock] = useState(true);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -60,7 +60,7 @@ export default function BusinessProducts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("*")
+        .select("id, name, description, price, image_url, in_stock, tags")
         .eq("business_id", business?.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -73,7 +73,7 @@ export default function BusinessProducts() {
     setName("");
     setDescription("");
     setPrice("");
-    setNicknames([]);
+    setTags([]);
     setInStock(true);
     setImageUrl(null);
     setImageFile(null);
@@ -86,7 +86,7 @@ export default function BusinessProducts() {
       setName(product.name);
       setDescription(product.description || "");
       setPrice(product.price?.toString() || "");
-      setNicknames(product.nicknames || []);
+      setTags(product.tags || []);
       setInStock(product.in_stock);
       setImageUrl(product.image_url);
     } else {
@@ -100,7 +100,7 @@ export default function BusinessProducts() {
     const fileName = `${business?.id}/products/${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
-      .from("business-images")
+      .from("product-images")
       .upload(fileName, file);
 
     if (uploadError) {
@@ -109,7 +109,7 @@ export default function BusinessProducts() {
     }
 
     const { data } = supabase.storage
-      .from("business-images")
+      .from("product-images")
       .getPublicUrl(fileName);
 
     return data.publicUrl;
@@ -129,7 +129,7 @@ export default function BusinessProducts() {
         name: name.trim(),
         description: description.trim() || null,
         price: price ? parseFloat(price) : null,
-        nicknames: nicknames.length > 0 ? nicknames : null,
+        tags: tags.length > 0 ? tags : null,
         in_stock: inStock,
         image_url: finalImageUrl,
         business_id: business?.id,
@@ -187,7 +187,7 @@ export default function BusinessProducts() {
     <div className="container mx-auto px-4 py-6 pb-24 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Products & Services</h1>
+          <h1 className="text-2xl font-bold">Products</h1>
           <p className="text-muted-foreground">Manage what you offer to customers</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -244,13 +244,13 @@ export default function BusinessProducts() {
                 />
               </div>
 
-              {/* Nicknames */}
+              {/* Tags */}
               <div className="space-y-2">
-                <Label>Nicknames / Alternative Names</Label>
+                <Label>Tags / Keywords</Label>
                 <TagInput
-                  value={nicknames}
-                  onChange={setNicknames}
-                  placeholder="Add nickname..."
+                  value={tags}
+                  onChange={setTags}
+                  placeholder="Add tag..."
                   maxTags={10}
                 />
               </div>
@@ -347,9 +347,9 @@ export default function BusinessProducts() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <CardTitle className="text-lg truncate">{product.name}</CardTitle>
-                    {product.nicknames && product.nicknames.length > 0 && (
+                    {product.tags && product.tags.length > 0 && (
                       <p className="text-xs text-muted-foreground mt-1 truncate">
-                        aka: {product.nicknames.join(", ")}
+                        {product.tags.join(", ")}
                       </p>
                     )}
                   </div>
