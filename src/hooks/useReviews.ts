@@ -8,14 +8,42 @@ export function useBusinessReviewsWithDetails(businessId: string | undefined) {
     queryFn: async () => {
       if (!businessId) return [];
 
-      const { data, error } = await supabase
+      // First get reviews
+      const { data: reviews, error } = await supabase
         .from("reviews")
         .select("*")
         .eq("business_id", businessId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      if (!reviews || reviews.length === 0) return [];
+
+      // Get reviewer profiles for customer names
+      const reviewerIds = [...new Set(reviews.map(r => r.reviewer_id))];
+      const { data: customers } = await supabase
+        .from("customers")
+        .select("id, user_id")
+        .in("id", reviewerIds);
+
+      const userIds = customers?.map(c => c.user_id) || [];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", userIds);
+
+      // Map profiles to customers
+      const customerToName = new Map();
+      customers?.forEach(c => {
+        const profile = profiles?.find(p => p.user_id === c.user_id);
+        if (profile) {
+          customerToName.set(c.id, profile.full_name);
+        }
+      });
+
+      return reviews.map(r => ({
+        ...r,
+        reviewer_name: customerToName.get(r.reviewer_id) || 'Anonymous',
+      }));
     },
     enabled: !!businessId,
   });

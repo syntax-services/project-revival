@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { VerificationBadge } from "@/components/business/VerificationBadge";
+import { BusinessEarningsCard } from "@/components/business/BusinessEarningsCard";
 import {
   Building2,
   Settings,
@@ -20,6 +21,7 @@ import {
   MapPin,
   ChevronRight,
   LogOut,
+  Wallet,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -118,6 +120,9 @@ export default function BusinessProfile() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Earnings Card */}
+        {business && <BusinessEarningsCard businessId={business.id} />}
 
         {/* Menu Items */}
         <Card>

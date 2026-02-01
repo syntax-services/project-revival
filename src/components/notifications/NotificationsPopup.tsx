@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
@@ -39,7 +40,7 @@ export function NotificationsPopup() {
   const [open, setOpen] = useState(false);
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { pinnedMessages, unreadCount: adminUnreadCount, markAsRead: markAdminRead } = useAdminMessages();
+  const { allMessages, pinnedMessages, unpinnedMessages, unreadCount: adminUnreadCount, markAsRead: markAdminRead } = useAdminMessages();
 
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ["notifications", user?.id],
@@ -170,7 +171,7 @@ export function NotificationsPopup() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm">{msg.title}</p>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                        <p className="text-sm text-muted-foreground mt-1">
                           {msg.content}
                         </p>
                         <p className="text-xs text-muted-foreground mt-2">
@@ -199,8 +200,53 @@ export function NotificationsPopup() {
               </div>
             )}
 
+            {/* Unpinned Admin Messages - NEW SECTION */}
+            {unpinnedMessages.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                  <MessageCircle className="h-3 w-3" />
+                  Messages from String
+                </h4>
+                {unpinnedMessages.slice(0, 5).map((msg) => (
+                  <div
+                    key={msg.id}
+                    className="p-3 bg-muted/50 border rounded-lg"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm">{msg.title}</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {msg.content}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-xs"
+                        onClick={() => markAdminRead.mutate(msg.id)}
+                      >
+                        Mark as read
+                      </Button>
+                      <AdminMessageReply
+                        messageId={msg.id}
+                        messageTitle={msg.title}
+                        messageContent={msg.content}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <Separator />
+
             {/* Regular Notifications */}
-            {notifications.length === 0 && pinnedMessages.length === 0 ? (
+            {notifications.length === 0 && allMessages.length === 0 ? (
               <div className="text-center py-12">
                 <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="font-medium">No notifications</h3>
@@ -211,7 +257,7 @@ export function NotificationsPopup() {
             ) : (
               <div className="space-y-2">
                 {notifications.length > 0 && (
-                  <h4 className="text-sm font-medium text-muted-foreground">Recent</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground">Recent Activity</h4>
                 )}
                 {notifications.map((notification) => {
                   const Icon = typeIcons[notification.type] || Info;

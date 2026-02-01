@@ -13,14 +13,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   MapPin, ShoppingBag, Briefcase, CheckCircle, XCircle, 
   Clock, Building2, User, Loader2, Users,
   DollarSign, Settings, Key, MessageSquare, Send, Pin,
-  Crown, Shield, Trash2, PackageCheck, AlertTriangle
+  Crown, Shield, Trash2, PackageCheck, AlertTriangle,
+  Star, Wallet, Reply, Eye, Image
 } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
+import { useAllWithdrawals, useProcessWithdrawal } from "@/hooks/useBusinessEarnings";
+import { useAllMessageReplies } from "@/hooks/useAdminMessages";
 
 type VerificationTier = 'none' | 'verified' | 'premium';
 
@@ -89,7 +93,7 @@ export default function StringAdmin() {
     enabled: isAdmin,
   });
 
-  // Fetch all customers
+  // Fetch all customers with location data
   const { data: customers } = useQuery({
     queryKey: ["admin-customers"],
     queryFn: async () => {
@@ -188,6 +192,42 @@ export default function StringAdmin() {
     },
     enabled: isAdmin,
   });
+
+  // Fetch all reviews
+  const { data: allReviews, isLoading: loadingReviews } = useQuery({
+    queryKey: ["admin-reviews"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("reviews")
+        .select("*, businesses:business_id (company_name)")
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return data;
+    },
+    enabled: isAdmin,
+  });
+
+  // Fetch all offers
+  const { data: allOffers, isLoading: loadingOffers } = useQuery({
+    queryKey: ["admin-offers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("offers")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: isAdmin,
+  });
+
+  // Withdrawals
+  const { data: withdrawals, isLoading: loadingWithdrawals } = useAllWithdrawals();
+  const processWithdrawal = useProcessWithdrawal();
+
+  // Message replies
+  const { data: messageReplies, isLoading: loadingReplies } = useAllMessageReplies();
 
   // Verify location mutation
   const verifyLocationMutation = useMutation({
@@ -362,6 +402,21 @@ export default function StringAdmin() {
     },
   });
 
+  // Update offer status (for fulfilling offers)
+  const updateOfferMutation = useMutation({
+    mutationFn: async ({ offerId, status }: { offerId: string; status: string }) => {
+      const { error } = await supabase
+        .from("offers")
+        .update({ status })
+        .eq("id", offerId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-offers"] });
+      toast.success("Offer status updated");
+    },
+  });
+
   if (checkingAdmin) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -418,6 +473,30 @@ export default function StringAdmin() {
   const pendingOrders = orders?.filter(o => ["pending", "confirmed", "processing", "shipped"].includes(o.status)) || [];
   const pendingJobs = jobs?.filter(j => ["requested", "quoted", "accepted", "in_progress"].includes(j.status)) || [];
   const pinnedMessages = adminMessages?.filter(m => m.is_pinned) || [];
+  const pendingWithdrawals = withdrawals?.filter((w: any) => w.status === "pending") || [];
+  const pendingOffers = allOffers?.filter(o => o.status === "open") || [];
+
+  // Get all users with locations
+  const allUsersWithLocations = [
+    ...(customers?.filter((c: any) => c.latitude && c.longitude).map((c: any) => ({
+      id: c.id,
+      name: (c.profiles as any)?.full_name || 'Unknown',
+      email: (c.profiles as any)?.email,
+      type: 'customer',
+      lat: c.latitude,
+      lng: c.longitude,
+      verified: c.location_verified,
+    })) || []),
+    ...(businesses?.filter((b: any) => b.latitude && b.longitude).map((b: any) => ({
+      id: b.id,
+      name: b.company_name,
+      email: (b.profiles as any)?.email,
+      type: 'business',
+      lat: b.latitude,
+      lng: b.longitude,
+      verified: b.location_verified,
+    })) || []),
+  ];
 
   const handleSelectAllUsers = (checked: boolean) => {
     if (checked) {
@@ -457,27 +536,29 @@ export default function StringAdmin() {
                 {pendingLocations.length} pending locations
               </Badge>
             )}
-            {pendingOrders.length > 0 && (
-              <Badge variant="secondary">{pendingOrders.length} active orders</Badge>
+            {pendingWithdrawals.length > 0 && (
+              <Badge variant="secondary">
+                <Wallet className="h-3 w-3 mr-1" />
+                {pendingWithdrawals.length} withdrawals
+              </Badge>
             )}
-            {pinnedMessages.length > 0 && (
+            {pendingOffers.length > 0 && (
               <Badge variant="outline">
-                <Pin className="h-3 w-3 mr-1" />
-                {pinnedMessages.length} pinned
+                {pendingOffers.length} open offers
               </Badge>
             )}
           </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-8 gap-4">
           <Card>
             <CardContent className="pt-4">
               <div className="flex items-center gap-3">
                 <Users className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-2xl font-bold">{profiles?.length || 0}</p>
-                  <p className="text-xs text-muted-foreground">Total Users</p>
+                  <p className="text-xs text-muted-foreground">Users</p>
                 </div>
               </div>
             </CardContent>
@@ -485,18 +566,7 @@ export default function StringAdmin() {
           <Card>
             <CardContent className="pt-4">
               <div className="flex items-center gap-3">
-                <User className="h-8 w-8 text-blue-500" />
-                <div>
-                  <p className="text-2xl font-bold">{customerProfiles.length}</p>
-                  <p className="text-xs text-muted-foreground">Customers</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-3">
-                <Building2 className="h-8 w-8 text-green-500" />
+                <Building2 className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-2xl font-bold">{businesses?.length || 0}</p>
                   <p className="text-xs text-muted-foreground">Businesses</p>
@@ -520,7 +590,7 @@ export default function StringAdmin() {
           <Card>
             <CardContent className="pt-4">
               <div className="flex items-center gap-3">
-                <ShoppingBag className="h-8 w-8 text-purple-500" />
+                <ShoppingBag className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-2xl font-bold">{orders?.length || 0}</p>
                   <p className="text-xs text-muted-foreground">Orders</p>
@@ -531,10 +601,43 @@ export default function StringAdmin() {
           <Card>
             <CardContent className="pt-4">
               <div className="flex items-center gap-3">
-                <Briefcase className="h-8 w-8 text-orange-500" />
+                <Briefcase className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-2xl font-bold">{jobs?.length || 0}</p>
                   <p className="text-xs text-muted-foreground">Jobs</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-3">
+                <Star className="h-8 w-8 text-yellow-500" />
+                <div>
+                  <p className="text-2xl font-bold">{allReviews?.length || 0}</p>
+                  <p className="text-xs text-muted-foreground">Reviews</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-3">
+                <Wallet className="h-8 w-8 text-primary" />
+                <div>
+                  <p className="text-2xl font-bold">{withdrawals?.length || 0}</p>
+                  <p className="text-xs text-muted-foreground">Withdrawals</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-3">
+                <Reply className="h-8 w-8 text-primary" />
+                <div>
+                  <p className="text-2xl font-bold">{messageReplies?.length || 0}</p>
+                  <p className="text-xs text-muted-foreground">Replies</p>
                 </div>
               </div>
             </CardContent>
@@ -551,7 +654,7 @@ export default function StringAdmin() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10">
             <TabsTrigger value="users" className="gap-1">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Users</span>
@@ -567,6 +670,18 @@ export default function StringAdmin() {
             <TabsTrigger value="jobs" className="gap-1">
               <Briefcase className="h-4 w-4" />
               <span className="hidden sm:inline">Jobs</span>
+            </TabsTrigger>
+            <TabsTrigger value="reviews" className="gap-1">
+              <Star className="h-4 w-4" />
+              <span className="hidden sm:inline">Reviews</span>
+            </TabsTrigger>
+            <TabsTrigger value="offers" className="gap-1">
+              <Image className="h-4 w-4" />
+              <span className="hidden sm:inline">Offers</span>
+            </TabsTrigger>
+            <TabsTrigger value="withdrawals" className="gap-1">
+              <Wallet className="h-4 w-4" />
+              <span className="hidden sm:inline">Withdrawals</span>
             </TabsTrigger>
             <TabsTrigger value="locations" className="gap-1">
               <MapPin className="h-4 w-4" />
@@ -586,46 +701,17 @@ export default function StringAdmin() {
           <TabsContent value="users" className="space-y-4">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>User Management ({profiles?.length || 0})</CardTitle>
-                    <CardDescription>View and manage all registered users</CardDescription>
-                  </div>
-                  {selectedUsers.length > 0 && (
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{selectedUsers.length} selected</Badge>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => {
-                          setMessageRecipientType('all');
-                          setShowMessageDialog(true);
-                        }}
-                      >
-                        <Send className="h-4 w-4 mr-1" />
-                        Message Selected
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                <CardTitle>All Users ({profiles?.length || 0})</CardTitle>
+                <CardDescription>Complete list of all registered users</CardDescription>
               </CardHeader>
               <CardContent>
-                {loadingProfiles ? (
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                ) : (
+                <ScrollArea className="h-[500px]">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-12">
-                          <input
-                            type="checkbox"
-                            checked={selectedUsers.length === profiles?.length}
-                            onChange={(e) => handleSelectAllUsers(e.target.checked)}
-                            className="rounded"
-                          />
-                        </TableHead>
                         <TableHead>User</TableHead>
                         <TableHead>Type</TableHead>
+                        <TableHead>Location</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Joined</TableHead>
                       </TableRow>
@@ -639,32 +725,25 @@ export default function StringAdmin() {
                         .map((profile: any) => (
                           <TableRow key={profile.id}>
                             <TableCell>
-                              <input
-                                type="checkbox"
-                                checked={selectedUsers.includes(profile.user_id)}
-                                onChange={() => toggleUserSelection(profile.user_id)}
-                                className="rounded"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-full ${profile.user_type === 'business' ? 'bg-green-100 dark:bg-green-900' : 'bg-blue-100 dark:bg-blue-900'}`}>
-                                  {profile.user_type === 'business' ? (
-                                    <Building2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-                                  ) : (
-                                    <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                                  )}
-                                </div>
-                                <div>
-                                  <p className="font-medium">{profile.full_name}</p>
-                                  <p className="text-xs text-muted-foreground">{profile.email}</p>
-                                </div>
+                              <div>
+                                <p className="font-medium">{profile.full_name}</p>
+                                <p className="text-xs text-muted-foreground">{profile.email}</p>
                               </div>
                             </TableCell>
                             <TableCell>
                               <Badge variant={profile.user_type === 'business' ? 'default' : 'secondary'}>
                                 {profile.user_type}
                               </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {profile.latitude && profile.longitude ? (
+                                <Badge variant="outline">
+                                  <MapPin className="h-3 w-3 mr-1" />
+                                  Set
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">Not set</span>
+                              )}
                             </TableCell>
                             <TableCell>
                               <Badge variant={profile.onboarding_completed ? 'outline' : 'destructive'}>
@@ -678,29 +757,28 @@ export default function StringAdmin() {
                         ))}
                     </TableBody>
                   </Table>
-                )}
+                </ScrollArea>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Businesses Tab with Tier Management */}
+          {/* Businesses Tab */}
           <TabsContent value="businesses" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Business Verification & Tiers ({businesses?.length || 0})</CardTitle>
+                <CardTitle>Business Verification ({businesses?.length || 0})</CardTitle>
                 <CardDescription>Manage verification tiers: None → Verified → Premium</CardDescription>
               </CardHeader>
               <CardContent>
-                {loadingBusinesses ? (
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                ) : (
+                <ScrollArea className="h-[500px]">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Business</TableHead>
                         <TableHead>Type</TableHead>
+                        <TableHead>Rating</TableHead>
                         <TableHead>Location</TableHead>
-                        <TableHead>Current Tier</TableHead>
+                        <TableHead>Tier</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -721,8 +799,18 @@ export default function StringAdmin() {
                               <Badge variant="outline">{business.business_type || 'goods'}</Badge>
                             </TableCell>
                             <TableCell>
+                              {business.reputation_score ? (
+                                <div className="flex items-center gap-1">
+                                  <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                                  <span>{business.reputation_score.toFixed(1)}</span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
                               <Badge variant={business.location_verified ? "default" : "secondary"}>
-                                {business.location_verified ? "Verified ✓" : "Not Verified"}
+                                {business.location_verified ? "Verified" : "Not Verified"}
                               </Badge>
                             </TableCell>
                             <TableCell>
@@ -742,24 +830,9 @@ export default function StringAdmin() {
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="none">
-                                    <span className="flex items-center gap-2">
-                                      <XCircle className="h-4 w-4 text-muted-foreground" />
-                                      None
-                                    </span>
-                                  </SelectItem>
-                                  <SelectItem value="verified">
-                                    <span className="flex items-center gap-2">
-                                      <Shield className="h-4 w-4 text-blue-500" />
-                                      Verified
-                                    </span>
-                                  </SelectItem>
-                                  <SelectItem value="premium">
-                                    <span className="flex items-center gap-2">
-                                      <Crown className="h-4 w-4 text-yellow-500" />
-                                      Premium
-                                    </span>
-                                  </SelectItem>
+                                  <SelectItem value="none">None</SelectItem>
+                                  <SelectItem value="verified">Verified</SelectItem>
+                                  <SelectItem value="premium">Premium</SelectItem>
                                 </SelectContent>
                               </Select>
                             </TableCell>
@@ -767,24 +840,20 @@ export default function StringAdmin() {
                         ))}
                     </TableBody>
                   </Table>
-                )}
+                </ScrollArea>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Orders Tab with Admin Confirm */}
+          {/* Orders Tab */}
           <TabsContent value="orders" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Order Management ({orders?.length || 0})</CardTitle>
-                <CardDescription>Monitor and manage customer orders. Admins can confirm deliveries.</CardDescription>
+                <CardTitle>Orders ({orders?.length || 0})</CardTitle>
+                <CardDescription>Monitor and manage customer orders</CardDescription>
               </CardHeader>
               <CardContent>
-                {loadingOrders ? (
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                ) : orders?.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No orders yet</p>
-                ) : (
+                <ScrollArea className="h-[500px]">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -797,79 +866,56 @@ export default function StringAdmin() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {orders
-                        ?.filter((o: any) => 
-                          o.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          o.businesses?.company_name?.toLowerCase().includes(searchTerm.toLowerCase())
-                        )
-                        .map((order: any) => (
-                          <TableRow key={order.id}>
-                            <TableCell>
-                              <div>
-                                <p className="font-medium">{order.order_number}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {format(new Date(order.created_at), "MMM d, yyyy")}
-                                </p>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <p className="text-sm">{order.customers?.profiles?.full_name || 'Unknown'}</p>
-                            </TableCell>
-                            <TableCell>
-                              <p className="text-sm">{order.businesses?.company_name}</p>
-                            </TableCell>
-                            <TableCell>
-                              <p className="font-medium">₦{Number(order.total).toLocaleString()}</p>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={
-                                order.status === 'delivered' ? 'default' :
-                                order.status === 'cancelled' ? 'destructive' :
-                                'secondary'
-                              }>
-                                {order.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {order.status === 'shipped' && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => confirmDeliveryMutation.mutate({ orderId: order.id })}
-                                  disabled={confirmDeliveryMutation.isPending}
-                                >
-                                  <PackageCheck className="h-4 w-4 mr-1" />
-                                  Confirm Delivery
-                                </Button>
-                              )}
-                              {order.status === 'processing' && (
-                                <Badge variant="outline" className="gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  Processing
-                                </Badge>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                      {orders?.map((order: any) => (
+                        <TableRow key={order.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{order.order_number}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {format(new Date(order.created_at), "MMM d, yyyy")}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>{order.customers?.profiles?.full_name || 'Unknown'}</TableCell>
+                          <TableCell>{order.businesses?.company_name}</TableCell>
+                          <TableCell>₦{Number(order.total).toLocaleString()}</TableCell>
+                          <TableCell>
+                            <Badge variant={
+                              order.status === 'delivered' ? 'default' :
+                              order.status === 'cancelled' ? 'destructive' :
+                              'secondary'
+                            }>
+                              {order.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {order.status === 'shipped' && (
+                              <Button
+                                size="sm"
+                                onClick={() => confirmDeliveryMutation.mutate({ orderId: order.id })}
+                              >
+                                Confirm Delivery
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
-                )}
+                </ScrollArea>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Jobs Tab with Admin Complete */}
+          {/* Jobs Tab */}
           <TabsContent value="jobs" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Job Management ({jobs?.length || 0})</CardTitle>
-                <CardDescription>Monitor service requests. Admins can mark jobs complete.</CardDescription>
+                <CardTitle>Jobs ({jobs?.length || 0})</CardTitle>
+                <CardDescription>Monitor service requests</CardDescription>
               </CardHeader>
               <CardContent>
-                {loadingJobs ? (
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                ) : jobs?.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No jobs yet</p>
-                ) : (
+                <ScrollArea className="h-[500px]">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -882,172 +928,425 @@ export default function StringAdmin() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {jobs
-                        ?.filter((j: any) => 
-                          j.job_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          j.title?.toLowerCase().includes(searchTerm.toLowerCase())
-                        )
-                        .map((job: any) => (
-                          <TableRow key={job.id}>
-                            <TableCell>
-                              <div>
-                                <p className="font-medium">{job.title}</p>
-                                <p className="text-xs text-muted-foreground">{job.job_number}</p>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <p className="text-sm">{job.customers?.profiles?.full_name || 'Unknown'}</p>
-                            </TableCell>
-                            <TableCell>
-                              <p className="text-sm">{job.businesses?.company_name}</p>
-                            </TableCell>
-                            <TableCell>
-                              {job.final_price ? (
-                                <p className="font-medium">₦{Number(job.final_price).toLocaleString()}</p>
-                              ) : job.quoted_price ? (
-                                <p className="text-muted-foreground">₦{Number(job.quoted_price).toLocaleString()} (quoted)</p>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={
-                                job.status === 'completed' ? 'default' :
-                                job.status === 'cancelled' ? 'destructive' :
-                                'secondary'
-                              }>
-                                {job.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {job.status === 'in_progress' && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => completeJobMutation.mutate({ jobId: job.id })}
-                                  disabled={completeJobMutation.isPending}
-                                >
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                  Mark Complete
-                                </Button>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                      {jobs?.map((job: any) => (
+                        <TableRow key={job.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{job.title}</p>
+                              <p className="text-xs text-muted-foreground">{job.job_number}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>{job.customers?.profiles?.full_name || 'Unknown'}</TableCell>
+                          <TableCell>{job.businesses?.company_name}</TableCell>
+                          <TableCell>
+                            {job.final_price ? `₦${Number(job.final_price).toLocaleString()}` : '—'}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={job.status === 'completed' ? 'default' : 'secondary'}>
+                              {job.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {job.status === 'in_progress' && (
+                              <Button
+                                size="sm"
+                                onClick={() => completeJobMutation.mutate({ jobId: job.id })}
+                              >
+                                Mark Complete
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
-                )}
+                </ScrollArea>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Locations Tab */}
-          <TabsContent value="locations" className="space-y-4">
+          {/* Reviews Tab */}
+          <TabsContent value="reviews" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Location Verification ({pendingLocations.length} pending)</CardTitle>
-                <CardDescription>
-                  Verify user locations by looking up their address on Google Maps
-                </CardDescription>
+                <CardTitle>All Reviews ({allReviews?.length || 0})</CardTitle>
+                <CardDescription>Monitor customer reviews and business responses</CardDescription>
               </CardHeader>
               <CardContent>
-                {loadingLocations ? (
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                ) : locationRequests?.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No location requests</p>
-                ) : (
+                <ScrollArea className="h-[500px]">
                   <div className="space-y-4">
-                    {locationRequests?.map((request: any) => (
-                      <LocationVerificationCard
-                        key={request.id}
-                        request={request}
-                        onVerify={(lat, lng) => verifyLocationMutation.mutate({
-                          requestId: request.id,
-                          userId: request.user_id,
-                          userType: request.user_type,
-                          latitude: lat,
-                          longitude: lng,
-                          approved: true,
-                        })}
-                        onReject={() => verifyLocationMutation.mutate({
-                          requestId: request.id,
-                          userId: request.user_id,
-                          userType: request.user_type,
-                          approved: false,
-                        })}
-                        isLoading={verifyLocationMutation.isPending}
-                      />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Messages Tab */}
-          <TabsContent value="messages" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Admin Messages ({adminMessages?.length || 0})</CardTitle>
-                    <CardDescription>Send announcements and pinned messages to users</CardDescription>
-                  </div>
-                  <Button onClick={() => setShowMessageDialog(true)}>
-                    <Send className="h-4 w-4 mr-2" />
-                    New Message
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {loadingMessages ? (
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                ) : adminMessages?.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No messages sent yet</p>
-                ) : (
-                  <div className="space-y-3">
-                    {adminMessages?.map((message: any) => (
-                      <div 
-                        key={message.id} 
-                        className={`p-4 border rounded-lg ${message.is_pinned ? 'border-yellow-500/50 bg-yellow-50/50 dark:bg-yellow-950/20' : ''}`}
-                      >
-                        <div className="flex items-start justify-between gap-4">
+                    {allReviews?.map((review: any) => (
+                      <div key={review.id} className="p-4 border rounded-lg">
+                        <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              {message.is_pinned && <Pin className="h-4 w-4 text-yellow-500" />}
-                              <h4 className="font-medium">{message.title}</h4>
-                              <Badge variant="outline">{message.recipient_type}</Badge>
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-0.5">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={`h-4 w-4 ${
+                                      star <= review.rating ? 'fill-yellow-500 text-yellow-500' : 'text-muted'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              {review.verified_purchase && (
+                                <Badge variant="secondary">Verified</Badge>
+                              )}
                             </div>
-                            <p className="text-sm text-muted-foreground">{message.content}</p>
+                            {review.title && <p className="font-medium mt-1">{review.title}</p>}
+                            {review.content && <p className="text-sm text-muted-foreground mt-1">{review.content}</p>}
                             <p className="text-xs text-muted-foreground mt-2">
-                              Sent {format(new Date(message.created_at), "MMM d, yyyy h:mm a")}
+                              For: {review.businesses?.company_name} • {formatDistanceToNow(new Date(review.created_at), { addSuffix: true })}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => togglePinMutation.mutate({
-                                messageId: message.id,
-                                isPinned: !message.is_pinned,
-                              })}
-                            >
-                              <Pin className={`h-4 w-4 ${message.is_pinned ? 'fill-current text-yellow-500' : ''}`} />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => deleteMessageMutation.mutate(message.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
                         </div>
+                        {review.response && (
+                          <div className="mt-3 p-3 bg-muted/50 rounded-lg">
+                            <p className="text-xs font-medium">Business Response:</p>
+                            <p className="text-sm text-muted-foreground">{review.response}</p>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
-                )}
+                </ScrollArea>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Offers Tab */}
+          <TabsContent value="offers" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Offer Requests ({allOffers?.length || 0})</CardTitle>
+                <CardDescription>Customer requests for products/services</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[500px]">
+                  <div className="space-y-4">
+                    {allOffers?.map((offer: any) => (
+                      <div key={offer.id} className="p-4 border rounded-lg">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant="outline">{offer.offer_type}</Badge>
+                              <Badge variant={offer.status === 'open' ? 'secondary' : offer.status === 'fulfilled' ? 'default' : 'outline'}>
+                                {offer.status}
+                              </Badge>
+                              {offer.urgency && <Badge variant="destructive">{offer.urgency}</Badge>}
+                            </div>
+                            <h4 className="font-medium">{offer.title}</h4>
+                            {offer.description && (
+                              <p className="text-sm text-muted-foreground mt-1">{offer.description}</p>
+                            )}
+                            {offer.budget_min || offer.budget_max ? (
+                              <p className="text-sm mt-1">
+                                Budget: ₦{offer.budget_min?.toLocaleString() || 0} - ₦{offer.budget_max?.toLocaleString() || 'Any'}
+                              </p>
+                            ) : null}
+                            <p className="text-xs text-muted-foreground mt-2">
+                              {formatDistanceToNow(new Date(offer.created_at), { addSuffix: true })}
+                            </p>
+                          </div>
+                          {offer.images && offer.images[0] && (
+                            <img src={offer.images[0]} alt="" className="h-20 w-20 rounded-lg object-cover" />
+                          )}
+                        </div>
+                        {offer.status === 'open' && (
+                          <div className="mt-3 flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => updateOfferMutation.mutate({ offerId: offer.id, status: 'fulfilled' })}
+                            >
+                              Mark Fulfilled
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateOfferMutation.mutate({ offerId: offer.id, status: 'closed' })}
+                            >
+                              Close
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Withdrawals Tab */}
+          <TabsContent value="withdrawals" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Withdrawal Requests ({withdrawals?.length || 0})</CardTitle>
+                <CardDescription>Process business withdrawal requests</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[500px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Business</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Bank Details</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {withdrawals?.map((w: any) => (
+                        <TableRow key={w.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{w.businesses?.company_name}</p>
+                              <p className="text-xs text-muted-foreground">{w.businesses?.profiles?.email}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium">₦{Number(w.amount).toLocaleString()}</TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              <p>{w.bank_name}</p>
+                              <p className="text-muted-foreground">{w.account_number}</p>
+                              <p className="text-muted-foreground">{w.account_name}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={
+                              w.status === 'completed' ? 'default' :
+                              w.status === 'rejected' ? 'destructive' :
+                              'secondary'
+                            }>
+                              {w.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {format(new Date(w.created_at), "MMM d, yyyy")}
+                          </TableCell>
+                          <TableCell>
+                            {w.status === 'pending' && (
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => processWithdrawal.mutate({
+                                    withdrawalId: w.id,
+                                    status: 'completed',
+                                  })}
+                                >
+                                  Approve
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => processWithdrawal.mutate({
+                                    withdrawalId: w.id,
+                                    status: 'rejected',
+                                    adminNotes: 'Rejected by admin',
+                                  })}
+                                >
+                                  Reject
+                                </Button>
+                              </div>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Locations Tab - Enhanced with all users */}
+          <TabsContent value="locations" className="space-y-4">
+            <div className="grid gap-4 lg:grid-cols-2">
+              {/* Pending Requests */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Pending Verification ({pendingLocations.length})</CardTitle>
+                  <CardDescription>Verify user locations from Google Maps</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[400px]">
+                    <div className="space-y-4">
+                      {pendingLocations.length === 0 ? (
+                        <p className="text-center text-muted-foreground py-8">No pending requests</p>
+                      ) : (
+                        pendingLocations.map((request: any) => (
+                          <LocationVerificationCard
+                            key={request.id}
+                            request={request}
+                            onVerify={(lat, lng) => verifyLocationMutation.mutate({
+                              requestId: request.id,
+                              userId: request.user_id,
+                              userType: request.user_type,
+                              latitude: lat,
+                              longitude: lng,
+                              approved: true,
+                            })}
+                            onReject={() => verifyLocationMutation.mutate({
+                              requestId: request.id,
+                              userId: request.user_id,
+                              userType: request.user_type,
+                              approved: false,
+                            })}
+                            isLoading={verifyLocationMutation.isPending}
+                          />
+                        ))
+                      )}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+
+              {/* All Users with Locations */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>All User Locations ({allUsersWithLocations.length})</CardTitle>
+                  <CardDescription>Users with coordinates set</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[400px]">
+                    <div className="space-y-2">
+                      {allUsersWithLocations.map((user: any) => (
+                        <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-full ${user.type === 'business' ? 'bg-primary/10' : 'bg-muted'}`}>
+                              {user.type === 'business' ? (
+                                <Building2 className="h-4 w-4" />
+                              ) : (
+                                <User className="h-4 w-4" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm">{user.name}</p>
+                              <p className="text-xs text-muted-foreground">{user.email}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {user.lat.toFixed(4)}, {user.lng.toFixed(4)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={user.verified ? 'default' : 'secondary'}>
+                              {user.verified ? 'Verified' : 'Unverified'}
+                            </Badge>
+                            <a
+                              href={`https://www.google.com/maps?q=${user.lat},${user.lng}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline text-xs"
+                            >
+                              View Map
+                            </a>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Messages Tab - with replies */}
+          <TabsContent value="messages" className="space-y-4">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Sent Messages ({adminMessages?.length || 0})</CardTitle>
+                      <CardDescription>Admin announcements</CardDescription>
+                    </div>
+                    <Button onClick={() => setShowMessageDialog(true)}>
+                      <Send className="h-4 w-4 mr-2" />
+                      New
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[400px]">
+                    <div className="space-y-3">
+                      {adminMessages?.map((message: any) => (
+                        <div 
+                          key={message.id} 
+                          className={`p-3 border rounded-lg ${message.is_pinned ? 'border-yellow-500/50 bg-yellow-50/50 dark:bg-yellow-950/20' : ''}`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                {message.is_pinned && <Pin className="h-3 w-3 text-yellow-500" />}
+                                <span className="font-medium text-sm">{message.title}</span>
+                                <Badge variant="outline" className="text-xs">{message.recipient_type}</Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground line-clamp-2">{message.content}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
+                              </p>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => togglePinMutation.mutate({
+                                  messageId: message.id,
+                                  isPinned: !message.is_pinned,
+                                })}
+                              >
+                                <Pin className={`h-3 w-3 ${message.is_pinned ? 'fill-current' : ''}`} />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => deleteMessageMutation.mutate(message.id)}
+                              >
+                                <Trash2 className="h-3 w-3 text-destructive" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+
+              {/* Replies from users */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>User Replies ({messageReplies?.length || 0})</CardTitle>
+                  <CardDescription>Responses from businesses and customers</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[400px]">
+                    <div className="space-y-3">
+                      {messageReplies?.map((reply: any) => (
+                        <div key={reply.id} className="p-3 border rounded-lg">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant={reply.sender_type === 'business' ? 'default' : 'secondary'}>
+                              {reply.sender_type}
+                            </Badge>
+                            <span className="text-sm font-medium">{reply.profiles?.full_name}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mb-1">
+                            Re: {reply.admin_messages?.title}
+                          </p>
+                          <p className="text-sm">{reply.content}</p>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true })}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* Commission Tab */}
@@ -1055,33 +1354,27 @@ export default function StringAdmin() {
             <Card>
               <CardHeader>
                 <CardTitle>Product Commission ({products?.length || 0})</CardTitle>
-                <CardDescription>Set commission rates (1-20%) for each product</CardDescription>
+                <CardDescription>Set commission rates (1-20%)</CardDescription>
               </CardHeader>
               <CardContent>
-                {loadingProducts ? (
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                ) : (
+                <ScrollArea className="h-[500px]">
                   <div className="space-y-3">
-                    {products
-                      ?.filter((p: any) => 
-                        p.name?.toLowerCase().includes(searchTerm.toLowerCase())
-                      )
-                      .map((product: any) => (
-                        <ProductCommissionCard
-                          key={product.id}
-                          product={product}
-                          onUpdate={(commission, isRare) => 
-                            updateCommissionMutation.mutate({ 
-                              productId: product.id, 
-                              commission, 
-                              isRare 
-                            })
-                          }
-                          isLoading={updateCommissionMutation.isPending}
-                        />
-                      ))}
+                    {products?.map((product: any) => (
+                      <ProductCommissionCard
+                        key={product.id}
+                        product={product}
+                        onUpdate={(commission, isRare) => 
+                          updateCommissionMutation.mutate({ 
+                            productId: product.id, 
+                            commission, 
+                            isRare 
+                          })
+                        }
+                        isLoading={updateCommissionMutation.isPending}
+                      />
+                    ))}
                   </div>
-                )}
+                </ScrollArea>
               </CardContent>
             </Card>
           </TabsContent>
@@ -1093,9 +1386,7 @@ export default function StringAdmin() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Send Admin Message</DialogTitle>
-            <DialogDescription>
-              Send an announcement or notification to platform users
-            </DialogDescription>
+            <DialogDescription>Send an announcement to platform users</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -1132,23 +1423,18 @@ export default function StringAdmin() {
               </Select>
             </div>
             <div className="flex items-center gap-3">
-              <Switch
-                checked={messagePinned}
-                onCheckedChange={setMessagePinned}
-              />
+              <Switch checked={messagePinned} onCheckedChange={setMessagePinned} />
               <Label>Pin this message</Label>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowMessageDialog(false)}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setShowMessageDialog(false)}>Cancel</Button>
             <Button 
               onClick={() => sendMessageMutation.mutate()}
               disabled={!messageTitle || !messageContent || sendMessageMutation.isPending}
             >
               {sendMessageMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Send Message
+              Send
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1175,157 +1461,88 @@ function TierBadge({ tier }: { tier: string }) {
         </Badge>
       );
     default:
-      return (
-        <Badge variant="secondary">
-          None
-        </Badge>
-      );
+      return <Badge variant="secondary">None</Badge>;
   }
 }
 
-// Location Verification Card Component
-function LocationVerificationCard({ 
-  request, 
-  onVerify, 
-  onReject, 
-  isLoading 
-}: { 
-  request: any;
-  onVerify: (lat: number, lng: number) => void;
-  onReject: () => void;
-  isLoading: boolean;
-}) {
+// Location Verification Card
+function LocationVerificationCard({ request, onVerify, onReject, isLoading }: any) {
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
 
-  const handleVerify = () => {
-    const lat = parseFloat(latitude);
-    const lng = parseFloat(longitude);
-    if (isNaN(lat) || isNaN(lng)) {
-      toast.error("Please enter valid coordinates");
-      return;
-    }
-    onVerify(lat, lng);
-  };
-
-  const isPending = request.status === "pending";
-
   return (
-    <div className={`p-4 border rounded-lg ${isPending ? 'border-yellow-500/50 bg-yellow-50/50 dark:bg-yellow-950/20' : ''}`}>
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <Badge variant={request.user_type === 'business' ? 'default' : 'secondary'}>
-              {request.user_type}
-            </Badge>
-            <Badge variant={
-              request.status === 'pending' ? 'outline' :
-              request.status === 'verified' ? 'default' :
-              'destructive'
-            }>
-              {request.status}
-            </Badge>
-          </div>
-          <p className="font-medium">{request.profiles?.full_name}</p>
-          <p className="text-sm text-muted-foreground">{request.profiles?.email}</p>
-          <div className="mt-2 p-2 bg-muted rounded text-sm">
-            <p><strong>Street:</strong> {request.street_address}</p>
-            {request.area_name && <p><strong>Area:</strong> {request.area_name}</p>}
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            Submitted: {format(new Date(request.created_at), "MMM d, yyyy h:mm a")}
-          </p>
-        </div>
-        
-        {isPending && (
-          <div className="space-y-3 min-w-[200px]">
-            <div>
-              <Label className="text-xs">Latitude</Label>
-              <Input
-                placeholder="e.g. 6.9023"
-                value={latitude}
-                onChange={(e) => setLatitude(e.target.value)}
-                className="h-8"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Longitude</Label>
-              <Input
-                placeholder="e.g. 3.4213"
-                value={longitude}
-                onChange={(e) => setLongitude(e.target.value)}
-                className="h-8"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                onClick={handleVerify}
-                disabled={isLoading || !latitude || !longitude}
-                className="flex-1"
-              >
-                <CheckCircle className="h-4 w-4 mr-1" />
-                Verify
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={onReject}
-                disabled={isLoading}
-              >
-                <XCircle className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
+    <div className="p-3 border rounded-lg border-yellow-500/50 bg-yellow-50/50 dark:bg-yellow-950/20">
+      <div className="flex items-center gap-2 mb-2">
+        <Badge variant={request.user_type === 'business' ? 'default' : 'secondary'}>
+          {request.user_type}
+        </Badge>
+      </div>
+      <p className="font-medium text-sm">{request.profiles?.full_name}</p>
+      <p className="text-xs text-muted-foreground">{request.profiles?.email}</p>
+      <div className="mt-2 p-2 bg-muted rounded text-xs">
+        <p><strong>Street:</strong> {request.street_address}</p>
+        {request.area_name && <p><strong>Area:</strong> {request.area_name}</p>}
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <Input
+          placeholder="Latitude"
+          value={latitude}
+          onChange={(e) => setLatitude(e.target.value)}
+          className="h-8 text-sm"
+        />
+        <Input
+          placeholder="Longitude"
+          value={longitude}
+          onChange={(e) => setLongitude(e.target.value)}
+          className="h-8 text-sm"
+        />
+      </div>
+      <div className="mt-2 flex gap-2">
+        <Button
+          size="sm"
+          className="flex-1"
+          onClick={() => onVerify(parseFloat(latitude), parseFloat(longitude))}
+          disabled={isLoading || !latitude || !longitude}
+        >
+          Verify
+        </Button>
+        <Button size="sm" variant="destructive" onClick={onReject} disabled={isLoading}>
+          Reject
+        </Button>
       </div>
     </div>
   );
 }
 
-// Product Commission Card Component
-function ProductCommissionCard({ 
-  product, 
-  onUpdate, 
-  isLoading 
-}: { 
-  product: any;
-  onUpdate: (commission: number, isRare: boolean) => void;
-  isLoading: boolean;
-}) {
+// Product Commission Card
+function ProductCommissionCard({ product, onUpdate, isLoading }: any) {
   const [commission, setCommission] = useState(product.commission_percent || 10);
   const [isRare, setIsRare] = useState(product.is_rare || false);
-
-  const handleUpdate = () => {
-    onUpdate(commission, isRare);
-  };
 
   const hasChanges = commission !== product.commission_percent || isRare !== product.is_rare;
 
   return (
-    <div className="flex items-center justify-between p-4 border rounded-lg">
+    <div className="flex items-center justify-between p-3 border rounded-lg">
       <div className="flex-1">
         <div className="flex items-center gap-2">
-          <p className="font-medium">{product.name}</p>
+          <p className="font-medium text-sm">{product.name}</p>
           {product.is_rare && <Badge variant="destructive">Rare</Badge>}
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {product.businesses?.company_name} • ₦{Number(product.price || 0).toLocaleString()}
         </p>
       </div>
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <Input
-            type="number"
-            min={1}
-            max={20}
-            value={commission}
-            onChange={(e) => setCommission(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
-            className="w-16 h-8 text-center"
-          />
-          <span className="text-sm text-muted-foreground">%</span>
-        </div>
-        <label className="flex items-center gap-2 text-sm">
+      <div className="flex items-center gap-2">
+        <Input
+          type="number"
+          min={1}
+          max={20}
+          value={commission}
+          onChange={(e) => setCommission(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
+          className="w-14 h-8 text-center text-sm"
+        />
+        <span className="text-xs">%</span>
+        <label className="flex items-center gap-1 text-xs">
           <input
             type="checkbox"
             checked={isRare}
@@ -1334,11 +1551,7 @@ function ProductCommissionCard({
           />
           Rare
         </label>
-        <Button
-          size="sm"
-          onClick={handleUpdate}
-          disabled={isLoading || !hasChanges}
-        >
+        <Button size="sm" onClick={() => onUpdate(commission, isRare)} disabled={isLoading || !hasChanges}>
           Save
         </Button>
       </div>
