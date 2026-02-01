@@ -1,10 +1,1 @@
-project_id = "qxfxqikevffkfbzhamcu"
-
-[functions.initialize-payment]
-verify_jwt = true
-
-[functions.paystack-webhook]
-verify_jwt = false
-
-[functions.bootstrap-admin]
-verify_jwt = false
+project_id = "kxynwcuhgawnhqoexpti"
