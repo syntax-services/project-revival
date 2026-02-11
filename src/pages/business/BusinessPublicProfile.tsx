@@ -45,7 +45,6 @@ interface Business {
   business_type: string | null;
   reputation_score: number | null;
   verified: boolean | null;
-  service_radius_km: number | null;
 }
 
 interface Product {
@@ -56,8 +55,6 @@ interface Product {
   image_url: string | null;
   in_stock: boolean;
   category: string | null;
-  nicknames: string[] | null;
-  commission_percent?: number | null;
 }
 
 interface Service {
@@ -69,7 +66,7 @@ interface Service {
   price_min: number | null;
   price_max: number | null;
   duration_estimate: string | null;
-  availability: string;
+  is_available: boolean | null;
 }
 
 interface CartItem {
@@ -110,17 +107,15 @@ export default function BusinessPublicProfile() {
     const fetchData = async () => {
       if (!id) return;
 
-      const [businessRes, productsRes, servicesRes, likesRes] = await Promise.all([
+      const [businessRes, productsRes, servicesRes] = await Promise.all([
         supabase.from("businesses").select("*").eq("id", id).single(),
-        supabase.from("products").select("*, commission_percent").eq("business_id", id).order("created_at", { ascending: false }),
+        supabase.from("products").select("*").eq("business_id", id).order("created_at", { ascending: false }),
         supabase.from("services").select("*").eq("business_id", id).order("created_at", { ascending: false }),
-        supabase.from("business_likes").select("*", { count: "exact", head: true }).eq("business_id", id),
       ]);
 
-      if (businessRes.data) setBusiness(businessRes.data);
-      if (productsRes.data) setProducts(productsRes.data);
-      if (servicesRes.data) setServices(servicesRes.data);
-      setLikesCount(likesRes.count || 0);
+      if (businessRes.data) setBusiness(businessRes.data as unknown as Business);
+      if (productsRes.data) setProducts(productsRes.data as unknown as Product[]);
+      if (servicesRes.data) setServices(servicesRes.data as unknown as Service[]);
 
       if (user && profile?.user_type === "customer") {
         const { data: customer } = await supabase
@@ -132,13 +127,9 @@ export default function BusinessPublicProfile() {
         if (customer) {
           setCustomerId(customer.id);
 
-          const [savedRes, likedRes] = await Promise.all([
-            supabase.from("saved_businesses").select("id").eq("customer_id", customer.id).eq("business_id", id).maybeSingle(),
-            supabase.from("business_likes").select("id").eq("customer_id", customer.id).eq("business_id", id).maybeSingle(),
-          ]);
+          const savedRes = await supabase.from("saved_businesses").select("id").eq("customer_id", customer.id).eq("business_id", id).maybeSingle();
 
           setIsSaved(!!savedRes.data);
-          setIsLiked(!!likedRes.data);
         }
       }
 
@@ -167,21 +158,7 @@ export default function BusinessPublicProfile() {
   };
 
   const toggleLike = async () => {
-    if (!customerId || !id) return;
-
-    try {
-      if (isLiked) {
-        await supabase.from("business_likes").delete().eq("customer_id", customerId).eq("business_id", id);
-        setIsLiked(false);
-        setLikesCount((prev) => prev - 1);
-      } else {
-        await supabase.from("business_likes").insert({ customer_id: customerId, business_id: id });
-        setIsLiked(true);
-        setLikesCount((prev) => prev + 1);
-      }
-    } catch (error) {
-      showToast({ variant: "destructive", title: "Action failed" });
-    }
+    // business_likes table not available yet
   };
 
   const startChat = async () => {
@@ -485,8 +462,8 @@ export default function BusinessPublicProfile() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <h3 className="font-medium text-foreground">{service.name}</h3>
-                              <Badge variant={service.availability === "available" ? "default" : "secondary"}>
-                                {service.availability}
+                              <Badge variant={service.is_available ? "default" : "secondary"}>
+                                {service.is_available ? "Available" : "Unavailable"}
                               </Badge>
                             </div>
                             {service.category && (
@@ -501,7 +478,7 @@ export default function BusinessPublicProfile() {
                             )}
                           </div>
                         </div>
-                        {profile?.user_type === "customer" && service.availability === "available" && (
+                        {profile?.user_type === "customer" && service.is_available && (
                           <Button className="w-full mt-3" onClick={() => openServiceRequest(service)} size="sm">
                             Request Service
                           </Button>
@@ -581,7 +558,7 @@ export default function BusinessPublicProfile() {
             price: item.product.price || 0,
             quantity: item.quantity,
             imageUrl: item.product.image_url || undefined,
-            commissionPercent: item.product.commission_percent || undefined,
+            commissionPercent: undefined,
           }))}
           onSuccess={handleCheckoutSuccess}
         />

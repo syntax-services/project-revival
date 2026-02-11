@@ -159,7 +159,7 @@ export default function BusinessUpload() {
         name: productName.trim(),
         description: productDescription.trim() || null,
         price: productPrice ? parseFloat(productPrice) : null,
-        nicknames: productNicknames.length > 0 ? productNicknames : null,
+        tags: productNicknames.length > 0 ? productNicknames : null,
         in_stock: productInStock,
         image_url: finalImageUrl,
       });

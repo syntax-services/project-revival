@@ -48,7 +48,6 @@ interface Product {
   id: string;
   name: string;
   business_id: string;
-  nicknames?: string[] | null;
   price?: number | null;
   image_url?: string | null;
 }
@@ -112,11 +111,9 @@ export default function CustomerDiscover() {
         if (businessList && customer) {
           const enriched = await Promise.all(
             businessList.map(async (biz) => {
-              const [likesRes, likedRes, savedRes, productsRes, servicesRes] = await Promise.all([
-                supabase.from("business_likes").select("*", { count: "exact", head: true }).eq("business_id", biz.id),
-                supabase.from("business_likes").select("id").eq("business_id", biz.id).eq("customer_id", customer.id).maybeSingle(),
+              const [savedRes, productsRes, servicesRes] = await Promise.all([
                 supabase.from("saved_businesses").select("id").eq("business_id", biz.id).eq("customer_id", customer.id).maybeSingle(),
-                supabase.from("products").select("id, name, business_id, nicknames, price, image_url").eq("business_id", biz.id).limit(5),
+                supabase.from("products").select("id, name, business_id, price, image_url").eq("business_id", biz.id).limit(5),
                 supabase.from("services").select("id, name, business_id, images, price_min, price_max").eq("business_id", biz.id).limit(5),
               ]);
 
@@ -129,8 +126,8 @@ export default function CustomerDiscover() {
 
               return {
                 ...biz,
-                likes_count: likesRes.count || 0,
-                is_liked: !!likedRes.data,
+                likes_count: 0,
+                is_liked: false,
                 is_saved: !!savedRes.data,
                 distance,
                 products: productsRes.data || [],
@@ -180,13 +177,8 @@ export default function CustomerDiscover() {
     if (!business) return;
 
     try {
-      if (business.is_liked) {
-        await supabase.from("business_likes").delete().eq("customer_id", customerId).eq("business_id", businessId);
-        setBusinesses((prev) => prev.map((b) => b.id === businessId ? { ...b, is_liked: false, likes_count: b.likes_count - 1 } : b));
-      } else {
-        await supabase.from("business_likes").insert({ customer_id: customerId, business_id: businessId });
-        setBusinesses((prev) => prev.map((b) => b.id === businessId ? { ...b, is_liked: true, likes_count: b.likes_count + 1 } : b));
-      }
+      // business_likes table not available yet
+      toast({ title: "Likes feature coming soon" });
     } catch (error) {
       toast({ variant: "destructive", title: "Action failed" });
     }
@@ -228,10 +220,7 @@ export default function CustomerDiscover() {
       b.company_name.toLowerCase().includes(searchLower) ||
       b.industry?.toLowerCase().includes(searchLower) ||
       b.business_location?.toLowerCase().includes(searchLower) ||
-      b.products.some((p) => 
-        p.name.toLowerCase().includes(searchLower) ||
-        (p.nicknames || []).some(nick => nick.toLowerCase().includes(searchLower))
-      ) ||
+      b.products.some((p) => p.name.toLowerCase().includes(searchLower)) ||
       b.services.some((s) => s.name.toLowerCase().includes(searchLower));
     
     if (!matchesSearch) return false;

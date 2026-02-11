@@ -152,7 +152,7 @@ export default function CustomerOverview() {
                         {order.businesses?.company_name || "Order"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {order.order_number} • {format(new Date(order.created_at), "MMM d")}
+                        {order.id.slice(0, 8).toUpperCase()} • {format(new Date(order.created_at), "MMM d")}
                       </p>
                     </div>
                     {getOrderStatusBadge(order.status)}
@@ -189,10 +189,10 @@ export default function CustomerOverview() {
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-foreground truncate">
-                        {job.title}
+                        {job.services?.name || job.description || "Service Request"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {job.job_number} • {format(new Date(job.created_at), "MMM d")}
+                        {job.id.slice(0, 8).toUpperCase()} • {format(new Date(job.created_at), "MMM d")}
                       </p>
                     </div>
                     {getJobStatusBadge(job.status)}

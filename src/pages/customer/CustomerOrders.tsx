@@ -71,7 +71,7 @@ export default function CustomerOrders() {
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground">
-              {order.order_number} • {items.length} item{items.length !== 1 ? "s" : ""} • ₦{Number(order.total).toLocaleString()}
+              {order.id.slice(0, 8).toUpperCase()} • {items.length} item{items.length !== 1 ? "s" : ""} • ₦{Number(order.total).toLocaleString()}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               {format(new Date(order.created_at), "MMM d, yyyy 'at' h:mm a")}
@@ -91,7 +91,7 @@ export default function CustomerOrders() {
                 orderId={order.id}
                 businessId={order.business_id}
                 customerId={customer.id}
-                orderNumber={order.order_number}
+                orderNumber={order.id.slice(0, 8).toUpperCase()}
                 onConfirmed={() => {
                   queryClient.invalidateQueries({ queryKey: ["customer-orders"] });
                   setSelectedOrder(null);
@@ -167,7 +167,7 @@ export default function CustomerOrders() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Order Number</p>
-                  <p className="font-medium">{selectedOrder.order_number}</p>
+                  <p className="font-medium">{selectedOrder.id.slice(0, 8).toUpperCase()}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Status</p>
@@ -179,9 +179,9 @@ export default function CustomerOrders() {
                   <p className="text-muted-foreground">Total</p>
                   <p className="font-medium">₦{Number(selectedOrder.total).toLocaleString()}</p>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">Delivery Method</p>
-                  <p className="font-medium capitalize">{selectedOrder.delivery_method}</p>
+                 <div>
+                   <p className="text-muted-foreground">Delivery</p>
+                   <p className="font-medium capitalize">{selectedOrder.delivery_address ? "Delivery" : "Pickup"}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Ordered</p>
@@ -244,7 +244,7 @@ export default function CustomerOrders() {
                     orderId={selectedOrder.id}
                     businessId={selectedOrder.business_id}
                     customerId={customer.id}
-                    orderNumber={selectedOrder.order_number}
+                    orderNumber={selectedOrder.id.slice(0, 8).toUpperCase()}
                     onConfirmed={() => {
                       queryClient.invalidateQueries({ queryKey: ["customer-orders"] });
                       setSelectedOrder(null);

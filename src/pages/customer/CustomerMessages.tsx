@@ -61,10 +61,10 @@ export default function CustomerMessages() {
         .select(`
           id,
           business_id,
-          updated_at
+          last_message_at
         `)
         .eq("customer_id", customerId)
-        .order("updated_at", { ascending: false });
+        .order("last_message_at", { ascending: false });
 
       if (convs) {
         // Fetch business names and last messages
@@ -77,7 +77,7 @@ export default function CustomerMessages() {
               .single();
 
             const { data: lastMsg } = await supabase
-              .from("chat_messages")
+              .from("messages")
               .select("content, created_at")
               .eq("conversation_id", conv.id)
               .order("created_at", { ascending: false })
@@ -85,18 +85,18 @@ export default function CustomerMessages() {
               .maybeSingle();
 
             const { count } = await supabase
-              .from("chat_messages")
+              .from("messages")
               .select("*", { count: "exact", head: true })
               .eq("conversation_id", conv.id)
               .eq("sender_type", "business")
-              .eq("read", false);
+              .is("read_at", null);
 
             return {
               id: conv.id,
               business_id: conv.business_id,
               business_name: business?.company_name || "Unknown",
               last_message: lastMsg?.content || null,
-              last_message_at: lastMsg?.created_at || conv.updated_at,
+              last_message_at: lastMsg?.created_at || conv.last_message_at || "",
               unread_count: count || 0,
             };
           })
@@ -115,20 +115,27 @@ export default function CustomerMessages() {
 
     const fetchMessages = async () => {
       const { data } = await supabase
-        .from("chat_messages")
+        .from("messages")
         .select("*")
         .eq("conversation_id", selectedConversation.id)
         .order("created_at", { ascending: true });
 
       if (data) {
-        setMessages(data as Message[]);
+        setMessages(data.map(m => ({
+          id: m.id,
+          content: m.content,
+          sender_type: m.sender_type as "customer" | "business",
+          created_at: m.created_at,
+          read: !!m.read_at,
+        })));
         
         // Mark messages as read
         await supabase
-          .from("chat_messages")
-          .update({ read: true })
+          .from("messages")
+          .update({ read_at: new Date().toISOString() })
           .eq("conversation_id", selectedConversation.id)
-          .eq("sender_type", "business");
+          .eq("sender_type", "business")
+          .is("read_at", null);
       }
     };
 
@@ -142,11 +149,18 @@ export default function CustomerMessages() {
         {
           event: "INSERT",
           schema: "public",
-          table: "chat_messages",
+          table: "messages",
           filter: `conversation_id=eq.${selectedConversation.id}`,
         },
         (payload) => {
-          setMessages((prev) => [...prev, payload.new as Message]);
+          const m = payload.new as any;
+          setMessages((prev) => [...prev, {
+            id: m.id,
+            content: m.content,
+            sender_type: m.sender_type,
+            created_at: m.created_at,
+            read: !!m.read_at,
+          }]);
         }
       )
       .subscribe();
@@ -165,18 +179,12 @@ export default function CustomerMessages() {
 
     setSending(true);
     try {
-      await supabase.from("chat_messages").insert({
+      await supabase.from("messages").insert({
         conversation_id: selectedConversation.id,
         sender_id: customerId,
         sender_type: "customer",
         content: newMessage.trim(),
       });
-
-      // Update conversation timestamp
-      await supabase
-        .from("conversations")
-        .update({ updated_at: new Date().toISOString() })
-        .eq("id", selectedConversation.id);
 
       setNewMessage("");
     } catch (error) {

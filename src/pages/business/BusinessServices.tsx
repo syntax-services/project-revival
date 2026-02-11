@@ -142,8 +142,8 @@ export default function BusinessServices() {
       price_min: service.price_min?.toString() || "",
       price_max: service.price_max?.toString() || "",
       duration_estimate: service.duration_estimate || "",
-      availability: service.availability as ServiceFormData["availability"],
-      location_coverage: service.location_coverage || [],
+      availability: (service.is_available ? "available" : "unavailable") as ServiceFormData["availability"],
+      location_coverage: [],
       images: service.images || [],
     });
     setIsDialogOpen(true);
@@ -164,8 +164,7 @@ export default function BusinessServices() {
         price_min: formData.price_min ? parseFloat(formData.price_min) : null,
         price_max: formData.price_max ? parseFloat(formData.price_max) : null,
         duration_estimate: formData.duration_estimate || null,
-        availability: formData.availability,
-        location_coverage: formData.location_coverage,
+        is_available: formData.availability === "available",
         images: formData.images,
       };
 
@@ -489,8 +488,8 @@ export default function BusinessServices() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-medium text-foreground truncate">{service.name}</h3>
-                          <Badge variant={service.availability === "available" ? "default" : "secondary"}>
-                            {service.availability}
+                          <Badge variant={service.is_available ? "default" : "secondary"}>
+                            {service.is_available ? "Available" : "Unavailable"}
                           </Badge>
                         </div>
                         {service.category && (
