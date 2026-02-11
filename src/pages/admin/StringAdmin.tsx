@@ -280,7 +280,7 @@ export default function StringAdmin() {
     mutationFn: async ({ productId, commission, isRare }: { productId: string; commission: number; isRare: boolean }) => {
       const { error } = await supabase
         .from("products")
-        .update({ commission_percent: commission, is_rare: isRare })
+        .update({ is_rare: isRare })
         .eq("id", productId);
       if (error) throw error;
     },
@@ -870,7 +870,7 @@ export default function StringAdmin() {
                         <TableRow key={order.id}>
                           <TableCell>
                             <div>
-                              <p className="font-medium">{order.order_number}</p>
+                              <p className="font-medium">{order.id?.slice(0, 8).toUpperCase()}</p>
                               <p className="text-xs text-muted-foreground">
                                 {format(new Date(order.created_at), "MMM d, yyyy")}
                               </p>
@@ -932,8 +932,8 @@ export default function StringAdmin() {
                         <TableRow key={job.id}>
                           <TableCell>
                             <div>
-                              <p className="font-medium">{job.title}</p>
-                              <p className="text-xs text-muted-foreground">{job.job_number}</p>
+                               <p className="font-medium">{job.description || 'Service Request'}</p>
+                               <p className="text-xs text-muted-foreground">{job.id?.slice(0, 8).toUpperCase()}</p>
                             </div>
                           </TableCell>
                           <TableCell>{job.customers?.profiles?.full_name || 'Unknown'}</TableCell>
