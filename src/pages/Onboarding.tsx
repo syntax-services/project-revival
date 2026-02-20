@@ -41,8 +41,8 @@ const yearsOptions = [
 ];
 
 const budgetOptions = [
-  "Less than $1,000/mo", "$1,000-$5,000/mo", "$5,000-$20,000/mo",
-  "$20,000-$50,000/mo", "$50,000+/mo"
+  "Less than ₦500,000/mo", "₦500,000-₦2,000,000/mo", "₦2,000,000-₦10,000,000/mo",
+  "₦10,000,000-₦25,000,000/mo", "₦25,000,000+/mo"
 ];
 
 const marketingChannels = [

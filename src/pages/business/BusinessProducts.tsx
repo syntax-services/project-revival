@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -184,7 +185,8 @@ export default function BusinessProducts() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 pb-24 space-y-6">
+    <DashboardLayout>
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Products</h1>
@@ -399,5 +401,6 @@ export default function BusinessProducts() {
         </div>
       )}
     </div>
+    </DashboardLayout>
   );
 }

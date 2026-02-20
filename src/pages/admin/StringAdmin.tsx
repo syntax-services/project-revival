@@ -241,9 +241,7 @@ export default function StringAdmin() {
         .from("location_requests")
         .update({
           status: approved ? "verified" : "rejected",
-          verified_latitude: latitude,
-          verified_longitude: longitude,
-          verified_by: user?.id,
+          admin_notes: approved ? `Verified at ${latitude},${longitude}` : "Rejected",
           verified_at: new Date().toISOString(),
         })
         .eq("id", requestId);
@@ -257,8 +255,6 @@ export default function StringAdmin() {
           .update({
             latitude, longitude,
             location_verified: true,
-            location_verified_at: new Date().toISOString(),
-            location_verified_by: user?.id,
           })
           .eq("user_id", userId);
         if (updateError) throw updateError;

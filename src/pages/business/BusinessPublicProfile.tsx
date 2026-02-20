@@ -240,11 +240,10 @@ export default function BusinessPublicProfile() {
         customer_id: customerId,
         business_id: id,
         service_id: selectedService.id,
-        title: jobTitle,
-        description: jobDescription || null,
+        description: jobDescription || jobTitle || null,
         location: jobLocation || null,
-        budget_min: budgetMin ? parseFloat(budgetMin) : null,
-        budget_max: budgetMax ? parseFloat(budgetMax) : null,
+        quoted_price: budgetMin ? parseFloat(budgetMin) : null,
+        requirements: budgetMax ? `Budget max: ₦${budgetMax}` : null,
       });
 
       if (error) throw error;
