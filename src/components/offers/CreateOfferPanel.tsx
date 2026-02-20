@@ -84,7 +84,7 @@ export function CreateOfferPanel() {
     const fileName = `offers/${user?.id}/${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
-      .from("business-images")
+      .from("offer-media")
       .upload(fileName, file);
 
     if (uploadError) {
@@ -92,7 +92,7 @@ export function CreateOfferPanel() {
       return null;
     }
 
-    const { data } = supabase.storage.from("business-images").getPublicUrl(fileName);
+    const { data } = supabase.storage.from("offer-media").getPublicUrl(fileName);
     return data.publicUrl;
   };
 

@@ -92,7 +92,7 @@ export default function BusinessServices() {
     const fileName = `${business.id}/services/${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
-      .from("business-images")
+      .from("service-images")
       .upload(fileName, file);
 
     if (uploadError) {
@@ -100,7 +100,7 @@ export default function BusinessServices() {
       return null;
     }
 
-    const { data } = supabase.storage.from("business-images").getPublicUrl(fileName);
+    const { data } = supabase.storage.from("service-images").getPublicUrl(fileName);
     return data.publicUrl;
   };
 
