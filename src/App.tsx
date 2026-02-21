@@ -57,8 +57,8 @@ const BusinessDiscover = lazy(() => import("./pages/business/BusinessDiscover"))
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const StringAdmin = lazy(() => import("./pages/admin/StringAdmin"));
 
-// Protected route component - lazy loaded
-const ProtectedRoute = lazy(() => import("@/components/auth/ProtectedRoute").then(m => ({ default: m.ProtectedRoute })));
+// Protected route component
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
