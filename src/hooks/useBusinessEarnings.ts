@@ -37,11 +37,11 @@ export function useBusinessEarnings(businessId: string | undefined) {
         .eq("status", "completed");
 
       // Get business balance info
-      const { data: business } = await supabase
-        .from("businesses")
+      const { data: wallet } = await supabase
+        .from("business_wallets")
         .select("available_balance, pending_balance, total_withdrawn")
-        .eq("id", businessId)
-        .single();
+        .eq("business_id", businessId)
+        .maybeSingle();
 
       const totalOrderRevenue = (orders || []).reduce((sum, o) => sum + Number(o.total || 0), 0);
       const totalCommission = (orders || []).reduce((sum, o) => sum + Number(o.commission_amount || 0) + Number(o.platform_fee || 0), 0);
@@ -58,9 +58,9 @@ export function useBusinessEarnings(businessId: string | undefined) {
         totalJobRevenue,
         orderCount: orders?.length || 0,
         jobCount: jobs?.length || 0,
-        availableBalance: Number(business?.available_balance || netRevenue),
-        pendingBalance: Number(business?.pending_balance || 0),
-        totalWithdrawn: Number(business?.total_withdrawn || 0),
+        availableBalance: Number(wallet?.available_balance || netRevenue),
+        pendingBalance: Number(wallet?.pending_balance || 0),
+        totalWithdrawn: Number(wallet?.total_withdrawn || 0),
       };
     },
     enabled: !!businessId,
