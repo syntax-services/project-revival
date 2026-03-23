@@ -168,7 +168,7 @@ export default function BusinessPublicProfile() {
     }
 
     try {
-      let { data: existingConv } = await supabase
+      const { data: existingConv } = await supabase
         .from("conversations")
         .select("id")
         .eq("customer_id", customerId)

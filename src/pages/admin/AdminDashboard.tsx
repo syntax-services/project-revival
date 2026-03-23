@@ -34,7 +34,9 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedReview, setSelectedReview] = useState<any>(null);
 
   // Fetch businesses for moderation

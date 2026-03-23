@@ -4,11 +4,11 @@
 // Common social media patterns
 const SOCIAL_PATTERNS = [
   // Instagram patterns
-  /\b(?:ig|insta(?:gram)?|@)\s*[:=\-]?\s*[a-zA-Z0-9._]+\b/gi,
+  /\b(?:ig|insta(?:gram)?|@)\s*[:=-]?\s*[a-zA-Z0-9._]+\b/gi,
   /@[a-zA-Z0-9._]{3,30}/g, // Direct @ mentions
   
   // WhatsApp patterns
-  /\b(?:whatsapp|wa|watsap|whats\s*app)\s*[:=\-]?\s*[\d+\s()-]+/gi,
+  /\b(?:whatsapp|wa|watsap|whats\s*app)\s*[:=-]?\s*[\d+\s()-]+/gi,
   
   // Phone number patterns (Nigerian and international)
   /\+?\d{1,3}[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}/g,
@@ -17,7 +17,7 @@ const SOCIAL_PATTERNS = [
   
   // Email patterns
   /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
-  /\b(?:gmail|yahoo|hotmail|outlook)\s*[:=\-]?\s*[a-zA-Z0-9._%+-]+/gi,
+  /\b(?:gmail|yahoo|hotmail|outlook)\s*[:=-]?\s*[a-zA-Z0-9._%+-]+/gi,
   
   // Telegram patterns
   /\b(?:telegram|tg|t\.me)\s*[:=\-/]?\s*[a-zA-Z0-9_]+/gi,
@@ -32,7 +32,7 @@ const SOCIAL_PATTERNS = [
   /\b(?:tiktok|tik\s*tok)\s*[:=\-/]?\s*[a-zA-Z0-9._]+/gi,
   
   // Snapchat patterns
-  /\b(?:snapchat|snap|sc)\s*[:=\-]?\s*[a-zA-Z0-9._]+/gi,
+  /\b(?:snapchat|snap|sc)\s*[:=-]?\s*[a-zA-Z0-9._]+/gi,
   
   // LinkedIn patterns
   /\b(?:linkedin|linked\s*in)\s*[:=\-/]?\s*[a-zA-Z0-9._-]+/gi,

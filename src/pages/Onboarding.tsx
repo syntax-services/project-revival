@@ -289,7 +289,7 @@ export default function Onboarding() {
 
       const redirectPath = userType === "business" ? "/business" : "/customer";
       navigate(redirectPath, { replace: true });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Onboarding error:", error);
       toast({
         variant: "destructive",

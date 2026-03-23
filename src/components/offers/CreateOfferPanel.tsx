@@ -134,13 +134,13 @@ export function CreateOfferPanel() {
     setSaving(true);
     try {
       await createOffer.mutateAsync({
-        offer_type: offerType as any,
+        offer_type: offerType as 'product' | 'service' | 'employment' | 'collaboration',
         title: title.trim(),
         description: description.trim() || undefined,
         budget_min: budgetMin ? parseFloat(budgetMin) : undefined,
         budget_max: budgetMax ? parseFloat(budgetMax) : undefined,
         location: location.trim() || undefined,
-        urgency: urgency as any || undefined,
+        urgency: (urgency as 'low' | 'medium' | 'high' | 'urgent') || undefined,
         images: images.length > 0 ? images : undefined,
         video_url: videoUrl.trim() || undefined,
       });

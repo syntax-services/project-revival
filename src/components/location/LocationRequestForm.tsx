@@ -66,7 +66,7 @@ export function LocationRequestForm({ onSuccess, required = false }: LocationReq
       setSubmitted(true);
       toast.success("Location submitted for verification!");
       onSuccess?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Location submit error:", error);
       toast.error(error.message || "Failed to submit location");
     } finally {

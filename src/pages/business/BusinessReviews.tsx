@@ -19,6 +19,7 @@ export default function BusinessReviews() {
   const { data: reviews, isLoading } = useBusinessReviewsWithDetails(business?.id);
   const respondMutation = useRespondToReview();
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedReview, setSelectedReview] = useState<any>(null);
   const [response, setResponse] = useState("");
 

@@ -153,7 +153,7 @@ export default function CustomerMessages() {
           filter: `conversation_id=eq.${selectedConversation.id}`,
         },
         (payload) => {
-          const m = payload.new as any;
+          const m = payload.new as Record<string, unknown>;
           setMessages((prev) => [...prev, {
             id: m.id,
             content: m.content,
