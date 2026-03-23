@@ -130,7 +130,7 @@ export default function Onboarding() {
 
   useEffect(() => {
     if (profile?.onboarding_completed) {
-      const redirectPath = profile.user_type === "business" ? "/business" : "/customer";
+      let redirectPath = "/customer"; if (profile.user_type === "business") { redirectPath = "/business"; } else if (profile.user_type === "admin") { redirectPath = "/admin"; }
       navigate(redirectPath, { replace: true });
     }
   }, [profile, navigate]);
