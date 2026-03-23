@@ -140,7 +140,8 @@ export function CheckoutFlow({
       onSuccess?.();
       onClose();
     },
-    onError: (error: any) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onError: (error: unknown) => {
       toast.error(error.message || "Failed to place order");
     },
   });
