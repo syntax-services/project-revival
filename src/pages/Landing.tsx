@@ -58,7 +58,14 @@ export default function Landing() {
   const getDashboardLink = () => {
     if (!user) return "/auth";
     if (!profile?.onboarding_completed) return "/onboarding";
-    return profile?.user_type === "business" ? "/business" : "/customer";
+    
+    if (profile.user_type === "business") {
+      return "/business";
+    } else if (profile.user_type === "admin") {
+      return "/admin";
+    }
+    
+    return "/customer";
   };
 
   return (
@@ -178,19 +185,19 @@ export default function Landing() {
           <div className="flex items-center gap-2">
             <img src={stringLogo} alt="String" className="h-8 w-auto opacity-70 logo-adaptive" />
             <span className="text-sm text-muted-foreground">
-              © 2025 String. All rights reserved.
+              © 2026 String. All rights reserved.
             </span>
           </div>
           <nav className="flex gap-6">
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
+            <Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground">
               Privacy
-            </a>
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
+            </Link>
+            <Link to="/terms" className="text-sm text-muted-foreground hover:text-foreground">
               Terms
-            </a>
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
+            </Link>
+            <Link to="/contact" className="text-sm text-muted-foreground hover:text-foreground">
               Contact
-            </a>
+            </Link>
           </nav>
         </div>
       </footer>

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { z } from "zod";
+import stringLogo from "@/assets/string-logo.png";
 
 const authSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -34,9 +35,16 @@ export default function Auth() {
   useEffect(() => {
     if (!authLoading && user) {
       if (profile?.onboarding_completed) {
-        const redirectPath = profile.user_type === "business" ? "/business" : "/customer";
+        let redirectPath = "/customer";
+        
+        if (profile.user_type === "business") {
+          redirectPath = "/business";
+        } else if (profile.user_type === "admin") {
+          redirectPath = "/admin";
+        }
+        
         navigate(redirectPath, { replace: true });
-      } else {
+      } else if (profile) {
         navigate("/onboarding", { replace: true });
       }
     }
@@ -92,6 +100,11 @@ export default function Auth() {
             description: message,
           });
         } else {
+          toast({
+            title: "Check your email",
+            description: "A secure link has been sent to your mail for email confirmation.",
+            duration: 10000,
+          });
           navigate("/onboarding", { replace: true });
         }
       }
@@ -127,10 +140,8 @@ export default function Auth() {
       <main className="flex flex-1 items-center justify-center p-4">
         <div className="w-full max-w-sm animate-fade-in">
           {/* Logo */}
-          <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 h-12 w-12 rounded-xl bg-primary flex items-center justify-center">
-              <span className="text-lg font-bold text-primary-foreground">S</span>
-            </div>
+          <div className="mb-8 text-center flex flex-col items-center">
+            <img src={stringLogo} alt="String Logo" className="h-16 w-auto mb-4 object-contain" />
             <h1 className="text-2xl font-semibold text-foreground">
               {isLogin ? "Welcome back" : "Create your account"}
             </h1>
