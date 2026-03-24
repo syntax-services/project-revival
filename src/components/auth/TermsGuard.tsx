@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -18,12 +19,18 @@ import { toast } from "sonner";
 export function TermsGuard({ children }: { children: React.ReactNode }) {
   const { user, profile, refreshProfile } = useAuth();
   const queryClient = useQueryClient();
+  const location = useLocation();
   const [showModal, setShowModal] = useState(false);
   const [latestVersion, setLatestVersion] = useState<number | null>(null);
+  const publicRoutes = ["/", "/auth", "/privacy", "/terms", "/contact"];
+  const isPublicRoute = publicRoutes.includes(location.pathname);
+  const shouldCheckTerms = !!user && !!profile?.onboarding_completed && !isPublicRoute;
 
   // Fetch the latest terms version from system_config
-  const { data: config, isLoading: loadingConfig } = useQuery({
+  const { data: config } = useQuery({
     queryKey: ["latest-terms-version"],
+    enabled: shouldCheckTerms,
+    staleTime: 10 * 60_000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("system_config")
@@ -36,12 +43,12 @@ export function TermsGuard({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    // Public routes that don't need terms enforcement
-    const publicRoutes = ["/", "/auth", "/privacy", "/terms"];
-    const currentPath = window.location.pathname;
-    const isPublicRoute = publicRoutes.includes(currentPath);
+    if (!shouldCheckTerms) {
+      setShowModal(false);
+      return;
+    }
 
-    if (config?.value && !isPublicRoute) {
+    if (config?.value) {
       const rawValue = config.value;
       const version: number = typeof rawValue === 'string' ? parseInt(rawValue, 10) : Number(rawValue);
       if (Number.isNaN(version)) return;
@@ -54,7 +61,7 @@ export function TermsGuard({ children }: { children: React.ReactNode }) {
         }
       }
     }
-  }, [config, user, profile]);
+  }, [config, profile, shouldCheckTerms, user]);
 
   const acceptMutation = useMutation({
     mutationFn: async () => {
@@ -80,8 +87,6 @@ export function TermsGuard({ children }: { children: React.ReactNode }) {
       toast.error(error.message || "Failed to accept terms");
     },
   });
-
-  if (loadingConfig) return null;
 
   return (
     <>
