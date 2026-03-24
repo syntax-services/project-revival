@@ -33,7 +33,7 @@ import { LaunchAnalytics } from "@/components/admin/LaunchAnalytics";
 type VerificationTier = 'none' | 'basic' | 'verified' | 'premium' | 'elite';
 
 export default function StringAdmin() {
-  const { signOut, user } = useAuth();
+  const { signOut, user, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("users");
@@ -74,10 +74,12 @@ export default function StringAdmin() {
       if (data?.error) throw new Error(data.error);
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Admin role granted! Refreshing...");
-      queryClient.invalidateQueries({ queryKey: ["admin-check"] });
+      await refreshProfile();
+      queryClient.invalidateQueries({ queryKey: ["admin-check", user?.id] });
       setBootstrapKey("");
+      navigate("/admin", { replace: true });
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to bootstrap admin");

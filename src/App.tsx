@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Suspense, lazy, useEffect } from "react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -58,7 +58,6 @@ const BusinessUpload = lazy(() => import("./pages/business/BusinessUpload"));
 const BusinessDiscover = lazy(() => import("./pages/business/BusinessDiscover"));
 
 // Admin pages
-const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const StringAdmin = lazy(() => import("./pages/admin/StringAdmin"));
 
 const queryClient = new QueryClient({
@@ -140,9 +139,24 @@ const App = () => (
                   <Route path="/business/:id" element={<ProtectedRoute><BusinessPublicProfile /></ProtectedRoute>} />
 
                   {/* Admin Routes */}
-                  <Route path="/admin" element={<ProtectedRoute requiredUserType="admin"><AdminDashboard /></ProtectedRoute>} />
+                  <Route
+                    path="/admin"
+                    element={
+                      <ProtectedRoute requiredUserType="admin" allowAdminBootstrap>
+                        <StringAdmin />
+                      </ProtectedRoute>
+                    }
+                  />
                   {/* Secret developer admin page - no public links */}
-                  <Route path="/string-admin" element={<ProtectedRoute requiredUserType="admin"><StringAdmin /></ProtectedRoute>} />
+                  <Route
+                    path="/string-admin"
+                    element={
+                      <ProtectedRoute requiredUserType="admin" allowAdminBootstrap>
+                        <StringAdmin />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route path="/admin-dashboard" element={<Navigate to="/admin" replace />} />
 
                   <Route path="*" element={<NotFound />} />
                 </Routes>

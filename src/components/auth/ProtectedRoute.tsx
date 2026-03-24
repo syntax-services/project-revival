@@ -6,11 +6,13 @@ import { Loader2 } from "lucide-react";
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredUserType?: "customer" | "business" | "admin";
+  allowAdminBootstrap?: boolean;
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requiredUserType,
+  allowAdminBootstrap = false,
 }) => {
   const { user, profile, loading, dashboardPath, isAdmin, resolvedUserType } = useAuth();
   const location = useLocation();
@@ -28,13 +30,17 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // Non-admin flows require onboarding before accessing protected routes
-  if ((!profile || !profile.onboarding_completed) && !isAdmin) {
+  if ((!profile || !profile.onboarding_completed) && !isAdmin && !allowAdminBootstrap) {
     if (!location.pathname.startsWith("/onboarding")) {
       return <Navigate to="/onboarding" replace />;
     }
   }
 
   if (requiredUserType === "admin") {
+    if (allowAdminBootstrap) {
+      return <>{children}</>;
+    }
+
     if (!isAdmin && location.pathname !== dashboardPath) {
       return <Navigate to={dashboardPath} replace />;
     }
