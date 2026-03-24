@@ -656,6 +656,36 @@ export type Database = {
         }
         Relationships: []
       }
+      onboarding_drafts: {
+        Row: {
+          created_at: string
+          current_step: number
+          draft: Json
+          id: string
+          selected_user_type: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_step?: number
+          draft?: Json
+          id?: string
+          selected_user_type?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_step?: number
+          draft?: Json
+          id?: string
+          selected_user_type?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       offers: {
         Row: {
           budget_max: number | null

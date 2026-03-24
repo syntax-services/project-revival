@@ -12,6 +12,57 @@ import { Loader2, ArrowRight, ArrowLeft, Building2, User, Check, Info } from "lu
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 
+type UserType = "customer" | "business";
+
+interface BusinessFormData {
+  companyName: string;
+  industry: string;
+  companySize: string;
+  yearsInOperation: string;
+  businessLocation: string;
+  website: string;
+  businessGoals: string[];
+  targetCustomerType: string;
+  monthlyCustomerVolume: string;
+  budgetRange: string;
+  marketingChannels: string[];
+  painPoints: string[];
+  productsServices: string;
+  competitiveLandscape: string;
+  growthStrategy: string;
+  operatingRegion: string;
+  internalCapacity: string;
+  expectationsFromString: string;
+  strategicNotes: string;
+  streetAddress: string;
+  areaName: string;
+  businessType: "goods" | "services" | "both";
+}
+
+interface CustomerFormData {
+  ageRange: string;
+  gender: string;
+  location: string;
+  interests: string[];
+  spendingHabits: string;
+  preferredCategories: string[];
+  lifestylePreferences: string[];
+  serviceExpectations: string;
+  painPoints: string[];
+  improvementWishes: string;
+  purchaseFrequency: string;
+  customPreferences: string;
+  streetAddress: string;
+  areaName: string;
+}
+
+interface OnboardingDraftPayload {
+  fullName: string;
+  phone: string;
+  businessData: BusinessFormData;
+  customerData: CustomerFormData;
+}
+
 const basicInfoSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters"),
   phone: z.string().optional(),
@@ -69,6 +120,51 @@ const categoryOptions = [
   "Home Services", "Professional Services", "Fitness", "Travel", "Technology"
 ];
 
+const defaultBusinessData: BusinessFormData = {
+  companyName: "",
+  industry: "",
+  companySize: "",
+  yearsInOperation: "",
+  businessLocation: "",
+  website: "",
+  businessGoals: [],
+  targetCustomerType: "",
+  monthlyCustomerVolume: "",
+  budgetRange: "",
+  marketingChannels: [],
+  painPoints: [],
+  productsServices: "",
+  competitiveLandscape: "",
+  growthStrategy: "",
+  operatingRegion: "",
+  internalCapacity: "",
+  expectationsFromString: "",
+  strategicNotes: "",
+  streetAddress: "",
+  areaName: "",
+  businessType: "both",
+};
+
+const defaultCustomerData: CustomerFormData = {
+  ageRange: "",
+  gender: "",
+  location: "",
+  interests: [],
+  spendingHabits: "",
+  preferredCategories: [],
+  lifestylePreferences: [],
+  serviceExpectations: "",
+  painPoints: [],
+  improvementWishes: "",
+  purchaseFrequency: "",
+  customPreferences: "",
+  streetAddress: "",
+  areaName: "",
+};
+
+const isStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "string");
+
 export default function Onboarding() {
   const { user, profile, refreshProfile, dashboardPath } = useAuth();
   const navigate = useNavigate();
@@ -76,6 +172,7 @@ export default function Onboarding() {
 
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [draftHydrated, setDraftHydrated] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Step 1: Basic Info
@@ -83,57 +180,141 @@ export default function Onboarding() {
   const [phone, setPhone] = useState("");
 
   // Step 2: User Type
-  const [userType, setUserType] = useState<"customer" | "business" | null>(null);
+  const [userType, setUserType] = useState<UserType | null>(null);
 
   // Step 3: Business Profile
-  const [businessData, setBusinessData] = useState({
-    companyName: "",
-    industry: "",
-    companySize: "",
-    yearsInOperation: "",
-    businessLocation: "",
-    website: "",
-    businessGoals: [] as string[],
-    targetCustomerType: "",
-    monthlyCustomerVolume: "",
-    budgetRange: "",
-    marketingChannels: [] as string[],
-    painPoints: [] as string[],
-    productsServices: "",
-    competitiveLandscape: "",
-    growthStrategy: "",
-    operatingRegion: "",
-    internalCapacity: "",
-    expectationsFromString: "",
-    strategicNotes: "",
-    streetAddress: "",
-    areaName: "",
-    businessType: "both" as "goods" | "services" | "both",
-  });
+  const [businessData, setBusinessData] = useState<BusinessFormData>(defaultBusinessData);
 
   // Step 3: Customer Profile
-  const [customerData, setCustomerData] = useState({
-    ageRange: "",
-    gender: "",
-    location: "",
-    interests: [] as string[],
-    spendingHabits: "",
-    preferredCategories: [] as string[],
-    lifestylePreferences: [] as string[],
-    serviceExpectations: "",
-    painPoints: [] as string[],
-    improvementWishes: "",
-    purchaseFrequency: "",
-    customPreferences: "",
-    streetAddress: "",
-    areaName: "",
-  });
+  const [customerData, setCustomerData] = useState<CustomerFormData>(defaultCustomerData);
 
   useEffect(() => {
     if (profile?.onboarding_completed) {
       navigate(dashboardPath, { replace: true });
     }
   }, [dashboardPath, navigate, profile]);
+
+  useEffect(() => {
+    const loadDraft = async () => {
+      if (!user || profile?.onboarding_completed) {
+        setDraftHydrated(true);
+        return;
+      }
+
+      try {
+        const { data: draftRecord, error } = await supabase
+          .from("onboarding_drafts")
+          .select("current_step, selected_user_type, draft")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (!draftRecord) {
+          setDraftHydrated(true);
+          return;
+        }
+
+        const draft = (draftRecord.draft ?? {}) as Record<string, unknown>;
+        const draftBusinessData = draft.businessData as Partial<BusinessFormData> | undefined;
+        const draftCustomerData = draft.customerData as Partial<CustomerFormData> | undefined;
+
+        if (typeof draft.fullName === "string") {
+          setFullName(draft.fullName);
+        }
+
+        if (typeof draft.phone === "string") {
+          setPhone(draft.phone);
+        }
+
+        if (draftRecord.selected_user_type === "business" || draftRecord.selected_user_type === "customer") {
+          setUserType(draftRecord.selected_user_type);
+        }
+
+        if (draftBusinessData) {
+          setBusinessData({
+            ...defaultBusinessData,
+            ...draftBusinessData,
+            businessGoals: isStringArray(draftBusinessData.businessGoals) ? draftBusinessData.businessGoals : defaultBusinessData.businessGoals,
+            marketingChannels: isStringArray(draftBusinessData.marketingChannels) ? draftBusinessData.marketingChannels : defaultBusinessData.marketingChannels,
+            painPoints: isStringArray(draftBusinessData.painPoints) ? draftBusinessData.painPoints : defaultBusinessData.painPoints,
+            businessType:
+              draftBusinessData.businessType === "goods" ||
+              draftBusinessData.businessType === "services" ||
+              draftBusinessData.businessType === "both"
+                ? draftBusinessData.businessType
+                : defaultBusinessData.businessType,
+          });
+        }
+
+        if (draftCustomerData) {
+          setCustomerData({
+            ...defaultCustomerData,
+            ...draftCustomerData,
+            interests: isStringArray(draftCustomerData.interests) ? draftCustomerData.interests : defaultCustomerData.interests,
+            preferredCategories: isStringArray(draftCustomerData.preferredCategories)
+              ? draftCustomerData.preferredCategories
+              : defaultCustomerData.preferredCategories,
+            lifestylePreferences: isStringArray(draftCustomerData.lifestylePreferences)
+              ? draftCustomerData.lifestylePreferences
+              : defaultCustomerData.lifestylePreferences,
+            painPoints: isStringArray(draftCustomerData.painPoints) ? draftCustomerData.painPoints : defaultCustomerData.painPoints,
+          });
+        }
+
+        if (
+          typeof draftRecord.current_step === "number" &&
+          draftRecord.current_step >= 1 &&
+          draftRecord.current_step <= steps.length
+        ) {
+          setCurrentStep(draftRecord.current_step);
+        }
+      } catch (error) {
+        console.error("Failed to load onboarding draft:", error);
+      } finally {
+        setDraftHydrated(true);
+      }
+    };
+
+    void loadDraft();
+  }, [profile?.onboarding_completed, user]);
+
+  useEffect(() => {
+    if (!user || profile?.onboarding_completed || !draftHydrated) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      const payload: OnboardingDraftPayload = {
+        fullName,
+        phone,
+        businessData,
+        customerData,
+      };
+
+      void supabase.from("onboarding_drafts").upsert(
+        {
+          user_id: user.id,
+          current_step: currentStep,
+          selected_user_type: userType,
+          draft: payload,
+        },
+        { onConflict: "user_id" },
+      );
+    }, 500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    businessData,
+    currentStep,
+    customerData,
+    draftHydrated,
+    fullName,
+    phone,
+    profile?.onboarding_completed,
+    user,
+    userType,
+  ]);
 
   const validateStep = () => {
     setErrors({});
@@ -289,6 +470,8 @@ export default function Onboarding() {
           area_name: areaName || null,
         });
       }
+
+      await supabase.from("onboarding_drafts").delete().eq("user_id", user.id);
 
       await refreshProfile();
 
@@ -851,6 +1034,17 @@ export default function Onboarding() {
       </div>
     );
   };
+
+  if (!draftHydrated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <div className="flex items-center gap-3 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <span>Loading your onboarding progress...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
