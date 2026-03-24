@@ -5,6 +5,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Suspense, lazy, useEffect } from "react";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { TermsGuard } from "@/components/auth/TermsGuard";
+import Landing from "./pages/Landing";
+import Auth from "./pages/Auth";
+import Onboarding from "./pages/Onboarding";
+import Contact from "./pages/Contact";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import NotFound from "./pages/NotFound";
 
 // Loading component
 const PageLoader = () => (
@@ -15,15 +24,6 @@ const PageLoader = () => (
     </div>
   </div>
 );
-
-// Lazy load all pages
-const Landing = lazy(() => import("./pages/Landing"));
-const Auth = lazy(() => import("./pages/Auth"));
-const Onboarding = lazy(() => import("./pages/Onboarding"));
-const Contact = lazy(() => import("./pages/Contact"));
-const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
-const TermsOfService = lazy(() => import("./pages/TermsOfService"));
-const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Customer pages
 const CustomerOverview = lazy(() => import("./pages/customer/CustomerOverview"));
@@ -61,10 +61,20 @@ const BusinessDiscover = lazy(() => import("./pages/business/BusinessDiscover"))
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const StringAdmin = lazy(() => import("./pages/admin/StringAdmin"));
 
-// Protected route component - lazy loaded
-const ProtectedRoute = lazy(() => import("@/components/auth/ProtectedRoute").then(m => ({ default: m.ProtectedRoute })));
-
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      gcTime: 10 * 60_000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
+    mutations: {
+      retry: 0,
+    },
+  },
+});
 
 // Theme initialization component
 function ThemeProvider({ children }: { children: React.ReactNode }) {
@@ -77,9 +87,6 @@ function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>;
 }
-
-const TermsGuard = lazy(() => import("@/components/auth/TermsGuard").then(m => ({ default: m.TermsGuard })));
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>

@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(() => ({
   server: {
     host: "::",
     port: 8080,
@@ -15,6 +15,46 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+    },
+  },
+  build: {
+    chunkSizeWarningLimit: 700,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) {
+            return;
+          }
+
+          if (
+            id.includes("react") ||
+            id.includes("scheduler") ||
+            id.includes("react-dom") ||
+            id.includes("react-router")
+          ) {
+            return "react-core";
+          }
+
+          if (id.includes("@supabase") || id.includes("@tanstack")) {
+            return "data-core";
+          }
+
+          if (id.includes("recharts")) {
+            return "charts";
+          }
+
+          if (
+            id.includes("@radix-ui") ||
+            id.includes("cmdk") ||
+            id.includes("embla-carousel") ||
+            id.includes("vaul")
+          ) {
+            return "ui-kit";
+          }
+
+          return "vendor";
+        },
+      },
     },
   },
 }));

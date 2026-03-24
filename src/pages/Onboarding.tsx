@@ -10,6 +10,7 @@ import { TagInput } from "@/components/ui/tag-input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowRight, ArrowLeft, Building2, User, Check, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { Json } from "@/integrations/supabase/types";
 import { z } from "zod";
 
 type UserType = "customer" | "business";
@@ -61,6 +62,12 @@ interface OnboardingDraftPayload {
   phone: string;
   businessData: BusinessFormData;
   customerData: CustomerFormData;
+}
+
+interface OnboardingCompletionResult {
+  redirect_path?: string;
+  success?: boolean;
+  user_type?: UserType;
 }
 
 const basicInfoSchema = z.object({
@@ -211,6 +218,18 @@ export default function Onboarding() {
         if (error) throw error;
 
         if (!draftRecord) {
+          if (profile?.full_name) {
+            setFullName(profile.full_name);
+          }
+
+          if (profile?.phone) {
+            setPhone(profile.phone);
+          }
+
+          if (profile?.user_type === "business" || profile?.user_type === "customer") {
+            setUserType(profile.user_type);
+          }
+
           setDraftHydrated(true);
           return;
         }
@@ -277,7 +296,7 @@ export default function Onboarding() {
     };
 
     void loadDraft();
-  }, [profile?.onboarding_completed, user]);
+  }, [profile, profile?.onboarding_completed, user]);
 
   useEffect(() => {
     if (!user || profile?.onboarding_completed || !draftHydrated) {
@@ -292,15 +311,19 @@ export default function Onboarding() {
         customerData,
       };
 
-      void supabase.from("onboarding_drafts").upsert(
-        {
-          user_id: user.id,
-          current_step: currentStep,
-          selected_user_type: userType,
-          draft: payload,
-        },
-        { onConflict: "user_id" },
-      );
+      const persistDraft = async () => {
+        const { error } = await supabase.rpc("save_onboarding_draft", {
+          p_current_step: currentStep,
+          p_selected_user_type: userType,
+          p_draft: payload as unknown as Json,
+        });
+
+        if (error) {
+          console.error("Failed to save onboarding draft:", error);
+        }
+      };
+
+      void persistDraft();
     }, 500);
 
     return () => window.clearTimeout(timeoutId);
@@ -378,100 +401,23 @@ export default function Onboarding() {
     setLoading(true);
 
     try {
-      // Create profile
-      const { error: profileError } = await supabase.from("profiles").upsert({
-        user_id: user.id,
-        full_name: fullName,
-        email: user.email!,
-        phone: phone || null,
-        user_type: userType,
-        onboarding_completed: true,
-      }, {
-        onConflict: "user_id",
+      const { data, error } = await supabase.rpc("complete_onboarding_setup", {
+        p_full_name: fullName.trim(),
+        p_phone: phone.trim() || null,
+        p_user_type: userType,
+        p_business_data: userType === "business" ? (businessData as unknown as Json) : null,
+        p_customer_data: userType === "customer" ? (customerData as unknown as Json) : null,
       });
 
-      if (profileError) throw profileError;
-
-      // Create user role
-      await supabase.from("user_roles").upsert({
-        user_id: user.id,
-        role: "user",
-      }, {
-        onConflict: "user_id,role",
-        ignoreDuplicates: true,
-      });
-
-      // Create type-specific profile
-      if (userType === "business") {
-        const { error: businessError } = await supabase.from("businesses").upsert({
-          user_id: user.id,
-          company_name: businessData.companyName,
-          industry: businessData.industry || null,
-          company_size: businessData.companySize || null,
-          years_in_operation: businessData.yearsInOperation || null,
-          business_location: businessData.businessLocation || null,
-          website: businessData.website || null,
-          business_goals: businessData.businessGoals.length > 0 ? businessData.businessGoals : null,
-          target_customer_type: businessData.targetCustomerType || null,
-          monthly_customer_volume: businessData.monthlyCustomerVolume || null,
-          budget_range: businessData.budgetRange || null,
-          marketing_channels: businessData.marketingChannels.length > 0 ? businessData.marketingChannels : null,
-          pain_points: businessData.painPoints.length > 0 ? businessData.painPoints : null,
-          products_services: businessData.productsServices || null,
-          competitive_landscape: businessData.competitiveLandscape || null,
-          growth_strategy: businessData.growthStrategy || null,
-          operating_region: businessData.operatingRegion || null,
-          internal_capacity: businessData.internalCapacity || null,
-          expectations_from_string: businessData.expectationsFromString || null,
-          strategic_notes: businessData.strategicNotes || null,
-          street_address: businessData.streetAddress || null,
-          area_name: businessData.areaName || null,
-          business_type: businessData.businessType,
-          location_verified: false,
-        }, {
-          onConflict: "user_id",
-        });
-
-        if (businessError) throw businessError;
-      } else {
-        const { error: customerError } = await supabase.from("customers").upsert({
-          user_id: user.id,
-          age_range: customerData.ageRange || null,
-          gender: customerData.gender || null,
-          location: customerData.location || null,
-          interests: customerData.interests.length > 0 ? customerData.interests : null,
-          spending_habits: customerData.spendingHabits || null,
-          preferred_categories: customerData.preferredCategories.length > 0 ? customerData.preferredCategories : null,
-          lifestyle_preferences: customerData.lifestylePreferences.length > 0 ? customerData.lifestylePreferences : null,
-          service_expectations: customerData.serviceExpectations || null,
-          pain_points: customerData.painPoints.length > 0 ? customerData.painPoints : null,
-          improvement_wishes: customerData.improvementWishes || null,
-          purchase_frequency: customerData.purchaseFrequency || null,
-          custom_preferences: customerData.customPreferences || null,
-          street_address: customerData.streetAddress || null,
-          area_name: customerData.areaName || null,
-          location_verified: false,
-        }, {
-          onConflict: "user_id",
-        });
-
-        if (customerError) throw customerError;
+      if (error) {
+        throw error;
       }
 
-      // Create location verification request
-      const streetAddress = userType === "business" ? businessData.streetAddress : customerData.streetAddress;
-      const areaName = userType === "business" ? businessData.areaName : customerData.areaName;
+      const completionResult = (data ?? {}) as OnboardingCompletionResult;
 
-      if (streetAddress) {
-        await supabase.from("location_requests").insert({
-          user_id: user.id,
-          user_type: userType,
-          street_address: streetAddress,
-          area_name: areaName || null,
-        });
+      if (!completionResult.success) {
+        throw new Error("Unable to complete onboarding right now. Please try again.");
       }
-
-      await supabase.from("onboarding_drafts").delete().eq("user_id", user.id);
 
       await refreshProfile();
 
@@ -480,7 +426,8 @@ export default function Onboarding() {
         description: "Your account has been set up successfully.",
       });
 
-      const redirectPath = userType === "business" ? "/business" : "/customer";
+      const redirectPath =
+        completionResult.redirect_path || (userType === "business" ? "/business" : "/customer");
       navigate(redirectPath, { replace: true });
     } catch (error: unknown) {
       console.error("Onboarding error:", error);

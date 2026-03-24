@@ -662,7 +662,7 @@ export type Database = {
           current_step: number
           draft: Json
           id: string
-          selected_user_type: string | null
+          selected_user_type: "business" | "customer" | null
           updated_at: string
           user_id: string
         }
@@ -671,7 +671,7 @@ export type Database = {
           current_step?: number
           draft?: Json
           id?: string
-          selected_user_type?: string | null
+          selected_user_type?: "business" | "customer" | null
           updated_at?: string
           user_id: string
         }
@@ -680,7 +680,7 @@ export type Database = {
           current_step?: number
           draft?: Json
           id?: string
-          selected_user_type?: string | null
+          selected_user_type?: "business" | "customer" | null
           updated_at?: string
           user_id?: string
         }
@@ -1274,12 +1274,38 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      complete_onboarding_setup: {
+        Args: {
+          p_business_data: Json | null
+          p_customer_data: Json | null
+          p_full_name: string
+          p_phone: string | null
+          p_user_type: string
+        }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      save_onboarding_draft: {
+        Args: {
+          p_current_step: number
+          p_draft: Json | null
+          p_selected_user_type: "business" | "customer" | null
+        }
+        Returns: {
+          created_at: string
+          current_step: number
+          draft: Json
+          id: string
+          selected_user_type: "business" | "customer" | null
+          updated_at: string
+          user_id: string
+        }
       }
     }
     Enums: {

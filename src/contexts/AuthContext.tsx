@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -54,6 +54,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [resolvedUserType, setResolvedUserType] = useState<ResolvedUserType | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const currentUserIdRef = useRef<string | null>(null);
+  const authHydratedRef = useRef(false);
 
   const normalizeAccountType = (userType: Profile['user_type'] | null | undefined): AccountType | null => {
     if (userType === 'business' || userType === 'customer') {
@@ -191,14 +193,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let isMounted = true;
 
-    const syncAuthState = async (nextSession: Session | null) => {
+    const syncAuthState = async (
+      nextSession: Session | null,
+      options: { blockUI: boolean; skipProfileRefresh?: boolean },
+    ) => {
       if (!isMounted) {
         return;
       }
 
-      setLoading(true);
+      if (options.blockUI) {
+        setLoading(true);
+      }
+
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
+      currentUserIdRef.current = nextSession?.user?.id ?? null;
 
       if (!nextSession?.user) {
         applyResolvedState({
@@ -210,6 +219,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (isMounted) {
           setLoading(false);
         }
+        authHydratedRef.current = true;
+        return;
+      }
+
+      if (options.skipProfileRefresh) {
+        if (isMounted && options.blockUI) {
+          setLoading(false);
+        }
+        authHydratedRef.current = true;
         return;
       }
 
@@ -220,15 +238,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       applyResolvedState(nextState);
-      setLoading(false);
+      if (options.blockUI) {
+        setLoading(false);
+      }
+      authHydratedRef.current = true;
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      void syncAuthState(nextSession);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === 'INITIAL_SESSION') {
+        return;
+      }
+
+      const nextUserId = nextSession?.user?.id ?? null;
+      const sameUser = currentUserIdRef.current === nextUserId;
+      const blockUI =
+        !authHydratedRef.current ||
+        event === 'SIGNED_IN' ||
+        event === 'SIGNED_OUT' ||
+        !sameUser;
+
+      const skipProfileRefresh = event === 'TOKEN_REFRESHED' && sameUser;
+
+      void syncAuthState(nextSession, {
+        blockUI,
+        skipProfileRefresh,
+      });
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      void syncAuthState(session);
+      void syncAuthState(session, { blockUI: true });
     });
 
     return () => {
