@@ -24,7 +24,7 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
-  const { signIn, signUp, user, profile, loading: authLoading } = useAuth();
+  const { signIn, signUp, user, loading: authLoading, dashboardPath } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -34,21 +34,9 @@ export default function Auth() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      if (profile?.onboarding_completed) {
-        let redirectPath = "/customer";
-        
-        if (profile.user_type === "business") {
-          redirectPath = "/business";
-        } else if (profile.user_type === "admin") {
-          redirectPath = "/admin";
-        }
-        
-        navigate(redirectPath, { replace: true });
-      } else if (profile) {
-        navigate("/onboarding", { replace: true });
-      }
+      navigate(dashboardPath, { replace: true });
     }
-  }, [user, profile, authLoading, navigate]);
+  }, [authLoading, dashboardPath, navigate, user]);
 
   const validateForm = () => {
     try {

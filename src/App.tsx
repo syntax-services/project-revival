@@ -20,6 +20,9 @@ const PageLoader = () => (
 const Landing = lazy(() => import("./pages/Landing"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
+const Contact = lazy(() => import("./pages/Contact"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Customer pages
@@ -34,6 +37,7 @@ const CustomerProfile = lazy(() => import("./pages/customer/CustomerProfile"));
 const CustomerNotifications = lazy(() => import("./pages/customer/CustomerNotifications"));
 const CustomerSettings = lazy(() => import("./pages/customer/CustomerSettings"));
 const CustomerMessages = lazy(() => import("./pages/customer/CustomerMessages"));
+const PaymentCallback = lazy(() => import("./pages/customer/PaymentCallback"));
 
 // Business pages
 const BusinessOverview = lazy(() => import("./pages/business/BusinessOverview"));
@@ -57,8 +61,8 @@ const BusinessDiscover = lazy(() => import("./pages/business/BusinessDiscover"))
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const StringAdmin = lazy(() => import("./pages/admin/StringAdmin"));
 
-// Protected route component
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+// Protected route component - lazy loaded
+const ProtectedRoute = lazy(() => import("@/components/auth/ProtectedRoute").then(m => ({ default: m.ProtectedRoute })));
 
 const queryClient = new QueryClient();
 
@@ -74,6 +78,8 @@ function ThemeProvider({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+const TermsGuard = lazy(() => import("@/components/auth/TermsGuard").then(m => ({ default: m.TermsGuard })));
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -83,51 +89,57 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path="/" element={<Landing />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+              <TermsGuard>
+                <Routes>
+                  <Route path="/" element={<Landing />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+                  <Route path="/contact" element={<Contact />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/terms" element={<TermsOfService />} />
 
-                {/* Customer Routes */}
-                <Route path="/customer" element={<ProtectedRoute requiredUserType="customer"><CustomerOverview /></ProtectedRoute>} />
-                <Route path="/customer/discover" element={<ProtectedRoute requiredUserType="customer"><CustomerDiscover /></ProtectedRoute>} />
-                <Route path="/customer/orders" element={<ProtectedRoute requiredUserType="customer"><CustomerOrders /></ProtectedRoute>} />
-                <Route path="/customer/offers" element={<ProtectedRoute requiredUserType="customer"><CustomerOffers /></ProtectedRoute>} />
-                <Route path="/customer/saved" element={<ProtectedRoute requiredUserType="customer"><CustomerSavedBusinesses /></ProtectedRoute>} />
-                <Route path="/customer/jobs" element={<ProtectedRoute requiredUserType="customer"><CustomerJobs /></ProtectedRoute>} />
-                <Route path="/customer/engagement" element={<ProtectedRoute requiredUserType="customer"><CustomerEngagement /></ProtectedRoute>} />
-                <Route path="/customer/profile" element={<ProtectedRoute requiredUserType="customer"><CustomerProfile /></ProtectedRoute>} />
-                <Route path="/customer/notifications" element={<ProtectedRoute requiredUserType="customer"><CustomerNotifications /></ProtectedRoute>} />
-                <Route path="/customer/settings" element={<ProtectedRoute requiredUserType="customer"><CustomerSettings /></ProtectedRoute>} />
-                <Route path="/customer/messages" element={<ProtectedRoute requiredUserType="customer"><CustomerMessages /></ProtectedRoute>} />
+                  {/* Customer Routes */}
+                  <Route path="/customer" element={<ProtectedRoute requiredUserType="customer"><CustomerOverview /></ProtectedRoute>} />
+                  <Route path="/customer/discover" element={<ProtectedRoute requiredUserType="customer"><CustomerDiscover /></ProtectedRoute>} />
+                  <Route path="/customer/orders" element={<ProtectedRoute requiredUserType="customer"><CustomerOrders /></ProtectedRoute>} />
+                  <Route path="/customer/offers" element={<ProtectedRoute requiredUserType="customer"><CustomerOffers /></ProtectedRoute>} />
+                  <Route path="/customer/saved" element={<ProtectedRoute requiredUserType="customer"><CustomerSavedBusinesses /></ProtectedRoute>} />
+                  <Route path="/customer/jobs" element={<ProtectedRoute requiredUserType="customer"><CustomerJobs /></ProtectedRoute>} />
+                  <Route path="/customer/engagement" element={<ProtectedRoute requiredUserType="customer"><CustomerEngagement /></ProtectedRoute>} />
+                  <Route path="/customer/profile" element={<ProtectedRoute requiredUserType="customer"><CustomerProfile /></ProtectedRoute>} />
+                  <Route path="/customer/notifications" element={<ProtectedRoute requiredUserType="customer"><CustomerNotifications /></ProtectedRoute>} />
+                  <Route path="/customer/settings" element={<ProtectedRoute requiredUserType="customer"><CustomerSettings /></ProtectedRoute>} />
+                  <Route path="/customer/messages" element={<ProtectedRoute requiredUserType="customer"><CustomerMessages /></ProtectedRoute>} />
+                  <Route path="/payment-callback" element={<ProtectedRoute><PaymentCallback /></ProtectedRoute>} />
 
-                {/* Business Routes */}
-                <Route path="/business" element={<ProtectedRoute requiredUserType="business"><BusinessOverview /></ProtectedRoute>} />
-                <Route path="/business/insights" element={<ProtectedRoute requiredUserType="business"><BusinessInsights /></ProtectedRoute>} />
-                <Route path="/business/leads" element={<ProtectedRoute requiredUserType="business"><BusinessLeads /></ProtectedRoute>} />
-                <Route path="/business/products" element={<ProtectedRoute requiredUserType="business"><BusinessProducts /></ProtectedRoute>} />
-                <Route path="/business/services" element={<ProtectedRoute requiredUserType="business"><BusinessServices /></ProtectedRoute>} />
-                <Route path="/business/orders" element={<ProtectedRoute requiredUserType="business"><BusinessOrders /></ProtectedRoute>} />
-                <Route path="/business/jobs" element={<ProtectedRoute requiredUserType="business"><BusinessJobs /></ProtectedRoute>} />
-                <Route path="/business/profile" element={<ProtectedRoute requiredUserType="business"><BusinessProfile /></ProtectedRoute>} />
-                <Route path="/business/growth" element={<ProtectedRoute requiredUserType="business"><BusinessGrowth /></ProtectedRoute>} />
-                <Route path="/business/settings" element={<ProtectedRoute requiredUserType="business"><BusinessSettings /></ProtectedRoute>} />
-                <Route path="/business/messages" element={<ProtectedRoute requiredUserType="business"><BusinessMessages /></ProtectedRoute>} />
-                <Route path="/business/analytics" element={<ProtectedRoute requiredUserType="business"><BusinessAnalytics /></ProtectedRoute>} />
-                <Route path="/business/reviews" element={<ProtectedRoute requiredUserType="business"><BusinessReviews /></ProtectedRoute>} />
-                <Route path="/business/upload" element={<ProtectedRoute requiredUserType="business"><BusinessUpload /></ProtectedRoute>} />
-                <Route path="/business/discover" element={<ProtectedRoute requiredUserType="business"><BusinessDiscover /></ProtectedRoute>} />
-                
-                {/* Public business profile - accessible to logged-in customers */}
-                <Route path="/business/:id" element={<ProtectedRoute requiredUserType="customer"><BusinessPublicProfile /></ProtectedRoute>} />
+                  {/* Business Routes */}
+                  <Route path="/business" element={<ProtectedRoute requiredUserType="business"><BusinessOverview /></ProtectedRoute>} />
+                  <Route path="/business/insights" element={<ProtectedRoute requiredUserType="business"><BusinessInsights /></ProtectedRoute>} />
+                  <Route path="/business/leads" element={<ProtectedRoute requiredUserType="business"><BusinessLeads /></ProtectedRoute>} />
+                  <Route path="/business/products" element={<ProtectedRoute requiredUserType="business"><BusinessProducts /></ProtectedRoute>} />
+                  <Route path="/business/services" element={<ProtectedRoute requiredUserType="business"><BusinessServices /></ProtectedRoute>} />
+                  <Route path="/business/orders" element={<ProtectedRoute requiredUserType="business"><BusinessOrders /></ProtectedRoute>} />
+                  <Route path="/business/jobs" element={<ProtectedRoute requiredUserType="business"><BusinessJobs /></ProtectedRoute>} />
+                  <Route path="/business/profile" element={<ProtectedRoute requiredUserType="business"><BusinessProfile /></ProtectedRoute>} />
+                  <Route path="/business/growth" element={<ProtectedRoute requiredUserType="business"><BusinessGrowth /></ProtectedRoute>} />
+                  <Route path="/business/settings" element={<ProtectedRoute requiredUserType="business"><BusinessSettings /></ProtectedRoute>} />
+                  <Route path="/business/messages" element={<ProtectedRoute requiredUserType="business"><BusinessMessages /></ProtectedRoute>} />
+                  <Route path="/business/analytics" element={<ProtectedRoute requiredUserType="business"><BusinessAnalytics /></ProtectedRoute>} />
+                  <Route path="/business/reviews" element={<ProtectedRoute requiredUserType="business"><BusinessReviews /></ProtectedRoute>} />
+                  <Route path="/business/upload" element={<ProtectedRoute requiredUserType="business"><BusinessUpload /></ProtectedRoute>} />
+                  <Route path="/business/discover" element={<ProtectedRoute requiredUserType="business"><BusinessDiscover /></ProtectedRoute>} />
 
-                {/* Admin Routes */}
-                <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-                {/* Secret developer admin page - no public links */}
-                <Route path="/string-admin" element={<ProtectedRoute><StringAdmin /></ProtectedRoute>} />
+                  {/* Public business profile - accessible to all logged-in users */}
+                  <Route path="/business/:id" element={<ProtectedRoute><BusinessPublicProfile /></ProtectedRoute>} />
 
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+                  {/* Admin Routes */}
+                  <Route path="/admin" element={<ProtectedRoute requiredUserType="admin"><AdminDashboard /></ProtectedRoute>} />
+                  {/* Secret developer admin page - no public links */}
+                  <Route path="/string-admin" element={<ProtectedRoute requiredUserType="admin"><StringAdmin /></ProtectedRoute>} />
+
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </TermsGuard>
             </Suspense>
           </BrowserRouter>
         </TooltipProvider>

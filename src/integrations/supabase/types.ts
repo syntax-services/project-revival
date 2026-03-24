@@ -88,90 +88,10 @@ export type Database = {
         }
         Relationships: []
       }
-      business_likes: {
-        Row: {
-          business_id: string
-          created_at: string
-          id: string
-          user_id: string
-        }
-        Insert: {
-          business_id: string
-          created_at?: string
-          id?: string
-          user_id: string
-        }
-        Update: {
-          business_id?: string
-          created_at?: string
-          id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "business_likes_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "business_likes_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "public_businesses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      business_wallets: {
-        Row: {
-          available_balance: number | null
-          business_id: string
-          created_at: string
-          id: string
-          pending_balance: number | null
-          total_withdrawn: number | null
-          updated_at: string
-        }
-        Insert: {
-          available_balance?: number | null
-          business_id: string
-          created_at?: string
-          id?: string
-          pending_balance?: number | null
-          total_withdrawn?: number | null
-          updated_at?: string
-        }
-        Update: {
-          available_balance?: number | null
-          business_id?: string
-          created_at?: string
-          id?: string
-          pending_balance?: number | null
-          total_withdrawn?: number | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "business_wallets_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: true
-            referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "business_wallets_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: true
-            referencedRelation: "public_businesses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       businesses: {
         Row: {
           area_name: string | null
+          available_balance: number | null
           budget_range: string | null
           business_goals: string[] | null
           business_location: string | null
@@ -192,14 +112,13 @@ export type Database = {
           is_active: boolean | null
           latitude: number | null
           location_verified: boolean | null
-          location_verified_at: string | null
-          location_verified_by: string | null
           logo_url: string | null
           longitude: number | null
           marketing_channels: string[] | null
           monthly_customer_volume: string | null
           operating_region: string | null
           pain_points: string[] | null
+          pending_balance: number | null
           products_services: string | null
           reputation_score: number | null
           strategic_notes: string | null
@@ -207,6 +126,7 @@ export type Database = {
           target_customer_type: string | null
           total_completed_orders: number | null
           total_reviews: number | null
+          total_withdrawn: number | null
           updated_at: string
           user_id: string
           verification_tier:
@@ -218,6 +138,7 @@ export type Database = {
         }
         Insert: {
           area_name?: string | null
+          available_balance?: number | null
           budget_range?: string | null
           business_goals?: string[] | null
           business_location?: string | null
@@ -238,14 +159,13 @@ export type Database = {
           is_active?: boolean | null
           latitude?: number | null
           location_verified?: boolean | null
-          location_verified_at?: string | null
-          location_verified_by?: string | null
           logo_url?: string | null
           longitude?: number | null
           marketing_channels?: string[] | null
           monthly_customer_volume?: string | null
           operating_region?: string | null
           pain_points?: string[] | null
+          pending_balance?: number | null
           products_services?: string | null
           reputation_score?: number | null
           strategic_notes?: string | null
@@ -253,6 +173,7 @@ export type Database = {
           target_customer_type?: string | null
           total_completed_orders?: number | null
           total_reviews?: number | null
+          total_withdrawn?: number | null
           updated_at?: string
           user_id: string
           verification_tier?:
@@ -264,6 +185,7 @@ export type Database = {
         }
         Update: {
           area_name?: string | null
+          available_balance?: number | null
           budget_range?: string | null
           business_goals?: string[] | null
           business_location?: string | null
@@ -284,14 +206,13 @@ export type Database = {
           is_active?: boolean | null
           latitude?: number | null
           location_verified?: boolean | null
-          location_verified_at?: string | null
-          location_verified_by?: string | null
           logo_url?: string | null
           longitude?: number | null
           marketing_channels?: string[] | null
           monthly_customer_volume?: string | null
           operating_region?: string | null
           pain_points?: string[] | null
+          pending_balance?: number | null
           products_services?: string | null
           reputation_score?: number | null
           strategic_notes?: string | null
@@ -299,6 +220,7 @@ export type Database = {
           target_customer_type?: string | null
           total_completed_orders?: number | null
           total_reviews?: number | null
+          total_withdrawn?: number | null
           updated_at?: string
           user_id?: string
           verification_tier?:
@@ -350,13 +272,6 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cart_items_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "public_businesses"
             referencedColumns: ["id"]
           },
           {
@@ -413,13 +328,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "conversations_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "public_businesses"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "conversations_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
@@ -442,8 +350,6 @@ export type Database = {
           lifestyle_preferences: string[] | null
           location: string | null
           location_verified: boolean | null
-          location_verified_at: string | null
-          location_verified_by: string | null
           longitude: number | null
           pain_points: string[] | null
           preferred_categories: string[] | null
@@ -467,8 +373,6 @@ export type Database = {
           lifestyle_preferences?: string[] | null
           location?: string | null
           location_verified?: boolean | null
-          location_verified_at?: string | null
-          location_verified_by?: string | null
           longitude?: number | null
           pain_points?: string[] | null
           preferred_categories?: string[] | null
@@ -492,8 +396,6 @@ export type Database = {
           lifestyle_preferences?: string[] | null
           location?: string | null
           location_verified?: boolean | null
-          location_verified_at?: string | null
-          location_verified_by?: string | null
           longitude?: number | null
           pain_points?: string[] | null
           preferred_categories?: string[] | null
@@ -506,11 +408,53 @@ export type Database = {
         }
         Relationships: []
       }
+      item_search_suggestions: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          details: string | null
+          id: string
+          search_term: string
+          status: string
+          suggested_item: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          details?: string | null
+          id?: string
+          search_term: string
+          status?: string
+          suggested_item: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          details?: string | null
+          id?: string
+          search_term?: string
+          status?: string
+          suggested_item?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_search_suggestions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           accepted_at: string | null
-          budget_max: number | null
-          budget_min: number | null
           business_id: string
           cancel_reason: string | null
           cancelled_at: string | null
@@ -527,13 +471,10 @@ export type Database = {
           service_id: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["job_status"]
-          title: string | null
           updated_at: string
         }
         Insert: {
           accepted_at?: string | null
-          budget_max?: number | null
-          budget_min?: number | null
           business_id: string
           cancel_reason?: string | null
           cancelled_at?: string | null
@@ -550,13 +491,10 @@ export type Database = {
           service_id?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["job_status"]
-          title?: string | null
           updated_at?: string
         }
         Update: {
           accepted_at?: string | null
-          budget_max?: number | null
-          budget_min?: number | null
           business_id?: string
           cancel_reason?: string | null
           cancelled_at?: string | null
@@ -573,7 +511,6 @@ export type Database = {
           service_id?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["job_status"]
-          title?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -582,13 +519,6 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "jobs_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "public_businesses"
             referencedColumns: ["id"]
           },
           {
@@ -618,9 +548,9 @@ export type Database = {
           user_id: string
           user_type: string
           verified_at: string | null
-          verified_by: string | null
           verified_latitude: number | null
           verified_longitude: number | null
+          verified_by: string | null
         }
         Insert: {
           admin_notes?: string | null
@@ -632,9 +562,9 @@ export type Database = {
           user_id: string
           user_type: string
           verified_at?: string | null
-          verified_by?: string | null
           verified_latitude?: number | null
           verified_longitude?: number | null
+          verified_by?: string | null
         }
         Update: {
           admin_notes?: string | null
@@ -646,9 +576,9 @@ export type Database = {
           user_id?: string
           user_type?: string
           verified_at?: string | null
-          verified_by?: string | null
           verified_latitude?: number | null
           verified_longitude?: number | null
+          verified_by?: string | null
         }
         Relationships: []
       }
@@ -862,13 +792,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "orders_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "public_businesses"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "orders_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
@@ -877,61 +800,10 @@ export type Database = {
           },
         ]
       }
-      payment_transactions: {
-        Row: {
-          amount: number
-          created_at: string
-          currency: string
-          id: string
-          metadata: Json | null
-          order_id: string | null
-          paystack_access_code: string | null
-          paystack_reference: string | null
-          status: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          currency?: string
-          id?: string
-          metadata?: Json | null
-          order_id?: string | null
-          paystack_access_code?: string | null
-          paystack_reference?: string | null
-          status?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          currency?: string
-          id?: string
-          metadata?: Json | null
-          order_id?: string | null
-          paystack_access_code?: string | null
-          paystack_reference?: string | null
-          status?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_transactions_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       products: {
         Row: {
           business_id: string
           category: string | null
-          commission_percent: number | null
           compare_at_price: number | null
           created_at: string
           description: string | null
@@ -947,11 +819,11 @@ export type Database = {
           tags: string[] | null
           total_orders: number | null
           updated_at: string
+          commission_percent: number | null
         }
         Insert: {
           business_id: string
           category?: string | null
-          commission_percent?: number | null
           compare_at_price?: number | null
           created_at?: string
           description?: string | null
@@ -971,7 +843,6 @@ export type Database = {
         Update: {
           business_id?: string
           category?: string | null
-          commission_percent?: number | null
           compare_at_price?: number | null
           created_at?: string
           description?: string | null
@@ -996,17 +867,11 @@ export type Database = {
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "products_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "public_businesses"
-            referencedColumns: ["id"]
-          },
         ]
       }
       profiles: {
         Row: {
+          accepted_terms_version: number | null
           avatar_url: string | null
           created_at: string
           email: string
@@ -1016,11 +881,13 @@ export type Database = {
           longitude: number | null
           onboarding_completed: boolean
           phone: string | null
+          terms_accepted_at: string | null
           updated_at: string
           user_id: string
           user_type: string
         }
         Insert: {
+          accepted_terms_version?: number | null
           avatar_url?: string | null
           created_at?: string
           email: string
@@ -1030,11 +897,13 @@ export type Database = {
           longitude?: number | null
           onboarding_completed?: boolean
           phone?: string | null
+          terms_accepted_at?: string | null
           updated_at?: string
           user_id: string
           user_type: string
         }
         Update: {
+          accepted_terms_version?: number | null
           avatar_url?: string | null
           created_at?: string
           email?: string
@@ -1044,6 +913,7 @@ export type Database = {
           longitude?: number | null
           onboarding_completed?: boolean
           phone?: string | null
+          terms_accepted_at?: string | null
           updated_at?: string
           user_id?: string
           user_type?: string
@@ -1087,13 +957,6 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "requests_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "public_businesses"
             referencedColumns: ["id"]
           },
           {
@@ -1175,13 +1038,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "reviews_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "public_businesses"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "reviews_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
@@ -1236,13 +1092,6 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "saved_businesses_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "public_businesses"
             referencedColumns: ["id"]
           },
           {
@@ -1317,13 +1166,6 @@ export type Database = {
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "services_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "public_businesses"
-            referencedColumns: ["id"]
-          },
         ]
       }
       user_roles: {
@@ -1395,149 +1237,11 @@ export type Database = {
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "withdrawal_requests_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "public_businesses"
-            referencedColumns: ["id"]
-          },
         ]
       }
     }
     Views: {
-      public_businesses: {
-        Row: {
-          budget_range: string | null
-          business_goals: string[] | null
-          business_location: string | null
-          business_type:
-            | Database["public"]["Enums"]["business_type_enum"]
-            | null
-          company_name: string | null
-          company_size: string | null
-          cover_image_url: string | null
-          created_at: string | null
-          description: string | null
-          id: string | null
-          industry: string | null
-          is_active: boolean | null
-          logo_url: string | null
-          marketing_channels: string[] | null
-          monthly_customer_volume: string | null
-          operating_region: string | null
-          products_services: string | null
-          reputation_score: number | null
-          target_customer_type: string | null
-          total_completed_orders: number | null
-          total_reviews: number | null
-          user_id: string | null
-          verification_tier:
-            | Database["public"]["Enums"]["verification_tier"]
-            | null
-          verified: boolean | null
-          website: string | null
-          years_in_operation: string | null
-        }
-        Insert: {
-          budget_range?: string | null
-          business_goals?: string[] | null
-          business_location?: string | null
-          business_type?:
-            | Database["public"]["Enums"]["business_type_enum"]
-            | null
-          company_name?: string | null
-          company_size?: string | null
-          cover_image_url?: string | null
-          created_at?: string | null
-          description?: string | null
-          id?: string | null
-          industry?: string | null
-          is_active?: boolean | null
-          logo_url?: string | null
-          marketing_channels?: string[] | null
-          monthly_customer_volume?: string | null
-          operating_region?: string | null
-          products_services?: string | null
-          reputation_score?: number | null
-          target_customer_type?: string | null
-          total_completed_orders?: number | null
-          total_reviews?: number | null
-          user_id?: string | null
-          verification_tier?:
-            | Database["public"]["Enums"]["verification_tier"]
-            | null
-          verified?: boolean | null
-          website?: string | null
-          years_in_operation?: string | null
-        }
-        Update: {
-          budget_range?: string | null
-          business_goals?: string[] | null
-          business_location?: string | null
-          business_type?:
-            | Database["public"]["Enums"]["business_type_enum"]
-            | null
-          company_name?: string | null
-          company_size?: string | null
-          cover_image_url?: string | null
-          created_at?: string | null
-          description?: string | null
-          id?: string | null
-          industry?: string | null
-          is_active?: boolean | null
-          logo_url?: string | null
-          marketing_channels?: string[] | null
-          monthly_customer_volume?: string | null
-          operating_region?: string | null
-          products_services?: string | null
-          reputation_score?: number | null
-          target_customer_type?: string | null
-          total_completed_orders?: number | null
-          total_reviews?: number | null
-          user_id?: string | null
-          verification_tier?:
-            | Database["public"]["Enums"]["verification_tier"]
-            | null
-          verified?: boolean | null
-          website?: string | null
-          years_in_operation?: string | null
-        }
-        Relationships: []
-      }
-      public_profiles: {
-        Row: {
-          avatar_url: string | null
-          created_at: string | null
-          full_name: string | null
-          id: string | null
-          latitude: number | null
-          longitude: number | null
-          user_id: string | null
-          user_type: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string | null
-          full_name?: string | null
-          id?: string | null
-          latitude?: number | null
-          longitude?: number | null
-          user_id?: string | null
-          user_type?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string | null
-          full_name?: string | null
-          id?: string | null
-          latitude?: number | null
-          longitude?: number | null
-          user_id?: string | null
-          user_type?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       has_role: {
@@ -1562,6 +1266,7 @@ export type Database = {
         | "disputed"
       offer_type_enum: "product" | "service" | "employment" | "collaboration"
       order_status:
+        | "draft"
         | "pending"
         | "confirmed"
         | "processing"
@@ -1712,6 +1417,7 @@ export const Constants = {
       ],
       offer_type_enum: ["product", "service", "employment", "collaboration"],
       order_status: [
+        "draft",
         "pending",
         "confirmed",
         "processing",

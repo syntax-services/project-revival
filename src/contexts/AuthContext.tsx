@@ -2,15 +2,20 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+type AccountType = 'customer' | 'business';
+type ResolvedUserType = AccountType | 'admin';
+
 interface Profile {
   id: string;
   user_id: string;
   full_name: string;
   email: string;
   phone: string | null;
-  user_type: 'customer' | 'business';
+  user_type: 'customer' | 'business' | 'admin';
   avatar_url: string | null;
   onboarding_completed: boolean;
+  accepted_terms_version: number | null;
+  terms_accepted_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -19,11 +24,16 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
+  accountType: AccountType | null;
+  resolvedUserType: ResolvedUserType | null;
+  dashboardPath: string;
+  isAdmin: boolean;
   loading: boolean;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  isEmailVerified: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,68 +50,196 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [accountType, setAccountType] = useState<AccountType | null>(null);
+  const [resolvedUserType, setResolvedUserType] = useState<ResolvedUserType | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (error) {
-      console.error('Error fetching profile:', error);
-      return null;
+  const normalizeAccountType = (userType: Profile['user_type'] | null | undefined): AccountType | null => {
+    if (userType === 'business' || userType === 'customer') {
+      return userType;
     }
-    return data as Profile | null;
+
+    return null;
+  };
+
+  const getDashboardPath = (
+    nextUser: User | null,
+    nextProfile: Profile | null,
+    nextResolvedUserType: ResolvedUserType | null,
+  ) => {
+    if (!nextUser) {
+      return '/auth';
+    }
+
+    if (!nextProfile?.onboarding_completed && nextResolvedUserType !== 'admin') {
+      return '/onboarding';
+    }
+
+    if (nextResolvedUserType === 'admin') {
+      return '/admin';
+    }
+
+    return nextResolvedUserType === 'business' ? '/business' : '/customer';
+  };
+
+  const applyResolvedState = ({
+    profile: nextProfile,
+    accountType: nextAccountType,
+    resolvedUserType: nextResolvedUserType,
+    isAdmin: nextIsAdmin,
+  }: {
+    profile: Profile | null;
+    accountType: AccountType | null;
+    resolvedUserType: ResolvedUserType | null;
+    isAdmin: boolean;
+  }) => {
+    setProfile(nextProfile);
+    setAccountType(nextAccountType);
+    setResolvedUserType(nextResolvedUserType);
+    setIsAdmin(nextIsAdmin);
+  };
+
+  const fetchResolvedAuthState = async (userId: string) => {
+    const [profileResult, adminRoleResult, businessResult, customerResult] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle(),
+      supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .maybeSingle(),
+      supabase
+        .from('businesses')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle(),
+      supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle(),
+    ]);
+
+    if (profileResult.error) {
+      console.error('Error fetching profile:', profileResult.error);
+    }
+
+    if (adminRoleResult.error) {
+      console.error('Error fetching admin role:', adminRoleResult.error);
+    }
+
+    if (businessResult.error) {
+      console.error('Error fetching business membership:', businessResult.error);
+    }
+
+    if (customerResult.error) {
+      console.error('Error fetching customer membership:', customerResult.error);
+    }
+
+    const rawProfile = profileResult.data as Profile | null;
+    const nextIsAdmin = !!adminRoleResult.data;
+    const inferredAccountType =
+      businessResult.data ? 'business' : customerResult.data ? 'customer' : normalizeAccountType(rawProfile?.user_type);
+    const normalizedProfileType =
+      inferredAccountType ?? (nextIsAdmin ? 'admin' : normalizeAccountType(rawProfile?.user_type) ?? null);
+
+    const nextProfile =
+      rawProfile && normalizedProfileType && rawProfile.user_type !== normalizedProfileType
+        ? { ...rawProfile, user_type: normalizedProfileType }
+        : rawProfile;
+
+    if (
+      rawProfile &&
+      inferredAccountType &&
+      !nextIsAdmin &&
+      rawProfile.user_type !== inferredAccountType
+    ) {
+      const { error: repairError } = await supabase
+        .from('profiles')
+        .update({ user_type: inferredAccountType })
+        .eq('user_id', userId);
+
+      if (repairError) {
+        console.warn('Failed to repair profile user_type:', repairError);
+      }
+    }
+
+    return {
+      profile: nextProfile,
+      accountType: inferredAccountType,
+      resolvedUserType: nextIsAdmin
+        ? 'admin'
+        : inferredAccountType ?? normalizeAccountType(nextProfile?.user_type),
+      isAdmin: nextIsAdmin,
+    };
   };
 
   const refreshProfile = async () => {
-    if (user) {
-      const profileData = await fetchProfile(user.id);
-      setProfile(profileData);
+    if (!user) {
+      return;
     }
+
+    const nextState = await fetchResolvedAuthState(user.id);
+    applyResolvedState(nextState);
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Defer profile fetch with setTimeout to avoid deadlock
-        if (session?.user) {
-          setTimeout(() => {
-            fetchProfile(session.user.id).then(setProfile);
-          }, 0);
-        } else {
-          setProfile(null);
-        }
-      }
-    );
+    let isMounted = true;
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchProfile(session.user.id).then((profileData) => {
-          setProfile(profileData);
-          setLoading(false);
-        });
-      } else {
-        setLoading(false);
+    const syncAuthState = async (nextSession: Session | null) => {
+      if (!isMounted) {
+        return;
       }
+
+      setLoading(true);
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+
+      if (!nextSession?.user) {
+        applyResolvedState({
+          profile: null,
+          accountType: null,
+          resolvedUserType: null,
+          isAdmin: false,
+        });
+        if (isMounted) {
+          setLoading(false);
+        }
+        return;
+      }
+
+      const nextState = await fetchResolvedAuthState(nextSession.user.id);
+
+      if (!isMounted) {
+        return;
+      }
+
+      applyResolvedState(nextState);
+      setLoading(false);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      void syncAuthState(nextSession);
     });
 
-    return () => subscription.unsubscribe();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      void syncAuthState(session);
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string) => {
     const redirectUrl = `${window.location.origin}/`;
-    
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -109,7 +247,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         emailRedirectTo: redirectUrl,
       },
     });
-    
+
     return { error: error ? new Error(error.message) : null };
   };
 
@@ -118,14 +256,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email,
       password,
     });
-    
+
     return { error: error ? new Error(error.message) : null };
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    setProfile(null);
+    applyResolvedState({
+      profile: null,
+      accountType: null,
+      resolvedUserType: null,
+      isAdmin: false,
+    });
   };
+
+  const dashboardPath = getDashboardPath(user, profile, resolvedUserType);
 
   return (
     <AuthContext.Provider
@@ -133,11 +278,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         session,
         profile,
+        accountType,
+        resolvedUserType,
+        dashboardPath,
+        isAdmin,
         loading,
         signUp,
         signIn,
         signOut,
         refreshProfile,
+        isEmailVerified: !!user?.email_confirmed_at,
       }}
     >
       {children}

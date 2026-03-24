@@ -34,6 +34,8 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
+import { ReputationBadge } from "@/components/ui/reputation-badge";
+
 interface Business {
   id: string;
   company_name: string;
@@ -45,6 +47,7 @@ interface Business {
   business_type: string | null;
   reputation_score: number | null;
   verified: boolean | null;
+  verification_tier: VerificationTier | null;
 }
 
 interface Product {
@@ -55,6 +58,8 @@ interface Product {
   image_url: string | null;
   in_stock: boolean;
   category: string | null;
+  commission_percent: number | null;
+  is_rare: boolean | null;
 }
 
 interface Service {
@@ -85,8 +90,6 @@ export default function BusinessPublicProfile() {
   const [services, setServices] = useState<Service[]>([]);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // Cart state
@@ -108,7 +111,7 @@ export default function BusinessPublicProfile() {
       if (!id) return;
 
       const [businessRes, productsRes, servicesRes] = await Promise.all([
-        supabase.from("businesses").select("*").eq("id", id).single(),
+        supabase.from("public_businesses").select("*").eq("id", id).single(),
         supabase.from("products").select("*").eq("business_id", id).order("created_at", { ascending: false }),
         supabase.from("services").select("*").eq("business_id", id).order("created_at", { ascending: false }),
       ]);
@@ -157,9 +160,6 @@ export default function BusinessPublicProfile() {
     }
   };
 
-  const toggleLike = async () => {
-    // business_likes table not available yet
-  };
 
   const startChat = async () => {
     if (!customerId || !id) {
@@ -188,7 +188,7 @@ export default function BusinessPublicProfile() {
   // Cart functions
   const addToCart = (product: Product) => {
     if (!product.in_stock) return;
-    
+
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
       if (existing) {
@@ -240,10 +240,11 @@ export default function BusinessPublicProfile() {
         customer_id: customerId,
         business_id: id,
         service_id: selectedService.id,
-        description: jobDescription || jobTitle || null,
+        title: jobTitle,
+        description: jobDescription || null,
         location: jobLocation || null,
-        quoted_price: budgetMin ? parseFloat(budgetMin) : null,
-        requirements: budgetMax ? `Budget max: ₦${budgetMax}` : null,
+        budget_min: budgetMin ? parseFloat(budgetMin) : null,
+        budget_max: budgetMax ? parseFloat(budgetMax) : null,
       });
 
       if (error) throw error;
@@ -265,11 +266,11 @@ export default function BusinessPublicProfile() {
 
   const getPriceDisplay = (service: Service) => {
     if (service.price_type === "quote") return "Quote on request";
-    if (service.price_type === "hourly" && service.price_min) return `₦${Number(service.price_min).toLocaleString()}/hr`;
+    if (service.price_type === "hourly" && service.price_min) return `\u20A6${Number(service.price_min).toLocaleString()}/hr`;
     if (service.price_type === "range" && service.price_min && service.price_max) {
-      return `₦${Number(service.price_min).toLocaleString()} - ₦${Number(service.price_max).toLocaleString()}`;
+      return `\u20A6${Number(service.price_min).toLocaleString()} - \u20A6${Number(service.price_max).toLocaleString()}`;
     }
-    if (service.price_min) return `₦${Number(service.price_min).toLocaleString()}`;
+    if (service.price_min) return `\u20A6${Number(service.price_min).toLocaleString()}`;
     return "—";
   };
 
@@ -318,8 +319,10 @@ export default function BusinessPublicProfile() {
               <span className="text-6xl font-bold text-muted-foreground/30">{business.company_name.charAt(0)}</span>
             </div>
           )}
-          {business.verified && (
-            <Badge className="absolute top-3 left-3">Verified</Badge>
+          {business.verification_tier && (
+            <div className="absolute top-3 left-3">
+              <ReputationBadge tier={(business.verification_tier || 'none') as 'none' | 'basic' | 'verified' | 'premium' | 'elite'} />
+            </div>
           )}
         </div>
 
@@ -363,10 +366,6 @@ export default function BusinessPublicProfile() {
                 <Button variant="outline" onClick={toggleSave}>
                   <Heart className={cn("h-4 w-4 mr-2", isSaved && "fill-foreground")} />
                   {isSaved ? "Saved" : "Save"}
-                </Button>
-                <Button variant="outline" onClick={toggleLike}>
-                  <Star className={cn("h-4 w-4 mr-2", isLiked && "fill-foreground")} />
-                  {likesCount}
                 </Button>
                 <Button onClick={startChat}>
                   <MessageCircle className="h-4 w-4 mr-2" />
@@ -427,7 +426,7 @@ export default function BusinessPublicProfile() {
                         )}
                         <div className="mt-3 flex items-center justify-between">
                           {product.price && (
-                            <span className="font-semibold text-foreground">₦{Number(product.price).toLocaleString()}</span>
+                            <span className="font-semibold text-foreground">{'\u20A6'}{Number(product.price).toLocaleString()}</span>
                           )}
                           <Badge variant={product.in_stock ? "default" : "secondary"}>
                             {product.in_stock ? "In Stock" : "Out of Stock"}
@@ -496,7 +495,7 @@ export default function BusinessPublicProfile() {
           <div className="fixed bottom-20 left-4 right-4 lg:bottom-6 lg:left-auto lg:right-6 lg:w-auto z-40">
             <Button onClick={() => setShowCart(true)} className="w-full lg:w-auto shadow-lg">
               <ShoppingCart className="h-4 w-4 mr-2" />
-              View Cart ({cart.reduce((sum, item) => sum + item.quantity, 0)} items) • ₦{cartTotal.toLocaleString()}
+              View Cart ({cart.reduce((sum, item) => sum + item.quantity, 0)} items) • {'\u20A6'}{cartTotal.toLocaleString()}
             </Button>
           </div>
         )}
@@ -557,7 +556,7 @@ export default function BusinessPublicProfile() {
             price: item.product.price || 0,
             quantity: item.quantity,
             imageUrl: item.product.image_url || undefined,
-            commissionPercent: undefined,
+            commissionPercent: item.product.commission_percent || undefined,
           }))}
           onSuccess={handleCheckoutSuccess}
         />

@@ -19,7 +19,7 @@ export default function BusinessReviews() {
   const { data: reviews, isLoading } = useBusinessReviewsWithDetails(business?.id);
   const respondMutation = useRespondToReview();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase row used in response dialog
   const [selectedReview, setSelectedReview] = useState<any>(null);
   const [response, setResponse] = useState("");
 

@@ -33,6 +33,7 @@ export function useBusinessOrders(businessId: string | undefined) {
         .from("orders")
         .select("*")
         .eq("business_id", businessId)
+        .neq("status", "draft") // Exclude unpaid draft orders
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -143,17 +144,21 @@ export function useBusinessStats(businessId: string | undefined) {
       const jobs = jobsRes.data || [];
       const reviews = reviewsRes.data || [];
 
-      const pendingOrders = orders.filter(o => o.status === "pending").length;
+      const pendingOrders = orders.filter(o => o.status === "pending" || o.status === "confirmed").length;
       const pendingJobs = jobs.filter(j => j.status === "requested" || j.status === "quoted").length;
       const completedOrders = orders.filter(o => o.status === "delivered").length;
       const completedJobs = jobs.filter(j => j.status === "completed").length;
       
-      const totalRevenue = orders
+      // Net Revenue calculation (subtracting commissions)
+      const orderNet = orders
         .filter(o => o.status === "delivered")
-        .reduce((sum, o) => sum + (Number(o.total) || 0), 0) +
-        jobs
+        .reduce((sum, o) => sum + (Number(o.total || 0) - Number(o.commission_amount || 0) - Number(o.platform_fee || 0)), 0);
+      
+      const jobNet = jobs
         .filter(j => j.status === "completed")
-        .reduce((sum, j) => sum + (Number(j.final_price) || 0), 0);
+        .reduce((sum, j) => sum + (Number(j.final_price || 0) * 0.9), 0); // 10% platform fee for jobs
+
+      const totalRevenue = orderNet + jobNet;
 
       const avgRating = reviews.length > 0
         ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length

@@ -9,8 +9,13 @@ interface BaseBusiness {
   reputation_score: number | null;
   verified: boolean | null;
   business_type: string | null;
+  cover_image_url: string | null;
+  business_location: string | null;
+  industry: string | null;
+  products_services: string | null;
   total_reviews?: number | null;
   total_completed_orders?: number | null;
+  verification_tier?: 'none' | 'basic' | 'verified' | 'premium' | 'elite' | null;
 }
 
 interface MatchingOptions {
@@ -145,4 +150,43 @@ export function detectLowQualitySignals(business: {
   }
 
   return warnings;
+}
+
+// Optional AI Matchmaking Hook using Groq API via Edge Function
+import { useMutation } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+interface AiInsightsResult {
+  id: string;
+  ai_match_score?: number;
+  ai_insights?: string[];
+}
+
+interface MatchmakingResult {
+  aiResults: AiInsightsResult[];
+  relatedItems: string[];
+}
+
+export function useAiMatchmaking() {
+  return useMutation({
+    mutationFn: async ({
+      userPreferences,
+      businesses,
+    }: {
+      userPreferences: Record<string, unknown>;
+      businesses: BaseBusiness[];
+    }) => {
+      const { data, error } = await supabase.functions.invoke("matchmaking-ai", {
+        body: { userPreferences, businesses },
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "AI Matchmaking failed");
+
+      return {
+        aiResults: data.aiResults as AiInsightsResult[],
+        relatedItems: data.relatedItems as string[],
+      } as MatchmakingResult;
+    },
+  });
 }

@@ -28,15 +28,17 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
+  const { signOut } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase row with dynamic shape used in detail dialog
   const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase row with dynamic shape used in delete dialog
   const [selectedReview, setSelectedReview] = useState<any>(null);
 
   // Fetch businesses for moderation
@@ -127,15 +129,25 @@ export default function AdminDashboard() {
   const unverifiedBusinesses = filteredBusinesses.filter((b) => !b.verified);
   const verifiedBusinesses = filteredBusinesses.filter((b) => b.verified);
 
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth?mode=login", { replace: true });
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6 pb-20 lg:pb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-            <Shield className="h-6 w-6" />
-            Admin Dashboard
-          </h1>
-          <p className="mt-1 text-muted-foreground">Platform moderation and oversight</p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+              <Shield className="h-6 w-6" />
+              Admin Dashboard
+            </h1>
+            <p className="mt-1 text-muted-foreground">Platform moderation and oversight</p>
+          </div>
+          <Button variant="outline" onClick={handleSignOut}>
+            Sign Out
+          </Button>
         </div>
 
         {/* Stats Overview */}

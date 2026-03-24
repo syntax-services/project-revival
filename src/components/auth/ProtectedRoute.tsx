@@ -5,14 +5,14 @@ import { Loader2 } from "lucide-react";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredUserType?: "customer" | "business";
+  requiredUserType?: "customer" | "business" | "admin";
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requiredUserType,
 }) => {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, dashboardPath, isAdmin, resolvedUserType } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -27,17 +27,21 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // If user has no profile or hasn't completed onboarding, redirect to onboarding
-  if (!profile || !profile.onboarding_completed) {
+  // Non-admin flows require onboarding before accessing protected routes
+  if ((!profile || !profile.onboarding_completed) && !isAdmin) {
     if (!location.pathname.startsWith("/onboarding")) {
       return <Navigate to="/onboarding" replace />;
     }
   }
 
-  // Check user type if required
-  if (requiredUserType && profile && profile.user_type !== requiredUserType) {
-    const redirectPath = profile.user_type === "business" ? "/business" : "/customer";
-    return <Navigate to={redirectPath} replace />;
+  if (requiredUserType === "admin") {
+    if (!isAdmin && location.pathname !== dashboardPath) {
+      return <Navigate to={dashboardPath} replace />;
+    }
+  } else if (requiredUserType && resolvedUserType && resolvedUserType !== requiredUserType) {
+    if (location.pathname !== dashboardPath) {
+      return <Navigate to={dashboardPath} replace />;
+    }
   }
 
   return <>{children}</>;

@@ -69,7 +69,7 @@ export default function BusinessUpload() {
     const fileName = `${business?.id}/${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
-      .from("business-media")
+      .from("business-images")
       .upload(fileName, file);
 
     if (uploadError) {
@@ -77,7 +77,7 @@ export default function BusinessUpload() {
       return null;
     }
 
-    const { data } = supabase.storage.from("business-media").getPublicUrl(fileName);
+    const { data } = supabase.storage.from("business-images").getPublicUrl(fileName);
     return data.publicUrl;
   };
 
@@ -438,7 +438,7 @@ export default function BusinessUpload() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Pricing Type</Label>
-                      <Select value={servicePriceType} onValueChange={(v) => setServicePriceType(v as 'fixed' | 'hourly' | 'range' | 'quote')}>
+                      <Select value={servicePriceType} onValueChange={(v) => setServicePriceType(v as "fixed" | "hourly" | "range" | "quote")}>
                         <SelectTrigger className="mt-1">
                           <SelectValue />
                         </SelectTrigger>
@@ -452,7 +452,7 @@ export default function BusinessUpload() {
                     </div>
                     <div>
                       <Label>Availability</Label>
-                      <Select value={serviceAvailability} onValueChange={(v) => setServiceAvailability(v as 'available' | 'busy' | 'unavailable')}>
+                      <Select value={serviceAvailability} onValueChange={(v) => setServiceAvailability(v as "available" | "busy" | "unavailable")}>
                         <SelectTrigger className="mt-1">
                           <SelectValue />
                         </SelectTrigger>

@@ -80,7 +80,7 @@ export function BusinessEarningsCard({ businessId }: BusinessEarningsCardProps) 
                 <span className="text-sm font-medium">Available Balance</span>
               </div>
               <p className="text-2xl font-bold mt-1">
-                ₦{earnings?.availableBalance.toLocaleString() || 0}
+                {'\u20A6'}{earnings?.availableBalance.toLocaleString() || 0}
               </p>
             </div>
             <div className="p-4 bg-muted rounded-lg">
@@ -89,7 +89,7 @@ export function BusinessEarningsCard({ businessId }: BusinessEarningsCardProps) 
                 <span className="text-sm font-medium">Pending</span>
               </div>
               <p className="text-2xl font-bold mt-1">
-                ₦{earnings?.pendingBalance.toLocaleString() || 0}
+                {'\u20A6'}{earnings?.pendingBalance.toLocaleString() || 0}
               </p>
             </div>
           </div>
@@ -97,15 +97,15 @@ export function BusinessEarningsCard({ businessId }: BusinessEarningsCardProps) 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-3 text-center">
             <div className="p-3 bg-muted/50 rounded-lg">
-              <p className="text-lg font-semibold">₦{earnings?.grossRevenue.toLocaleString() || 0}</p>
+              <p className="text-lg font-semibold">{'\u20A6'}{earnings?.grossRevenue.toLocaleString() || 0}</p>
               <p className="text-xs text-muted-foreground">Gross Revenue</p>
             </div>
             <div className="p-3 bg-muted/50 rounded-lg">
-              <p className="text-lg font-semibold text-destructive">-₦{earnings?.totalCommission.toLocaleString() || 0}</p>
+              <p className="text-lg font-semibold text-destructive">- {'\u20A6'}{earnings?.totalCommission.toLocaleString() || 0}</p>
               <p className="text-xs text-muted-foreground">Platform Fees</p>
             </div>
             <div className="p-3 bg-muted/50 rounded-lg">
-              <p className="text-lg font-semibold text-green-600">₦{earnings?.netRevenue.toLocaleString() || 0}</p>
+              <p className="text-lg font-semibold text-green-600">{'\u20A6'}{earnings?.netRevenue.toLocaleString() || 0}</p>
               <p className="text-xs text-muted-foreground">Net Earnings</p>
             </div>
           </div>
@@ -127,7 +127,7 @@ export function BusinessEarningsCard({ businessId }: BusinessEarningsCardProps) 
               {pendingWithdrawals.map((w) => (
                 <div key={w.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <div>
-                    <p className="font-medium">₦{Number(w.amount).toLocaleString()}</p>
+                    <p className="font-medium">{'\u20A6'}{Number(w.amount).toLocaleString()}</p>
                     <p className="text-xs text-muted-foreground">
                       {w.bank_name} - {w.account_number}
                     </p>
@@ -152,7 +152,7 @@ export function BusinessEarningsCard({ businessId }: BusinessEarningsCardProps) 
                     <span className="text-muted-foreground">
                       {format(new Date(w.created_at), "MMM d, yyyy")}
                     </span>
-                    <span className="font-medium">₦{Number(w.amount).toLocaleString()}</span>
+                    <span className="font-medium">{'\u20A6'}{Number(w.amount).toLocaleString()}</span>
                   </div>
                 ))}
             </div>
@@ -172,7 +172,7 @@ export function BusinessEarningsCard({ businessId }: BusinessEarningsCardProps) 
           <div className="space-y-4 py-4">
             <div className="p-3 bg-muted rounded-lg">
               <p className="text-sm text-muted-foreground">Available Balance</p>
-              <p className="text-xl font-bold">₦{earnings?.availableBalance.toLocaleString() || 0}</p>
+              <p className="text-xl font-bold">{'\u20A6'}{earnings?.availableBalance.toLocaleString() || 0}</p>
             </div>
 
             <div className="space-y-2">

@@ -9,7 +9,7 @@ interface LocationData {
 }
 
 export function useUserLocation() {
-  const { user, profile } = useAuth();
+  const { accountType, profile, user } = useAuth();
   const { toast } = useToast();
   const [location, setLocation] = useState<LocationData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -33,8 +33,8 @@ export function useUserLocation() {
         setLocation({ latitude, longitude });
 
         // Save to database
-        if (user && profile) {
-          const table = profile.user_type === "business" ? "businesses" : "customers";
+        if (user && profile && accountType) {
+          const table = accountType === "business" ? "businesses" : "customers";
           
           await supabase
             .from(table)

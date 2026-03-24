@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 Deno.serve(async (req) => {
@@ -60,6 +60,17 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: insertError.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Update profile user_type
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({ user_type: "admin" })
+      .eq("user_id", user_id);
+
+    if (profileError) {
+       console.error("Profile update error:", profileError);
+       // We don't fail the whole request since role was added, but we log it
     }
 
     return new Response(

@@ -78,7 +78,7 @@ export default function BusinessServices() {
   const { data: business } = useBusiness();
   const { data: services = [], isLoading } = useBusinessServices(business?.id);
   const queryClient = useQueryClient();
-  
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingService, setEditingService] = useState<typeof services[0] | null>(null);
   const [formData, setFormData] = useState<ServiceFormData>(defaultFormData);
@@ -225,7 +225,7 @@ export default function BusinessServices() {
     if (service.price_type === "quote") return "Quote on request";
     if (service.price_type === "hourly" && service.price_min) return `₦${Number(service.price_min).toLocaleString()}/hr`;
     if (service.price_type === "range" && service.price_min && service.price_max) {
-      return `₦${Number(service.price_min).toLocaleString()} - ₦${Number(service.price_max).toLocaleString()}`;
+      return `{\u20A6}${Number(service.price_min).toLocaleString()} - {\u20A6}${Number(service.price_max).toLocaleString()}`;
     }
     if (service.price_min) return `₦${Number(service.price_min).toLocaleString()}`;
     return "—";

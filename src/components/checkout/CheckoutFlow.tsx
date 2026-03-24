@@ -3,15 +3,14 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { 
-  ShoppingCart, MapPin, Truck, Zap, Store, Loader2, 
+  ShoppingCart, Truck, Zap, Store, Loader2, 
   CheckCircle, AlertCircle, CreditCard 
 } from "lucide-react";
 import { toast } from "sonner";
@@ -32,6 +31,24 @@ interface CheckoutFlowProps {
   businessName: string;
   cartItems: CartItem[];
   onSuccess?: () => void;
+}
+
+interface CheckoutCustomer {
+  id: string;
+  street_address?: string;
+  location_verified?: boolean;
+  profiles?: {
+    full_name: string | null;
+    phone: string | null;
+  };
+}
+
+interface InitializePaymentResponse {
+  success: boolean;
+  authorization_url?: string;
+  access_code?: string;
+  reference?: string;
+  error?: string;
 }
 
 const DELIVERY_OPTIONS = [
@@ -59,7 +76,9 @@ const DELIVERY_OPTIONS = [
     fee: 500,
     estimatedHours: 6,
   },
-];
+] as const;
+
+type DeliveryType = "pickup" | "standard" | "express";
 
 export function CheckoutFlow({ 
   isOpen, 
@@ -71,13 +90,13 @@ export function CheckoutFlow({
 }: CheckoutFlowProps) {
   const { user } = useAuth();
   const [step, setStep] = useState(1);
-  const [deliveryType, setDeliveryType] = useState("pickup");
+  const [deliveryType, setDeliveryType] = useState<"pickup" | "standard" | "express">("pickup");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [deliveryInstructions, setDeliveryInstructions] = useState("");
   const [processingPayment, setProcessingPayment] = useState(false);
 
   // Fetch customer data
-  const { data: customer } = useQuery({
+  const { data: customer } = useQuery<CheckoutCustomer>({
     queryKey: ["customer-checkout", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -86,7 +105,7 @@ export function CheckoutFlow({
         .eq("user_id", user?.id)
         .single();
       if (error) throw error;
-      return data;
+      return data as CheckoutCustomer;
     },
     enabled: !!user?.id,
   });
@@ -95,54 +114,64 @@ export function CheckoutFlow({
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const deliveryFee = DELIVERY_OPTIONS.find(d => d.id === deliveryType)?.fee || 0;
   
-  // Calculate platform commission (average of item commissions or default 10%)
-  const avgCommission = cartItems.reduce((sum, item) => sum + (item.commissionPercent || 10), 0) / cartItems.length;
-  const commissionAmount = Math.round(subtotal * (avgCommission / 100));
-  
-  const total = subtotal + deliveryFee + commissionAmount;
+  /**
+   * String Platform Fee Model (MVP):
+   *   - `commission_amount`: The platform's take. Calculated as weighted avg of per-item commission (default 10%).
+   *   - `platform_fee`: Reserved for future fixed fees. Currently always 0 for product orders.
+   *   - Total customer pays = subtotal + deliveryFee + commissionAmount.
+   *   - Business receives = total - commission_amount - platform_fee (computed server-side by the settlement RPC).
+   *   - The settlement RPCs (`settle_order_settlement`, `settle_job_settlement`) are the single source of truth
+   *     for payout math. The client only sends the fee values; the DB functions enforce correctness.
+   */
+  const commissionAmountValue = cartItems.reduce((sum, item) => 
+    sum + (item.price * item.quantity * (item.commissionPercent || 10) / 100), 0
+  );
+  const roundedCommission = Math.round(commissionAmountValue);
+  const avgCommission = subtotal > 0 ? (commissionAmountValue / subtotal) * 100 : 10;
+
+  const total = subtotal + deliveryFee + roundedCommission;
 
   // Create order mutation
   const createOrderMutation = useMutation({
     mutationFn: async () => {
-      if (!customer) throw new Error("Customer data not found");
+      if (!customer || !user?.email) {
+        throw new Error("Please complete your profile first");
+      }
 
-      // Create order
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          business_id: businessId,
-          customer_id: customer.id,
-          items: cartItems.map(item => ({
-            product_id: item.productId,
+      const { data, error } = await supabase.functions.invoke<InitializePaymentResponse>("initialize-payment", {
+        body: {
+          email: user.email,
+          businessId,
+          items: cartItems.map((item) => ({
+            productId: item.productId,
             name: item.name,
             price: item.price,
             quantity: item.quantity,
           })),
           subtotal,
-          delivery_fee: deliveryFee,
+          deliveryFee,
           total,
-          delivery_type: deliveryType,
-          delivery_address: deliveryType !== "pickup" ? deliveryAddress : null,
-          notes: deliveryInstructions || null,
-          platform_fee: commissionAmount,
-          commission_amount: commissionAmount,
-          status: "pending",
-        })
-        .select()
-        .single();
+          deliveryType,
+          deliveryAddress: deliveryType === "pickup" ? null : deliveryAddress.trim(),
+          deliveryInstructions: deliveryInstructions.trim() || null,
+          platformFee: 0,
+          commissionAmount: roundedCommission,
+          metadata: {
+            business_name: businessName,
+            customer_name: customer.profiles?.full_name ?? null,
+          },
+        },
+      });
 
-      if (orderError) throw orderError;
+      if (error) throw error;
+      if (!data?.success || !data.authorization_url) {
+        throw new Error(data?.error || "Failed to get payment URL");
+      }
 
-      return order;
+      return data;
     },
-    onSuccess: (order) => {
-      toast.success("Order placed successfully!");
-      onSuccess?.();
-      onClose();
-    },
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: unknown) => {
-      toast.error(error.message || "Failed to place order");
+      toast.error(error instanceof Error ? error.message : "Failed to place order");
     },
   });
 
@@ -161,11 +190,13 @@ export function CheckoutFlow({
     setProcessingPayment(true);
 
     try {
-      // For now, create order without actual payment (Paystack integration pending)
-      // In production, this would call a Paystack edge function
-      await createOrderMutation.mutateAsync();
-    } catch (error) {
+      const paymentSession = await createOrderMutation.mutateAsync();
+      if (paymentSession.authorization_url) {
+        window.location.assign(paymentSession.authorization_url);
+      }
+    } catch (error: unknown) {
       console.error("Payment error:", error);
+      // mutateAsync onError handles toast
     } finally {
       setProcessingPayment(false);
     }
@@ -206,7 +237,7 @@ export function CheckoutFlow({
                         <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
                       </div>
                     </div>
-                    <p className="font-medium">₦{(item.price * item.quantity).toLocaleString()}</p>
+                    <p className="font-medium">{'\u20A6'}{(item.price * item.quantity).toLocaleString()}</p>
                   </div>
                 ))}
               </div>
@@ -222,7 +253,7 @@ export function CheckoutFlow({
             <div className="space-y-4">
               <h3 className="font-medium">Delivery Method</h3>
               
-              <RadioGroup value={deliveryType} onValueChange={setDeliveryType}>
+              <RadioGroup value={deliveryType} onValueChange={(val: DeliveryType) => setDeliveryType(val)}>
                 {DELIVERY_OPTIONS.map((option) => (
                   <div
                     key={option.id}
@@ -234,13 +265,13 @@ export function CheckoutFlow({
                     <RadioGroupItem value={option.id} id={option.id} />
                     <option.icon className="h-5 w-5 text-muted-foreground" />
                     <div className="flex-1">
-                      <Label htmlFor={option.id} className="cursor-pointer">
+                      <label htmlFor={option.id} className="cursor-pointer font-medium text-sm">
                         {option.name}
-                      </Label>
+                      </label>
                       <p className="text-sm text-muted-foreground">{option.description}</p>
                     </div>
                     <span className="font-medium">
-                      {option.fee === 0 ? "Free" : `₦${option.fee.toLocaleString()}`}
+                      {option.fee === 0 ? "Free" : `\u20A6${option.fee.toLocaleString()}`}
                     </span>
                   </div>
                 ))}
@@ -303,15 +334,15 @@ export function CheckoutFlow({
                 <CardContent className="pt-4 space-y-3">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal</span>
-                    <span>₦{subtotal.toLocaleString()}</span>
+                    <span>{'\u20A6'}{subtotal.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Delivery Fee</span>
-                    <span>{deliveryFee === 0 ? "Free" : `₦${deliveryFee.toLocaleString()}`}</span>
+                    <span>{deliveryFee === 0 ? "Free" : `\u20A6${deliveryFee.toLocaleString()}`}</span>
                   </div>
                   <div className="flex justify-between text-sm text-muted-foreground">
                     <span>Service Fee ({avgCommission.toFixed(0)}%)</span>
-                    <span>₦{commissionAmount.toLocaleString()}</span>
+                    <span>{'\u20A6'}{roundedCommission.toLocaleString()}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between font-bold text-lg">
@@ -347,7 +378,7 @@ export function CheckoutFlow({
                   ) : (
                     <>
                       <CreditCard className="h-4 w-4 mr-2" />
-                      Pay ₦{total.toLocaleString()}
+                       Pay {'\u20A6'}{total.toLocaleString()}
                     </>
                   )}
                 </Button>
@@ -355,7 +386,6 @@ export function CheckoutFlow({
 
               <p className="text-xs text-center text-muted-foreground">
                 By placing this order, you agree to String's terms of service.
-                Payment will be processed securely via Paystack.
               </p>
             </div>
           )}

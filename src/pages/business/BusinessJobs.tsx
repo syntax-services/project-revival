@@ -42,22 +42,34 @@ export default function BusinessJobs() {
   const updateJobStatus = async (jobId: string, newStatus: JobStatus, additionalData?: Record<string, unknown>) => {
     setUpdating(true);
     try {
-      const updateData: Record<string, unknown> = { status: newStatus, ...additionalData };
-      
-      if (newStatus === "accepted") updateData.accepted_at = new Date().toISOString();
-      if (newStatus === "ongoing") updateData.started_at = new Date().toISOString();
-      if (newStatus === "completed") updateData.completed_at = new Date().toISOString();
-      if (newStatus === "cancelled") updateData.cancelled_at = new Date().toISOString();
+      if (newStatus === "completed") {
+        const finalPrice = additionalData?.final_price as number;
+        const { data, error: rpcError } = await supabase.rpc("settle_job_settlement", {
+          p_job_id: jobId,
+          p_final_price: finalPrice
+        });
 
-      const { error } = await supabase
-        .from("jobs")
-        .update(updateData)
-        .eq("id", jobId);
+        if (rpcError) throw rpcError;
+        const result = data as { success: boolean; error?: string };
+        if (!result.success) throw new Error(result.error);
+      } else {
+        const updateData: Record<string, unknown> = { status: newStatus, ...additionalData };
+        
+        if (newStatus === "accepted") updateData.accepted_at = new Date().toISOString();
+        if (newStatus === "ongoing") updateData.started_at = new Date().toISOString();
+        if (newStatus === "cancelled") updateData.cancelled_at = new Date().toISOString();
 
-      if (error) throw error;
+        const { error } = await supabase
+          .from("jobs")
+          .update(updateData)
+          .eq("id", jobId);
+
+        if (error) throw error;
+      }
       
       toast.success(`Job status updated to ${statusConfig[newStatus].label}`);
       queryClient.invalidateQueries({ queryKey: ["business-jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["business-earnings"] });
       setSelectedJob(null);
       setQuotePrice("");
     } catch (error) {
@@ -99,7 +111,7 @@ export default function BusinessJobs() {
             <p className="text-sm text-muted-foreground">Job #{job.id.slice(0, 8)}</p>
             {job.quoted_price && (
               <p className="text-sm text-muted-foreground">
-                Quote: ₦{Number(job.quoted_price).toLocaleString()}
+                Quote: {'\u20A6'}{Number(job.quoted_price).toLocaleString()}
               </p>
             )}
             <p className="text-xs text-muted-foreground mt-1">
@@ -182,13 +194,13 @@ export default function BusinessJobs() {
                 {selectedJob.quoted_price && (
                   <div>
                     <p className="text-muted-foreground">Your Quote</p>
-                    <p className="font-medium">₦{Number(selectedJob.quoted_price).toLocaleString()}</p>
+                    <p className="font-medium">{'\u20A6'}{Number(selectedJob.quoted_price).toLocaleString()}</p>
                   </div>
                 )}
                 {selectedJob.final_price && (
                   <div>
                     <p className="text-muted-foreground">Final Price</p>
-                    <p className="font-medium">₦{Number(selectedJob.final_price).toLocaleString()}</p>
+                    <p className="font-medium">{'\u20A6'}{Number(selectedJob.final_price).toLocaleString()}</p>
                   </div>
                 )}
                 {selectedJob.location && (

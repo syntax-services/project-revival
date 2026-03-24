@@ -15,11 +15,14 @@ import { useState } from "react";
 import { OrderConfirmation } from "@/components/orders/OrderConfirmation";
 import { PostPurchaseReview } from "@/components/reviews/PostPurchaseReview";
 import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 type OrderStatus = "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded";
 
 const statusConfig: Record<OrderStatus, { label: string; icon: typeof Clock; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  pending: { label: "Pending", icon: Clock, variant: "secondary" },
+  pending: { label: "Awaiting Payment", icon: Clock, variant: "secondary" },
   confirmed: { label: "Confirmed", icon: CheckCircle, variant: "default" },
   processing: { label: "Processing", icon: Package, variant: "default" },
   shipped: { label: "Shipped", icon: Truck, variant: "default" },
@@ -36,6 +39,7 @@ interface OrderItem {
 }
 
 export default function CustomerOrders() {
+  const { user } = useAuth();
   const { data: customer } = useCustomer();
   const { data: orders = [], isLoading } = useCustomerOrders(customer?.id);
   const [selectedOrder, setSelectedOrder] = useState<typeof orders[0] | null>(null);
@@ -71,7 +75,7 @@ export default function CustomerOrders() {
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground">
-              {order.id.slice(0, 8).toUpperCase()} • {items.length} item{items.length !== 1 ? "s" : ""} • ₦{Number(order.total).toLocaleString()}
+              {order.id.slice(0, 8).toUpperCase()} • {items.length} item{items.length !== 1 ? "s" : ""} • {'\u20A6'}{Number(order.total).toLocaleString()}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               {format(new Date(order.created_at), "MMM d, yyyy 'at' h:mm a")}
@@ -97,6 +101,29 @@ export default function CustomerOrders() {
                   setSelectedOrder(null);
                 }}
               />
+            )}
+            {order.status === "pending" && (
+              <Button 
+                size="sm" 
+                variant="default"
+                className="bg-green-600 hover:bg-green-700"
+                onClick={async () => {
+                   const { data, error } = await supabase.functions.invoke("initialize-payment", {
+                     body: { 
+                       orderId: order.id,
+                       email: user?.email, // Assuming user is available from context
+                       total: order.total
+                     }
+                   });
+                   if (data?.authorization_url) {
+                     window.location.assign(data.authorization_url);
+                   } else {
+                     toast.error("Failed to resume payment");
+                   }
+                }}
+              >
+                Pay Now
+              </Button>
             )}
             <Button variant="ghost" size="sm" onClick={() => setSelectedOrder(order)}>
               <Eye className="h-4 w-4" />
@@ -177,7 +204,7 @@ export default function CustomerOrders() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Total</p>
-                  <p className="font-medium">₦{Number(selectedOrder.total).toLocaleString()}</p>
+                  <p className="font-medium">{'\u20A6'}{Number(selectedOrder.total).toLocaleString()}</p>
                 </div>
                  <div>
                    <p className="text-muted-foreground">Delivery</p>
@@ -202,7 +229,7 @@ export default function CustomerOrders() {
                   {((selectedOrder.items as unknown as OrderItem[]) || []).map((item, idx) => (
                     <div key={idx} className="flex justify-between text-sm">
                       <span>{item.name} × {item.quantity}</span>
-                      <span>₦{(item.price * item.quantity).toLocaleString()}</span>
+                      <span>{'\u20A6'}{(item.price * item.quantity).toLocaleString()}</span>
                     </div>
                   ))}
                 </div>

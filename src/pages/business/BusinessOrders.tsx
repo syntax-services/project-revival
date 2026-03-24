@@ -78,6 +78,7 @@ export default function BusinessOrders() {
 
   const filterOrders = (status: string) => {
     if (status === "all") return orders;
+    if (status === "pending") return orders.filter(o => o.status === "pending" || o.status === "confirmed");
     if (status === "active") return orders.filter(o => ["pending", "confirmed", "processing", "shipped"].includes(o.status));
     return orders.filter(o => o.status === status);
   };
@@ -100,7 +101,7 @@ export default function BusinessOrders() {
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground">
-              {items.length} item{items.length !== 1 ? "s" : ""} • ₦{Number(order.total).toLocaleString()}
+              {items.length} item{items.length !== 1 ? "s" : ""} • {'\u20A6'}{Number(order.total).toLocaleString()}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               {format(new Date(order.created_at), "MMM d, yyyy 'at' h:mm a")}
@@ -125,8 +126,8 @@ export default function BusinessOrders() {
         <Tabs defaultValue="all" className="w-full">
           <TabsList className="w-full justify-start overflow-x-auto">
             <TabsTrigger value="all">All ({orders.length})</TabsTrigger>
-            <TabsTrigger value="pending">Pending ({filterOrders("pending").length})</TabsTrigger>
-            <TabsTrigger value="active">Active ({filterOrders("active").length})</TabsTrigger>
+            <TabsTrigger value="pending">New/Pending ({filterOrders("pending").length})</TabsTrigger>
+            <TabsTrigger value="active">In Progress ({filterOrders("active").length})</TabsTrigger>
             <TabsTrigger value="delivered">Delivered ({filterOrders("delivered").length})</TabsTrigger>
           </TabsList>
 
@@ -177,7 +178,7 @@ export default function BusinessOrders() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Total</p>
-                  <p className="font-medium">₦{Number(selectedOrder.total).toLocaleString()}</p>
+                  <p className="font-medium">{'\u20A6'}{Number(selectedOrder.total).toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Created</p>
@@ -198,7 +199,7 @@ export default function BusinessOrders() {
                   {((selectedOrder.items as unknown as OrderItem[]) || []).map((item, idx) => (
                     <div key={idx} className="flex justify-between text-sm">
                       <span>{item.name} × {item.quantity}</span>
-                      <span>₦{(item.price * item.quantity).toLocaleString()}</span>
+                      <span>{'\u20A6'}{(item.price * item.quantity).toLocaleString()}</span>
                     </div>
                   ))}
                 </div>

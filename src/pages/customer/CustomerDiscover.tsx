@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,10 +6,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useUserLocation, calculateDistance } from "@/hooks/useLocation";
-import { useSmartMatching, detectLowQualitySignals } from "@/hooks/useSmartMatching";
-import { BusinessCard } from "@/components/business/BusinessCard";
+import { useSmartMatching, detectLowQualitySignals, useAiMatchmaking } from "@/hooks/useSmartMatching";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Search,
   Building2,
@@ -19,6 +27,10 @@ import {
   Filter,
   Star,
   AlertTriangle,
+  Sparkles,
+  Loader2,
+  Lightbulb,
+  Send,
 } from "lucide-react";
 import {
   Select,
@@ -27,6 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ReputationBadge } from "@/components/ui/reputation-badge";
 
 interface Business {
   id: string;
@@ -40,6 +53,7 @@ interface Business {
   business_type: string | null;
   reputation_score: number | null;
   verified: boolean | null;
+  verification_tier: "none" | "basic" | "verified" | "premium" | "elite" | null;
   total_reviews: number | null;
   total_completed_orders: number | null;
 }
@@ -62,8 +76,6 @@ interface Service {
 }
 
 interface EnrichedBusiness extends Business {
-  likes_count: number;
-  is_liked: boolean;
   is_saved: boolean;
   distance: number | null;
   products: Product[];
@@ -71,12 +83,100 @@ interface EnrichedBusiness extends Business {
   warnings: string[];
 }
 
+interface RankedBusiness extends EnrichedBusiness {
+  matchScore: number;
+  trustScore: number;
+}
+
+interface SearchInsight {
+  id: string;
+  ai_match_score?: number;
+  ai_insights?: string[];
+}
+
+interface SearchAssistPayload {
+  aiResults: SearchInsight[];
+  relatedItems: string[];
+}
+
+const tokenizeSearch = (value: string) =>
+  value
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3);
+
+const buildRelatedTerms = (term: string, businesses: EnrichedBusiness[]) => {
+  const tokens = tokenizeSearch(term);
+  const catalogTerms = Array.from(
+    new Set(
+      businesses.flatMap((business) => [
+        business.company_name,
+        business.industry ?? "",
+        business.products_services ?? "",
+        ...business.products.map((product) => product.name),
+        ...business.services.map((service) => service.name),
+      ]),
+    ),
+  )
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+
+  return catalogTerms
+    .filter((item) => {
+      const normalized = item.toLowerCase();
+      return tokens.some((token) => normalized.includes(token) || token.includes(normalized));
+    })
+    .slice(0, 6);
+};
+
+const buildLocalSearchAssist = (term: string, candidates: RankedBusiness[], businesses: EnrichedBusiness[]): SearchAssistPayload => {
+  const aiResults = candidates.slice(0, 6).map((business) => {
+    const insights: string[] = [];
+
+    if (business.distance !== null) {
+      insights.push(
+        business.distance < 1
+          ? "Very close to your location."
+          : `${business.distance.toFixed(1)}km away from you.`,
+      );
+    }
+
+    if (business.products.some((product) => product.name.toLowerCase().includes(term.toLowerCase()))) {
+      insights.push("Has a matching product listed right now.");
+    }
+
+    if (business.services.some((service) => service.name.toLowerCase().includes(term.toLowerCase()))) {
+      insights.push("Has a matching service available.");
+    }
+
+    if (business.verified) {
+      insights.push("Verified business profile.");
+    }
+
+    if ((business.total_completed_orders || 0) > 0) {
+      insights.push(`Completed ${business.total_completed_orders} orders on String.`);
+    }
+
+    return {
+      id: business.id,
+      ai_match_score: business.matchScore,
+      ai_insights: insights.slice(0, 3),
+    };
+  });
+
+  return {
+    aiResults,
+    relatedItems: buildRelatedTerms(term, businesses),
+  };
+};
+
 export default function CustomerDiscover() {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { location, requestLocation, loading: locationLoading } = useUserLocation();
-  
+
   const [businesses, setBusinesses] = useState<EnrichedBusiness[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -84,6 +184,14 @@ export default function CustomerDiscover() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("smart");
+
+  const aiMatchmaking = useAiMatchmaking();
+  const [searchInsights, setSearchInsights] = useState<SearchInsight[]>([]);
+  const [relatedItems, setRelatedItems] = useState<string[]>([]);
+  const [suggestionOpen, setSuggestionOpen] = useState(false);
+  const [suggestedItem, setSuggestedItem] = useState("");
+  const [suggestionDetails, setSuggestionDetails] = useState("");
+  const [submittingSuggestion, setSubmittingSuggestion] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -104,38 +212,36 @@ export default function CustomerDiscover() {
         }
 
         const { data: businessList } = await supabase
-          .from("businesses")
-          .select("id, company_name, industry, business_location, products_services, cover_image_url, latitude, longitude, business_type, reputation_score, verified, total_reviews, total_completed_orders")
+          .from("public_businesses")
+          .select(`
+            id, company_name, industry, business_location, products_services, 
+            cover_image_url, latitude, longitude, business_type, 
+            reputation_score, verified, verification_tier, total_reviews, total_completed_orders,
+            products(id, name, business_id, price, image_url),
+            services(id, name, business_id, images, price_min, price_max),
+            saved_businesses!left(id)
+          `)
+          .eq("saved_businesses.customer_id", customer?.id || "")
           .order("created_at", { ascending: false });
 
-        if (businessList && customer) {
-          const enriched = await Promise.all(
-            businessList.map(async (biz) => {
-              const [savedRes, productsRes, servicesRes] = await Promise.all([
-                supabase.from("saved_businesses").select("id").eq("business_id", biz.id).eq("customer_id", customer.id).maybeSingle(),
-                supabase.from("products").select("id, name, business_id, price, image_url").eq("business_id", biz.id).limit(5),
-                supabase.from("services").select("id, name, business_id, images, price_min, price_max").eq("business_id", biz.id).limit(5),
-              ]);
+        if (businessList) {
+          const enriched = businessList.map((biz: EnrichedBusiness & { saved_businesses?: { id: string }[] }) => {
+            let distance: number | null = null;
+            if (customer?.latitude && customer?.longitude && biz.latitude && biz.longitude) {
+              distance = calculateDistance(customer.latitude, customer.longitude, biz.latitude, biz.longitude);
+            }
 
-              let distance: number | null = null;
-              if (customer.latitude && customer.longitude && biz.latitude && biz.longitude) {
-                distance = calculateDistance(customer.latitude, customer.longitude, biz.latitude, biz.longitude);
-              }
+            const warnings = detectLowQualitySignals(biz);
 
-              const warnings = detectLowQualitySignals(biz);
-
-              return {
-                ...biz,
-                likes_count: 0,
-                is_liked: false,
-                is_saved: !!savedRes.data,
-                distance,
-                products: productsRes.data || [],
-                services: servicesRes.data || [],
-                warnings,
-              };
-            })
-          );
+            return {
+              ...biz,
+              is_saved: biz.saved_businesses?.length > 0,
+              distance,
+              products: biz.products?.slice(0, 5) || [],
+              services: biz.services?.slice(0, 5) || [],
+              warnings,
+            };
+          });
 
           setBusinesses(enriched);
         }
@@ -170,20 +276,6 @@ export default function CustomerDiscover() {
     }
   };
 
-  const toggleLike = async (businessId: string) => {
-    if (!customerId) return;
-
-    const business = businesses.find((b) => b.id === businessId);
-    if (!business) return;
-
-    try {
-      // business_likes table not available yet
-      toast({ title: "Likes feature coming soon" });
-    } catch (error) {
-      toast({ variant: "destructive", title: "Action failed" });
-    }
-  };
-
   const startChat = async (businessId: string) => {
     if (!customerId) return;
 
@@ -205,33 +297,29 @@ export default function CustomerDiscover() {
     }
   };
 
-  // Apply smart matching
-  const smartMatched = useSmartMatching(businesses, {
+  const smartMatched = useSmartMatching<EnrichedBusiness>(businesses, {
     userLatitude: userLocation?.lat,
     userLongitude: userLocation?.lng,
-    preferredType: typeFilter === "all" ? "all" : typeFilter as "goods" | "services",
-  });
+    preferredType: typeFilter === "all" ? "all" : (typeFilter as "goods" | "services"),
+  }) as RankedBusiness[];
 
-  // Filter by search and type
-  let filteredBusinesses = smartMatched.filter((b) => {
-    // Search across business name, products, services, and product nicknames
+  let filteredBusinesses: RankedBusiness[] = smartMatched.filter((b) => {
     const searchLower = search.toLowerCase();
-    const matchesSearch = 
+    const matchesSearch =
       b.company_name.toLowerCase().includes(searchLower) ||
       b.industry?.toLowerCase().includes(searchLower) ||
       b.business_location?.toLowerCase().includes(searchLower) ||
       b.products.some((p) => p.name.toLowerCase().includes(searchLower)) ||
       b.services.some((s) => s.name.toLowerCase().includes(searchLower));
-    
+
     if (!matchesSearch) return false;
-    
+
     if (typeFilter === "goods") return b.business_type === "goods" || b.products.length > 0;
     if (typeFilter === "services") return b.business_type === "services" || b.services.length > 0;
-    
+
     return true;
   });
 
-  // Sort
   if (sortBy !== "smart") {
     filteredBusinesses = [...filteredBusinesses].sort((a, b) => {
       if (sortBy === "distance") {
@@ -243,11 +331,108 @@ export default function CustomerDiscover() {
         return (b.reputation_score || 0) - (a.reputation_score || 0);
       }
       if (sortBy === "popular") {
-        return b.likes_count - a.likes_count;
+        return (b.total_completed_orders || 0) - (a.total_completed_orders || 0);
       }
       return 0;
     });
   }
+
+  const openSuggestionDialog = () => {
+    const trimmedSearch = search.trim();
+    setSuggestedItem(trimmedSearch);
+    setSuggestionDetails("");
+    setSuggestionOpen(true);
+  };
+
+  const applySearchAssist = (result: SearchAssistPayload, title: string, description: string) => {
+    setSearchInsights(result.aiResults);
+    setRelatedItems(result.relatedItems);
+    toast({ title, description });
+  };
+
+  const handleSearchAssist = () => {
+    const trimmedSearch = search.trim();
+
+    if (!trimmedSearch) {
+      toast({ title: "Enter what you want to find first" });
+      return;
+    }
+
+    const rankedCandidates = filteredBusinesses.length > 0 ? filteredBusinesses : smartMatched.slice(0, 8);
+    const localFallback = buildLocalSearchAssist(trimmedSearch, rankedCandidates, businesses);
+
+    aiMatchmaking.mutate(
+      {
+        userPreferences: { search_term: trimmedSearch, type_filter: typeFilter },
+        businesses: rankedCandidates,
+      },
+      {
+        onSuccess: (results) => {
+          applySearchAssist(
+            {
+              aiResults: results.aiResults.length > 0 ? results.aiResults : localFallback.aiResults,
+              relatedItems: results.relatedItems.length > 0 ? results.relatedItems : localFallback.relatedItems,
+            },
+            "Search highlights ready",
+            "We ranked the closest businesses and related search terms for you.",
+          );
+        },
+        onError: () => {
+          applySearchAssist(
+            localFallback,
+            localFallback.aiResults.length > 0 ? "Showing the closest matches we found" : "No exact match yet",
+            localFallback.aiResults.length > 0
+              ? "Search assistance is using your current catalog and location data."
+              : "You can suggest this item so businesses know what customers want next.",
+          );
+        },
+      },
+    );
+  };
+
+  const handleSuggestionSubmit = async () => {
+    const normalizedSuggestedItem = suggestedItem.trim() || search.trim();
+
+    if (!user || !normalizedSuggestedItem) {
+      toast({
+        title: "Add the item you want",
+        description: "Tell us what product or service you could not find.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSubmittingSuggestion(true);
+
+    try {
+      const { error } = await supabase.from("item_search_suggestions").insert({
+        user_id: user.id,
+        customer_id: customerId,
+        search_term: search.trim() || normalizedSuggestedItem,
+        suggested_item: normalizedSuggestedItem,
+        details: suggestionDetails.trim() || null,
+      });
+
+      if (error) throw error;
+
+      setSuggestionOpen(false);
+      setSuggestedItem("");
+      setSuggestionDetails("");
+      toast({
+        title: "Suggestion sent",
+        description: "Thanks. We will use this to guide what sellers add next.",
+      });
+    } catch (error) {
+      console.error("Error submitting item suggestion:", error);
+      toast({
+        title: "We could not save your suggestion",
+        description: "Please try again in a moment.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmittingSuggestion(false);
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -274,18 +459,63 @@ export default function CustomerDiscover() {
           </div>
         )}
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search businesses, products, or services..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-11 h-12"
-          />
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search businesses, products, or services..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-12 pl-11"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleSearchAssist}
+              disabled={aiMatchmaking.isPending || !search.trim()}
+              className="h-12 flex-1 bg-primary text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+            >
+              {aiMatchmaking.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+              {aiMatchmaking.isPending ? "Searching..." : "Search String"}
+            </Button>
+          </div>
         </div>
 
-        {/* Filters */}
+        <div className="flex flex-col gap-3 rounded-2xl bg-muted/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground">Cannot find what you need?</p>
+            <p className="text-sm text-muted-foreground">
+              Suggest the item or service and we will use it to guide what sellers add next.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            className="h-10 shrink-0 border-0 bg-background/80 shadow-sm hover:bg-background"
+            onClick={openSuggestionDialog}
+          >
+            <Lightbulb className="mr-2 h-4 w-4" />
+            Suggest item
+          </Button>
+        </div>
+
+        {relatedItems.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+            <span className="whitespace-nowrap text-sm font-medium text-foreground">
+              <Search className="mr-1 inline h-4 w-4 text-primary" />
+              Related searches:
+            </span>
+            {relatedItems.map((item, idx) => (
+              <button
+                key={idx}
+                className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 cursor-pointer whitespace-nowrap"
+                onClick={() => setSearch(item)}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-3">
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="w-[140px]">
@@ -317,12 +547,10 @@ export default function CustomerDiscover() {
           </Select>
         </div>
 
-        {/* Results count */}
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground font-medium">
           {filteredBusinesses.length} business{filteredBusinesses.length !== 1 ? "es" : ""} found
         </p>
 
-        {/* Business Grid */}
         {loading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map((i) => (
@@ -334,121 +562,138 @@ export default function CustomerDiscover() {
             ))}
           </div>
         ) : filteredBusinesses.length === 0 ? (
-          <div className="dashboard-card text-center py-12">
-            <Building2 className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 font-medium text-foreground">No businesses found</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {search ? "Try adjusting your search terms" : "Check back later for new businesses"}
+          <div className="dashboard-card text-center py-16">
+            <Building2 className="mx-auto h-12 w-12 text-muted-foreground opacity-20" />
+            <h3 className="mt-4 font-semibold text-foreground text-lg">No businesses found</h3>
+            <p className="mt-1 text-sm text-muted-foreground max-w-xs mx-auto">
+              {search ? "No matches found for your current search. Try different keywords or filters." : "We're expanding! Check back soon for new businesses in your area."}
             </p>
+            {search.trim() && (
+              <div className="mt-5">
+                <Button onClick={openSuggestionDialog} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                  Suggest "{search.trim()}"
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredBusinesses.map((business) => (
-              <div key={business.id} className="dashboard-card group overflow-hidden">
-                {/* Cover Image */}
+              <div key={business.id} className="dashboard-card group overflow-hidden border-border/50 hover:border-primary/20 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300">
                 <div
-                  className="relative -mx-5 -mt-5 mb-4 h-32 bg-gradient-to-br from-muted to-muted/50 cursor-pointer"
+                  className="relative -mx-5 -mt-5 mb-4 h-32 bg-gradient-to-br from-muted/50 to-muted transition-transform duration-500 group-hover:scale-[1.02] cursor-pointer"
                   onClick={() => navigate(`/business/${business.id}`)}
                 >
                   {business.cover_image_url ? (
                     <img src={business.cover_image_url} alt={business.company_name} className="h-full w-full object-cover" />
                   ) : (
-                    <div className="flex h-full items-center justify-center">
-                      <span className="text-4xl font-bold text-muted-foreground/30">{business.company_name.charAt(0)}</span>
+                    <div className="flex h-full items-center justify-center bg-slate-100 dark:bg-slate-800">
+                      <span className="text-4xl font-bold text-slate-300 dark:text-slate-700">{business.company_name.charAt(0)}</span>
                     </div>
                   )}
                   <div className="absolute top-2 right-2 flex gap-1 flex-wrap">
                     {business.distance !== null && (
-                      <span className="bg-background/90 backdrop-blur-sm text-xs px-2 py-1 rounded-full text-foreground">
+                      <span className="bg-background/90 backdrop-blur-sm text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full text-foreground shadow-sm">
                         {business.distance < 1 ? `${Math.round(business.distance * 1000)}m` : `${business.distance.toFixed(1)}km`}
                       </span>
                     )}
-                    {business.verified && (
-                      <Badge variant="default" className="text-xs">Verified</Badge>
+                    {business.verification_tier && (
+                      <ReputationBadge tier={(business.verification_tier || 'none') as 'none' | 'basic' | 'verified' | 'premium' | 'elite'} className="scale-75 origin-top-right shadow-sm" />
                     )}
                   </div>
-                  {/* Warnings indicator */}
+                  
                   {business.warnings.length > 0 && (
                     <div className="absolute top-2 left-2">
-                      <div className="bg-background/90 backdrop-blur-sm px-2 py-1 rounded-full flex items-center gap-1">
-                        <AlertTriangle className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">{business.warnings[0]}</span>
+                      <div className="bg-background/90 backdrop-blur-sm px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                        <AlertTriangle className="h-3 w-3 text-amber-500" />
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase">{business.warnings[0]}</span>
                       </div>
+                    </div>
+                  )}
+
+                  {searchInsights.find((item) => item.id === business.id)?.ai_match_score !== undefined && (
+                    <div className="absolute bottom-2 right-2">
+                      <Badge variant="default" className="border-0 bg-primary text-[10px] font-bold text-primary-foreground shadow-lg">
+                        {searchInsights.find((item) => item.id === business.id)?.ai_match_score}% Search Match
+                      </Badge>
                     </div>
                   )}
                 </div>
 
-                {/* Business Info */}
+                {searchInsights.find((item) => item.id === business.id)?.ai_insights && (
+                  <div className="mb-3 rounded-lg border border-primary/10 bg-primary/5 px-4 py-2">
+                    <p className="mb-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-primary">
+                      <Sparkles className="h-3 w-3" /> Search highlights
+                    </p>
+                    <ul className="text-xs text-muted-foreground space-y-1">
+                      {searchInsights.find((item) => item.id === business.id)?.ai_insights?.map((insight, idx) => (
+                        <li key={idx} className="flex gap-2">
+                          <span className="text-primary">-</span>
+                          {insight}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <div className="cursor-pointer" onClick={() => navigate(`/business/${business.id}`)}>
-                  <h3 className="font-medium text-foreground hover:text-foreground/80 transition-colors">
+                  <h3 className="font-bold text-foreground group-hover:text-primary transition-colors text-lg truncate">
                     {business.company_name}
                   </h3>
-                  {business.reputation_score && business.reputation_score > 0 && (
+                  {business.reputation_score !== null && business.reputation_score > 0 && (
                     <div className="flex items-center gap-1 mt-1">
-                      <Star className="h-3 w-3 fill-foreground text-foreground" />
-                      <span className="text-sm text-foreground">{business.reputation_score.toFixed(1)}</span>
-                      {business.total_reviews && business.total_reviews > 0 && (
-                        <span className="text-xs text-muted-foreground">({business.total_reviews} reviews)</span>
+                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                      <span className="text-sm font-bold text-foreground">{business.reputation_score.toFixed(1)}</span>
+                      {business.total_reviews !== null && business.total_reviews > 0 && (
+                        <span className="text-xs text-muted-foreground leading-none">({business.total_reviews} reviews)</span>
                       )}
                     </div>
                   )}
                   {business.industry && (
-                    <p className="mt-1 text-sm text-muted-foreground truncate">{business.industry}</p>
+                    <p className="mt-1 text-xs font-medium text-muted-foreground uppercase tracking-wide truncate opacity-70">{business.industry}</p>
                   )}
                 </div>
 
-                {/* Dynamic Product/Service Names */}
-                <div className="mt-3 space-y-2">
-                  {business.products.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      <Package className="h-3 w-3 text-muted-foreground mt-0.5" />
-                      <div className="flex-1 flex flex-wrap gap-1">
+                <div className="mt-4 space-y-2">
+                  {business.products && business.products.length > 0 && (
+                    <div className="flex gap-2">
+                      <Package className="h-3.5 w-3.5 text-muted-foreground mt-0.5 opacity-40 shrink-0" />
+                      <div className="flex flex-wrap gap-1">
                         {business.products.map((product) => (
-                          <Badge key={product.id} variant="secondary" className="text-xs">
+                          <Badge key={product.id} variant="secondary" className="text-[10px] bg-slate-100 dark:bg-slate-800 border-none font-medium">
                             {product.name}
                           </Badge>
                         ))}
-                        {business.products.length >= 3 && (
-                          <span className="text-xs text-muted-foreground">+more</span>
-                        )}
                       </div>
                     </div>
                   )}
-                  {business.services.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      <Wrench className="h-3 w-3 text-muted-foreground mt-0.5" />
-                      <div className="flex-1 flex flex-wrap gap-1">
+                  {business.services && business.services.length > 0 && (
+                    <div className="flex gap-2">
+                      <Wrench className="h-3.5 w-3.5 text-muted-foreground mt-0.5 opacity-40 shrink-0" />
+                      <div className="flex flex-wrap gap-1">
                         {business.services.map((service) => (
-                          <Badge key={service.id} variant="outline" className="text-xs">
+                          <Badge key={service.id} variant="outline" className="text-[10px] border-dashed font-medium">
                             {service.name}
                           </Badge>
                         ))}
-                        {business.services.length >= 3 && (
-                          <span className="text-xs text-muted-foreground">+more</span>
-                        )}
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Actions */}
-                <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => toggleLike(business.id)} 
-                      className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <Star className={`h-4 w-4 ${business.is_liked ? "fill-foreground text-foreground" : ""}`} />
-                      <span>{business.likes_count}</span>
-                    </button>
-                    <button
-                      onClick={() => toggleSave(business.id)}
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {business.is_saved ? "Saved" : "Save"}
-                    </button>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => startChat(business.id)}>
+                <div className="mt-6 flex items-center justify-between border-t border-border/50 pt-4">
+                  <button
+                    onClick={() => toggleSave(business.id)}
+                    className={`text-xs font-bold uppercase tracking-widest transition-colors ${business.is_saved ? "text-primary hover:text-primary/80" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    {business.is_saved ? "Saved" : "Save"}
+                  </button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => startChat(business.id)}
+                    className="text-xs font-bold uppercase tracking-widest hover:bg-primary/5 hover:text-primary"
+                  >
                     Message
                   </Button>
                 </div>
@@ -457,6 +702,54 @@ export default function CustomerDiscover() {
           </div>
         )}
       </div>
+
+      <Dialog open={suggestionOpen} onOpenChange={setSuggestionOpen}>
+        <DialogContent className="border-0 bg-background shadow-2xl sm:max-w-lg">
+          <DialogHeader className="text-left">
+            <DialogTitle className="text-xl">Suggest a missing item</DialogTitle>
+            <DialogDescription className="leading-6">
+              Tell us what product or service you could not find. We will use this demand signal to guide what sellers add next.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="suggested-item" className="text-sm font-medium text-foreground">
+                Product or service name
+              </label>
+              <Input
+                id="suggested-item"
+                value={suggestedItem}
+                onChange={(event) => setSuggestedItem(event.target.value)}
+                placeholder="Example: smoked turkey, event MC, solar battery"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="suggestion-details" className="text-sm font-medium text-foreground">
+                Extra details
+              </label>
+              <Textarea
+                id="suggestion-details"
+                value={suggestionDetails}
+                onChange={(event) => setSuggestionDetails(event.target.value)}
+                placeholder="Add size, location, preferred quality, budget, or anything else that helps."
+                className="min-h-[120px] border-0 bg-muted/40 shadow-none focus-visible:ring-1"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" className="border-0 bg-muted hover:bg-muted/80" onClick={() => setSuggestionOpen(false)}>
+              Maybe later
+            </Button>
+            <Button onClick={handleSuggestionSubmit} disabled={submittingSuggestion} className="bg-primary text-primary-foreground hover:bg-primary/90">
+              {submittingSuggestion ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+              Send suggestion
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

@@ -61,21 +61,20 @@ export default function CustomerMessages() {
         .select(`
           id,
           business_id,
-          last_message_at
+          last_message_at,
+          businesses (
+            company_name
+          )
         `)
         .eq("customer_id", customerId)
         .order("last_message_at", { ascending: false });
 
       if (convs) {
-        // Fetch business names and last messages
+        // Fetch last messages and unread counts
+        // Still doing some per-conversation work for last message and unread count 
+        // until we add last_message_id to the conversations table.
         const enriched = await Promise.all(
-          convs.map(async (conv) => {
-            const { data: business } = await supabase
-              .from("businesses")
-              .select("company_name")
-              .eq("id", conv.business_id)
-              .single();
-
+          convs.map(async (conv: { id: string; business_id: string; last_message_at: string; businesses: { company_name: string } | null }) => {
             const { data: lastMsg } = await supabase
               .from("messages")
               .select("content, created_at")
@@ -94,7 +93,7 @@ export default function CustomerMessages() {
             return {
               id: conv.id,
               business_id: conv.business_id,
-              business_name: business?.company_name || "Unknown",
+              business_name: conv.businesses?.company_name || "Unknown",
               last_message: lastMsg?.content || null,
               last_message_at: lastMsg?.created_at || conv.last_message_at || "",
               unread_count: count || 0,
@@ -128,7 +127,7 @@ export default function CustomerMessages() {
           created_at: m.created_at,
           read: !!m.read_at,
         })));
-        
+
         // Mark messages as read
         await supabase
           .from("messages")
@@ -153,7 +152,7 @@ export default function CustomerMessages() {
           filter: `conversation_id=eq.${selectedConversation.id}`,
         },
         (payload) => {
-          const m = payload.new as Record<string, unknown>;
+          const m = payload.new as { id: string; content: string; sender_type: string; created_at: string; read_at: string | null };
           setMessages((prev) => [...prev, {
             id: m.id,
             content: m.content,

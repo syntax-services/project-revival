@@ -53,19 +53,10 @@ const features = [
 ];
 
 export default function Landing() {
-  const { user, profile } = useAuth();
+  const { dashboardPath, user } = useAuth();
 
   const getDashboardLink = () => {
-    if (!user) return "/auth";
-    if (!profile?.onboarding_completed) return "/onboarding";
-    
-    if (profile.user_type === "business") {
-      return "/business";
-    } else if (profile.user_type === "admin") {
-      return "/admin";
-    }
-    
-    return "/customer";
+    return user ? dashboardPath : "/auth";
   };
 
   return (
@@ -184,8 +175,11 @@ export default function Landing() {
         <div className="container flex flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-2">
             <img src={stringLogo} alt="String" className="h-8 w-auto opacity-70 logo-adaptive" />
-            <span className="text-sm text-muted-foreground">
+            <span className="sr-only text-sm text-muted-foreground">
               © 2026 String. All rights reserved.
+            </span>
+            <span className="text-sm text-muted-foreground">
+              Copyright 2026 String. All rights reserved.
             </span>
           </div>
           <nav className="flex gap-6">

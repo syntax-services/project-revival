@@ -68,7 +68,8 @@ export function LocationRequestForm({ onSuccess, required = false }: LocationReq
       onSuccess?.();
     } catch (error: unknown) {
       console.error("Location submit error:", error);
-      toast.error(error.message || "Failed to submit location");
+      const msg = error instanceof Error ? error.message : "Failed to submit location";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

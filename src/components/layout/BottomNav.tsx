@@ -6,11 +6,12 @@ import {
   MessageCircle,
   User,
   Plus,
-  ClipboardList,
+  Settings,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const customerNavItems = [
+export const customerNavItems = [
   { href: "/customer", label: "Home", icon: Home },
   { href: "/customer/discover", label: "Discover", icon: Search },
   { href: "/customer/offers", label: "Requests", icon: Plus },
@@ -18,7 +19,7 @@ const customerNavItems = [
   { href: "/customer/profile", label: "Profile", icon: User },
 ];
 
-const businessNavItems = [
+export const businessNavItems = [
   { href: "/business", label: "Home", icon: Home },
   { href: "/business/discover", label: "Discover", icon: Search },
   { href: "/business/upload", label: "Upload", icon: Plus },
@@ -26,20 +27,30 @@ const businessNavItems = [
   { href: "/business/profile", label: "Profile", icon: User },
 ];
 
+export const adminNavItems = [
+  { href: "/admin", label: "Admin", icon: Shield },
+  { href: "/string-admin", label: "Control", icon: Settings },
+];
+
 interface BottomNavProps {
   isVisible?: boolean;
 }
 
 export function BottomNav({ isVisible = true }: BottomNavProps) {
-  const { profile } = useAuth();
+  const { resolvedUserType } = useAuth();
   const location = useLocation();
 
-  const navItems = profile?.user_type === "business" ? businessNavItems : customerNavItems;
+  const navItems =
+    resolvedUserType === "admin"
+      ? adminNavItems
+      : resolvedUserType === "business"
+        ? businessNavItems
+        : customerNavItems;
 
   return (
-    <nav 
+    <nav
       className={cn(
-        "fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/98 backdrop-blur-md safe-area-bottom transition-transform duration-300",
+        "md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/98 backdrop-blur-md safe-area-bottom transition-transform duration-300",
         !isVisible && "translate-y-full"
       )}
     >

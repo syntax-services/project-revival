@@ -11,6 +11,8 @@ const SOCIAL_PATTERNS = [
   /\b(?:whatsapp|wa|watsap|whats\s*app)\s*[:=-]?\s*[\d+\s()-]+/gi,
   
   // Phone number patterns (Nigerian and international)
+  
+  // Phone number patterns (Nigerian and international)
   /\+?\d{1,3}[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}/g,
   /\b0[789][01]\d{8}\b/g, // Nigerian mobile numbers
   /\b\d{10,14}\b/g, // Long number sequences
@@ -20,25 +22,25 @@ const SOCIAL_PATTERNS = [
   /\b(?:gmail|yahoo|hotmail|outlook)\s*[:=-]?\s*[a-zA-Z0-9._%+-]+/gi,
   
   // Telegram patterns
-  /\b(?:telegram|tg|t\.me)\s*[:=\-/]?\s*[a-zA-Z0-9_]+/gi,
+  /\b(?:telegram|tg|t\.me)\s*[:=/-]?\s*[a-zA-Z0-9_]+/gi,
   
   // Twitter/X patterns
-  /\b(?:twitter|x\.com|@)\s*[:=\-/]?\s*[a-zA-Z0-9_]+/gi,
+  /\b(?:twitter|x\.com|@)\s*[:=/-]?\s*[a-zA-Z0-9_]+/gi,
   
   // Facebook patterns
-  /\b(?:facebook|fb|fb\.com|facebook\.com)\s*[:=\-/]?\s*[a-zA-Z0-9._]+/gi,
+  /\b(?:facebook|fb|fb\.com|facebook\.com)\s*[:=/-]?\s*[a-zA-Z0-9._]+/gi,
   
   // TikTok patterns
-  /\b(?:tiktok|tik\s*tok)\s*[:=\-/]?\s*[a-zA-Z0-9._]+/gi,
+  /\b(?:tiktok|tik\s*tok)\s*[:=/-]?\s*[a-zA-Z0-9._]+/gi,
   
   // Snapchat patterns
   /\b(?:snapchat|snap|sc)\s*[:=-]?\s*[a-zA-Z0-9._]+/gi,
   
   // LinkedIn patterns
-  /\b(?:linkedin|linked\s*in)\s*[:=\-/]?\s*[a-zA-Z0-9._-]+/gi,
+  /\b(?:linkedin|linked\s*in)\s*[:=/-]?\s*[a-zA-Z0-9._-]+/gi,
   
   // YouTube patterns
-  /\b(?:youtube|yt|youtube\.com)\s*[:=\-/]?\s*[a-zA-Z0-9._-]+/gi,
+  /\b(?:youtube|yt|youtube\.com)\s*[:=/-]?\s*[a-zA-Z0-9._-]+/gi,
   
   // General social URL patterns
   /(?:https?:\/\/)?(?:www\.)?(?:instagram|twitter|facebook|tiktok|snapchat|linkedin|youtube|t\.me|wa\.me)[^\s]*/gi,

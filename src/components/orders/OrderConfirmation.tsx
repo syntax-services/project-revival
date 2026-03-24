@@ -32,17 +32,20 @@ export function OrderConfirmation({
 
   const confirmMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from("orders")
-        .update({ 
-          status: "delivered",
-          delivered_at: new Date().toISOString()
-        })
-        .eq("id", orderId);
-      if (error) throw error;
+      const { data, error: rpcError } = await supabase.rpc("settle_order_settlement", {
+        p_order_id: orderId
+      });
+
+      if (rpcError) throw rpcError;
+      
+      const result = data as { success: boolean; error?: string };
+      if (!result.success) {
+        throw new Error(result.error || "Failed to settle order");
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customer-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["business-earnings"] });
       toast.success("Order confirmed as delivered!");
       setShowConfirmDialog(false);
       setShowReviewDialog(true);

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { TagInput } from "@/components/ui/tag-input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowRight, ArrowLeft, Building2, User, Check } from "lucide-react";
+import { Loader2, ArrowRight, ArrowLeft, Building2, User, Check, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 
@@ -41,8 +41,8 @@ const yearsOptions = [
 ];
 
 const budgetOptions = [
-  "Less than ₦500,000/mo", "₦500,000-₦2,000,000/mo", "₦2,000,000-₦10,000,000/mo",
-  "₦10,000,000-₦25,000,000/mo", "₦25,000,000+/mo"
+  "Less than ₦50,000/mo", "₦50,000-₦250,000/mo", "₦250,000-₦1,000,000/mo",
+  "₦1,000,000-₦5,000,000/mo", "₦5,000,000+/mo"
 ];
 
 const marketingChannels = [
@@ -70,7 +70,7 @@ const categoryOptions = [
 ];
 
 export default function Onboarding() {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, dashboardPath } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -108,6 +108,7 @@ export default function Onboarding() {
     strategicNotes: "",
     streetAddress: "",
     areaName: "",
+    businessType: "both" as "goods" | "services" | "both",
   });
 
   // Step 3: Customer Profile
@@ -130,10 +131,9 @@ export default function Onboarding() {
 
   useEffect(() => {
     if (profile?.onboarding_completed) {
-      let redirectPath = "/customer"; if (profile.user_type === "business") { redirectPath = "/business"; } else if (profile.user_type === "admin") { redirectPath = "/admin"; }
-      navigate(redirectPath, { replace: true });
+      navigate(dashboardPath, { replace: true });
     }
-  }, [profile, navigate]);
+  }, [dashboardPath, navigate, profile]);
 
   const validateStep = () => {
     setErrors({});
@@ -198,26 +198,31 @@ export default function Onboarding() {
 
     try {
       // Create profile
-      const { error: profileError } = await supabase.from("profiles").insert({
+      const { error: profileError } = await supabase.from("profiles").upsert({
         user_id: user.id,
         full_name: fullName,
         email: user.email!,
         phone: phone || null,
         user_type: userType,
         onboarding_completed: true,
+      }, {
+        onConflict: "user_id",
       });
 
       if (profileError) throw profileError;
 
       // Create user role
-      await supabase.from("user_roles").insert({
+      await supabase.from("user_roles").upsert({
         user_id: user.id,
         role: "user",
+      }, {
+        onConflict: "user_id,role",
+        ignoreDuplicates: true,
       });
 
       // Create type-specific profile
       if (userType === "business") {
-        const { error: businessError } = await supabase.from("businesses").insert({
+        const { error: businessError } = await supabase.from("businesses").upsert({
           user_id: user.id,
           company_name: businessData.companyName,
           industry: businessData.industry || null,
@@ -240,12 +245,15 @@ export default function Onboarding() {
           strategic_notes: businessData.strategicNotes || null,
           street_address: businessData.streetAddress || null,
           area_name: businessData.areaName || null,
+          business_type: businessData.businessType,
           location_verified: false,
+        }, {
+          onConflict: "user_id",
         });
 
         if (businessError) throw businessError;
       } else {
-        const { error: customerError } = await supabase.from("customers").insert({
+        const { error: customerError } = await supabase.from("customers").upsert({
           user_id: user.id,
           age_range: customerData.ageRange || null,
           gender: customerData.gender || null,
@@ -262,6 +270,8 @@ export default function Onboarding() {
           street_address: customerData.streetAddress || null,
           area_name: customerData.areaName || null,
           location_verified: false,
+        }, {
+          onConflict: "user_id",
         });
 
         if (customerError) throw customerError;
@@ -270,7 +280,7 @@ export default function Onboarding() {
       // Create location verification request
       const streetAddress = userType === "business" ? businessData.streetAddress : customerData.streetAddress;
       const areaName = userType === "business" ? businessData.areaName : customerData.areaName;
-      
+
       if (streetAddress) {
         await supabase.from("location_requests").insert({
           user_id: user.id,
@@ -291,10 +301,11 @@ export default function Onboarding() {
       navigate(redirectPath, { replace: true });
     } catch (error: unknown) {
       console.error("Onboarding error:", error);
+      const message = error instanceof Error ? error.message : "Please try again.";
       toast({
         variant: "destructive",
         title: "Something went wrong",
-        description: error.message || "Please try again.",
+        description: message,
       });
     } finally {
       setLoading(false);
@@ -310,8 +321,8 @@ export default function Onboarding() {
               currentStep > step.id
                 ? "step-indicator-completed"
                 : currentStep === step.id
-                ? "step-indicator-active"
-                : "step-indicator-pending"
+                  ? "step-indicator-active"
+                  : "step-indicator-pending"
             )}
           >
             {currentStep > step.id ? (
@@ -356,6 +367,9 @@ export default function Onboarding() {
           {errors.fullName && (
             <p className="text-sm text-destructive">{errors.fullName}</p>
           )}
+          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+            <Info className="h-3 w-3" /> Enter your legal or known name (e.g., John Doe).
+          </p>
         </div>
 
         <div className="space-y-2">
@@ -367,6 +381,9 @@ export default function Onboarding() {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />
+          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+            <Info className="h-3 w-3" /> We'll use this primarily for delivery and contact.
+          </p>
         </div>
       </div>
     </div>
@@ -458,6 +475,9 @@ export default function Onboarding() {
           {errors.companyName && (
             <p className="text-sm text-destructive">{errors.companyName}</p>
           )}
+          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+            <Info className="h-3 w-3" /> The official, public name of your business.
+          </p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -583,6 +603,9 @@ export default function Onboarding() {
             }
             placeholder="Add pain points..."
           />
+          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+            <Info className="h-3 w-3" /> Challenges your business is currently facing.
+          </p>
         </div>
 
         <div className="space-y-2">
@@ -594,6 +617,25 @@ export default function Onboarding() {
               setBusinessData({ ...businessData, productsServices: e.target.value })
             }
           />
+          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+            <Info className="h-3 w-3" /> List exactly what you sell or offer. Example: 'Pastries, Wedding Cakes, Delivery'.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Business Type *</Label>
+          <select
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            value={businessData.businessType}
+            onChange={(e) =>
+              setBusinessData({ ...businessData, businessType: e.target.value as "goods" | "services" | "both" })
+            }
+          >
+            <option value="goods">Goods (Products)</option>
+            <option value="services">Services</option>
+            <option value="both">Both Goods & Services</option>
+          </select>
+          <p className="text-xs text-muted-foreground">This helps us categorize your business correctly in search results</p>
         </div>
 
         <div className="space-y-2">
@@ -665,6 +707,9 @@ export default function Onboarding() {
               setCustomerData({ ...customerData, location: e.target.value })
             }
           />
+          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+            <Info className="h-3 w-3" /> Enter your current city and country so we can match you with local businesses.
+          </p>
         </div>
 
         <div className="space-y-2">
@@ -705,6 +750,9 @@ export default function Onboarding() {
               <option key={opt} value={opt}>{opt}</option>
             ))}
           </select>
+          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+            <Info className="h-3 w-3" /> How often do you buy these kinds of services or goods?
+          </p>
         </div>
 
         <div className="space-y-2">
@@ -739,7 +787,7 @@ export default function Onboarding() {
 
   const renderStep4 = () => {
     const data = userType === "business" ? businessData : customerData;
-    const setData = userType === "business" 
+    const setData = userType === "business"
       ? (updates: Partial<typeof businessData>) => setBusinessData({ ...businessData, ...updates })
       : (updates: Partial<typeof customerData>) => setCustomerData({ ...customerData, ...updates });
 
@@ -750,7 +798,7 @@ export default function Onboarding() {
             Your Location
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {userType === "business" 
+            {userType === "business"
               ? "Enter your business address for customers to find you"
               : "Enter your location for accurate delivery and nearby businesses"}
           </p>
@@ -759,7 +807,7 @@ export default function Onboarding() {
         <div className="space-y-4 pt-4">
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
             <p className="text-sm text-muted-foreground">
-              📍 <strong>Important:</strong> Enter your exact street address including landmarks. 
+              📍 <strong>Important:</strong> Enter your exact street address including landmarks.
               Our team will verify it on Google Maps for accurate delivery services.
             </p>
           </div>
@@ -768,7 +816,7 @@ export default function Onboarding() {
             <Label htmlFor="streetAddress">Street Address *</Label>
             <Textarea
               id="streetAddress"
-              placeholder={userType === "business" 
+              placeholder={userType === "business"
                 ? "E.g., Shop 5, Behind GTBank, OOU Main Gate Road, Ago-Iwoye"
                 : "E.g., Block C, Room 215, Hall 3, OOU Campus, Ago-Iwoye"}
               value={data.streetAddress}
@@ -795,7 +843,7 @@ export default function Onboarding() {
 
           <div className="rounded-lg bg-muted/50 p-3">
             <p className="text-xs text-muted-foreground">
-              🔒 Your location will be verified by our team within 24 hours. 
+              🔒 Your location will be verified by our team within 24 hours.
               This ensures accurate delivery and helps customers find nearby businesses.
             </p>
           </div>

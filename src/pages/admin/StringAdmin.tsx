@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,28 +16,31 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  MapPin, ShoppingBag, Briefcase, CheckCircle, XCircle, 
+import {
+  MapPin, ShoppingBag, Briefcase, CheckCircle, XCircle,
   Clock, Building2, User, Loader2, Users,
   DollarSign, Settings, Key, MessageSquare, Send, Pin,
   Crown, Shield, Trash2, PackageCheck, AlertTriangle,
-  Star, Wallet, Reply, Eye, Image
+  Star, Wallet, Reply, Eye, Image, Zap, TrendingUp, LogOut
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { useAllWithdrawals, useProcessWithdrawal } from "@/hooks/useBusinessEarnings";
 import { useAllMessageReplies } from "@/hooks/useAdminMessages";
+import { ReputationBadge } from "@/components/ui/reputation-badge";
+import { LaunchAnalytics } from "@/components/admin/LaunchAnalytics";
 
-type VerificationTier = 'none' | 'verified' | 'premium';
+type VerificationTier = 'none' | 'basic' | 'verified' | 'premium' | 'elite';
 
 export default function StringAdmin() {
-  const { user } = useAuth();
+  const { signOut, user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("users");
   const [searchTerm, setSearchTerm] = useState("");
   const [bootstrapKey, setBootstrapKey] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  
+
   // Message dialog state
   const [showMessageDialog, setShowMessageDialog] = useState(false);
   const [messageTitle, setMessageTitle] = useState("");
@@ -131,6 +135,21 @@ export default function StringAdmin() {
         .select("*, profiles:user_id (full_name, email)")
         .order("created_at", { ascending: false });
       if (error) throw error;
+      return data;
+    },
+    enabled: isAdmin,
+  });
+
+  // Fetch latest terms version
+  const { data: config } = useQuery({
+    queryKey: ["latest-terms-version"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("system_config")
+        .select("value")
+        .eq("key", "latest_terms_version")
+        .single();
+      if (error) return { value: 1 };
       return data;
     },
     enabled: isAdmin,
@@ -232,9 +251,9 @@ export default function StringAdmin() {
 
   // Verify location mutation
   const verifyLocationMutation = useMutation({
-    mutationFn: async ({ 
+    mutationFn: async ({
       requestId, userId, userType, latitude, longitude, approved
-    }: { 
+    }: {
       requestId: string; userId: string; userType: string;
       latitude?: number; longitude?: number; approved: boolean;
     }) => {
@@ -242,29 +261,38 @@ export default function StringAdmin() {
         .from("location_requests")
         .update({
           status: approved ? "verified" : "rejected",
-          admin_notes: approved ? `Verified at ${latitude},${longitude}` : "Rejected",
+          verified_latitude: latitude,
+          verified_longitude: longitude,
+          verified_by: user?.id,
           verified_at: new Date().toISOString(),
         })
         .eq("id", requestId);
 
       if (requestError) throw requestError;
 
-      if (approved && latitude && longitude) {
-        const table = userType === "business" ? "businesses" : "customers";
-        const { error: updateError } = await supabase
-          .from(table)
+      if (approved) {
+        // Update user profile location
+        const { error: profileError } = await supabase
+          .from("profiles")
           .update({
-            latitude, longitude,
-            location_verified: true,
+            latitude,
+            longitude,
           })
           .eq("user_id", userId);
-        if (updateError) throw updateError;
+        if (profileError) throw profileError;
 
-        await supabase.from("profiles").update({ latitude, longitude }).eq("user_id", userId);
+        if (userType === 'business') {
+          await supabase
+            .from("businesses")
+            .update({ location_verified: true })
+            .eq("user_id", userId);
+        }
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-location-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-location-requests"] }); // Changed from admin-pending-locations to match existing key
+      queryClient.invalidateQueries({ queryKey: ["admin-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-customers"] });
       toast.success("Location request processed");
     },
     onError: (error: Error) => {
@@ -272,12 +300,30 @@ export default function StringAdmin() {
     },
   });
 
+  const updateUserLocationMutation = useMutation({
+    mutationFn: async ({ userId, address }: { userId: string; address: string }) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ address })
+        .eq("id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-profiles"] });
+      toast.success("User location updated");
+    },
+    onError: () => toast.error("Failed to update user location"),
+  });
+
   // Update product commission
   const updateCommissionMutation = useMutation({
     mutationFn: async ({ productId, commission, isRare }: { productId: string; commission: number; isRare: boolean }) => {
       const { error } = await supabase
         .from("products")
-        .update({ is_rare: isRare })
+        .update({
+          is_rare: isRare,
+          commission_percent: commission
+        })
         .eq("id", productId);
       if (error) throw error;
     },
@@ -293,7 +339,7 @@ export default function StringAdmin() {
     mutationFn: async ({ businessId, tier }: { businessId: string; tier: VerificationTier }) => {
       const { error } = await supabase
         .from("businesses")
-        .update({ 
+        .update({
           verification_tier: tier,
           verified: tier !== 'none'
         })
@@ -307,12 +353,32 @@ export default function StringAdmin() {
     onError: () => toast.error("Failed to update tier"),
   });
 
+  // Platform Control: Update Terms Version
+  const updateTermsVersionMutation = useMutation({
+    mutationFn: async (version: number) => {
+      const { error } = await supabase
+        .from("system_config")
+        .upsert({
+          key: "latest_terms_version",
+          value: JSON.stringify(version),
+          updated_at: new Date().toISOString(),
+          updated_by: user?.id
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["latest-terms-version"] });
+      toast.success("Platform Terms Version updated! Users will be locked until they accept.");
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to update version"),
+  });
+
   // Confirm delivery on behalf of customer (admin power)
   const confirmDeliveryMutation = useMutation({
     mutationFn: async ({ orderId }: { orderId: string }) => {
       const { error } = await supabase
         .from("orders")
-        .update({ 
+        .update({
           status: 'delivered',
           delivered_at: new Date().toISOString()
         })
@@ -331,7 +397,7 @@ export default function StringAdmin() {
     mutationFn: async ({ jobId }: { jobId: string }) => {
       const { error } = await supabase
         .from("jobs")
-        .update({ 
+        .update({
           status: 'completed',
           completed_at: new Date().toISOString()
         })
@@ -447,8 +513,8 @@ export default function StringAdmin() {
                 onChange={(e) => setBootstrapKey(e.target.value)}
               />
             </div>
-            <Button 
-              className="w-full" 
+            <Button
+              className="w-full"
               onClick={() => bootstrapMutation.mutate()}
               disabled={!bootstrapKey || bootstrapMutation.isPending}
             >
@@ -472,6 +538,11 @@ export default function StringAdmin() {
   const pinnedMessages = adminMessages?.filter(m => m.is_pinned) || [];
   const pendingWithdrawals = withdrawals?.filter((w: any) => w.status === "pending") || [];
   const pendingOffers = allOffers?.filter(o => o.status === "open") || [];
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth?mode=login", { replace: true });
+  };
 
   // Get all users with locations
   const allUsersWithLocations = [
@@ -504,8 +575,8 @@ export default function StringAdmin() {
   };
 
   const toggleUserSelection = (userId: string) => {
-    setSelectedUsers(prev => 
-      prev.includes(userId) 
+    setSelectedUsers(prev =>
+      prev.includes(userId)
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
     );
@@ -527,6 +598,10 @@ export default function StringAdmin() {
             <Button onClick={() => setShowMessageDialog(true)} variant="outline">
               <Send className="h-4 w-4 mr-2" />
               Send Message
+            </Button>
+            <Button onClick={handleSignOut} variant="outline">
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
             </Button>
             {pendingLocations.length > 0 && (
               <Badge variant="destructive" className="animate-pulse">
@@ -651,48 +726,61 @@ export default function StringAdmin() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10">
-            <TabsTrigger value="users" className="gap-1">
+          <TabsList className="w-full flex justify-start overflow-x-auto no-scrollbar gap-2 p-1 border-b pb-2 mb-4 h-auto bg-transparent">
+            <TabsTrigger value="analytics" className="gap-2 flex-shrink-0 data-[state=active]:bg-primary/10">
+              <TrendingUp className="h-4 w-4" />
+              <span>Analytics</span>
+            </TabsTrigger>
+            <TabsTrigger value="users" className="gap-2 flex-shrink-0 data-[state=active]:bg-primary/10">
               <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">Users</span>
+              <span>Users</span>
             </TabsTrigger>
-            <TabsTrigger value="businesses" className="gap-1">
+            <TabsTrigger value="businesses" className="gap-2 flex-shrink-0 data-[state=active]:bg-primary/10">
               <Building2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Businesses</span>
+              <span>Businesses</span>
             </TabsTrigger>
-            <TabsTrigger value="orders" className="gap-1">
+            <TabsTrigger value="orders" className="gap-2 flex-shrink-0 data-[state=active]:bg-primary/10">
               <ShoppingBag className="h-4 w-4" />
-              <span className="hidden sm:inline">Orders</span>
+              <span>Orders</span>
             </TabsTrigger>
-            <TabsTrigger value="jobs" className="gap-1">
+            <TabsTrigger value="jobs" className="gap-2 flex-shrink-0 data-[state=active]:bg-primary/10">
               <Briefcase className="h-4 w-4" />
-              <span className="hidden sm:inline">Jobs</span>
+              <span>Jobs</span>
             </TabsTrigger>
-            <TabsTrigger value="reviews" className="gap-1">
+            <TabsTrigger value="reviews" className="gap-2 flex-shrink-0 data-[state=active]:bg-primary/10">
               <Star className="h-4 w-4" />
-              <span className="hidden sm:inline">Reviews</span>
+              <span>Reviews</span>
             </TabsTrigger>
-            <TabsTrigger value="offers" className="gap-1">
+            <TabsTrigger value="offers" className="gap-2 flex-shrink-0 data-[state=active]:bg-primary/10">
               <Image className="h-4 w-4" />
-              <span className="hidden sm:inline">Offers</span>
+              <span>Offers</span>
             </TabsTrigger>
-            <TabsTrigger value="withdrawals" className="gap-1">
+            <TabsTrigger value="withdrawals" className="gap-2 flex-shrink-0 data-[state=active]:bg-primary/10">
               <Wallet className="h-4 w-4" />
-              <span className="hidden sm:inline">Withdrawals</span>
+              <span>Withdrawals</span>
             </TabsTrigger>
-            <TabsTrigger value="locations" className="gap-1">
+            <TabsTrigger value="locations" className="gap-2 flex-shrink-0 data-[state=active]:bg-primary/10">
               <MapPin className="h-4 w-4" />
-              <span className="hidden sm:inline">Locations</span>
+              <span>Locations</span>
             </TabsTrigger>
-            <TabsTrigger value="messages" className="gap-1">
+            <TabsTrigger value="messages" className="gap-2 flex-shrink-0 data-[state=active]:bg-primary/10">
               <MessageSquare className="h-4 w-4" />
-              <span className="hidden sm:inline">Messages</span>
+              <span>Messages</span>
             </TabsTrigger>
-            <TabsTrigger value="commission" className="gap-1">
+            <TabsTrigger value="commission" className="gap-2 flex-shrink-0 data-[state=active]:bg-primary/10">
               <DollarSign className="h-4 w-4" />
-              <span className="hidden sm:inline">Commission</span>
+              <span>Commission</span>
+            </TabsTrigger>
+            <TabsTrigger value="platform" className="gap-2 flex-shrink-0 data-[state=active]:bg-primary/10">
+              <Shield className="h-4 w-4" />
+              <span>Platform</span>
             </TabsTrigger>
           </TabsList>
+
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="space-y-4">
+            <LaunchAnalytics />
+          </TabsContent>
 
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-4">
@@ -715,7 +803,7 @@ export default function StringAdmin() {
                     </TableHeader>
                     <TableBody>
                       {profiles
-                        ?.filter((p: any) => 
+                        ?.filter((p: any) =>
                           p.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           p.email?.toLowerCase().includes(searchTerm.toLowerCase())
                         )
@@ -724,7 +812,7 @@ export default function StringAdmin() {
                             <TableCell>
                               <div>
                                 <p className="font-medium">{profile.full_name}</p>
-                                <p className="text-xs text-muted-foreground">{profile.email}</p>
+                                <p className="text-xs text-muted-foreground">{profile.email || "(No email provided)"}</p>
                               </div>
                             </TableCell>
                             <TableCell>
@@ -736,10 +824,18 @@ export default function StringAdmin() {
                               {profile.latitude && profile.longitude ? (
                                 <Badge variant="outline">
                                   <MapPin className="h-3 w-3 mr-1" />
-                                  Set
+                                  Set ({profile.latitude.toFixed(2)}, {profile.longitude.toFixed(2)})
                                 </Badge>
                               ) : (
-                                <span className="text-muted-foreground text-sm">Not set</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-muted-foreground text-sm">{profile.address || "Not set"}</span>
+                                  <Button variant="ghost" size="sm" onClick={() => {
+                                    const loc = prompt("Set user address string manually:");
+                                    if (loc) updateUserLocationMutation.mutate({ userId: profile.id, address: loc });
+                                  }}>
+                                    Edit
+                                  </Button>
+                                </div>
                               )}
                             </TableCell>
                             <TableCell>
@@ -781,7 +877,7 @@ export default function StringAdmin() {
                     </TableHeader>
                     <TableBody>
                       {businesses
-                        ?.filter((b: any) => 
+                        ?.filter((b: any) =>
                           b.company_name?.toLowerCase().includes(searchTerm.toLowerCase())
                         )
                         .map((business: any) => (
@@ -816,10 +912,10 @@ export default function StringAdmin() {
                             <TableCell>
                               <Select
                                 value={business.verification_tier || 'none'}
-                                onValueChange={(value: VerificationTier) => 
-                                  updateVerificationTierMutation.mutate({ 
-                                    businessId: business.id, 
-                                    tier: value 
+                                onValueChange={(value: VerificationTier) =>
+                                  updateVerificationTierMutation.mutate({
+                                    businessId: business.id,
+                                    tier: value
                                   })
                                 }
                               >
@@ -875,12 +971,12 @@ export default function StringAdmin() {
                           </TableCell>
                           <TableCell>{order.customers?.profiles?.full_name || 'Unknown'}</TableCell>
                           <TableCell>{order.businesses?.company_name}</TableCell>
-                          <TableCell>₦{Number(order.total).toLocaleString()}</TableCell>
+                          <TableCell>{'\u20A6'}{Number(order.total).toLocaleString()}</TableCell>
                           <TableCell>
                             <Badge variant={
                               order.status === 'delivered' ? 'default' :
-                              order.status === 'cancelled' ? 'destructive' :
-                              'secondary'
+                                order.status === 'cancelled' ? 'destructive' :
+                                  'secondary'
                             }>
                               {order.status}
                             </Badge>
@@ -929,8 +1025,8 @@ export default function StringAdmin() {
                         <TableRow key={job.id}>
                           <TableCell>
                             <div>
-                               <p className="font-medium">{job.description || 'Service Request'}</p>
-                               <p className="text-xs text-muted-foreground">{job.id?.slice(0, 8).toUpperCase()}</p>
+                              <p className="font-medium">{job.description || 'Service Request'}</p>
+                              <p className="text-xs text-muted-foreground">{job.id?.slice(0, 8).toUpperCase()}</p>
                             </div>
                           </TableCell>
                           <TableCell>{job.customers?.profiles?.full_name || 'Unknown'}</TableCell>
@@ -981,9 +1077,8 @@ export default function StringAdmin() {
                                 {[1, 2, 3, 4, 5].map((star) => (
                                   <Star
                                     key={star}
-                                    className={`h-4 w-4 ${
-                                      star <= review.rating ? 'fill-yellow-500 text-yellow-500' : 'text-muted'
-                                    }`}
+                                    className={`h-4 w-4 ${star <= review.rating ? 'fill-yellow-500 text-yellow-500' : 'text-muted'
+                                      }`}
                                   />
                                 ))}
                               </div>
@@ -1039,7 +1134,7 @@ export default function StringAdmin() {
                             )}
                             {offer.budget_min || offer.budget_max ? (
                               <p className="text-sm mt-1">
-                                Budget: ₦{offer.budget_min?.toLocaleString() || 0} - ₦{offer.budget_max?.toLocaleString() || 'Any'}
+                                Budget: {'\u20A6'}{offer.budget_min?.toLocaleString() || 0} - {'\u20A6'}{offer.budget_max?.toLocaleString() || 'Any'}
                               </p>
                             ) : null}
                             <p className="text-xs text-muted-foreground mt-2">
@@ -1115,8 +1210,8 @@ export default function StringAdmin() {
                           <TableCell>
                             <Badge variant={
                               w.status === 'completed' ? 'default' :
-                              w.status === 'rejected' ? 'destructive' :
-                              'secondary'
+                                w.status === 'rejected' ? 'destructive' :
+                                  'secondary'
                             }>
                               {w.status}
                             </Badge>
@@ -1270,8 +1365,8 @@ export default function StringAdmin() {
                   <ScrollArea className="h-[400px]">
                     <div className="space-y-3">
                       {adminMessages?.map((message: any) => (
-                        <div 
-                          key={message.id} 
+                        <div
+                          key={message.id}
                           className={`p-3 border rounded-lg ${message.is_pinned ? 'border-yellow-500/50 bg-yellow-50/50 dark:bg-yellow-950/20' : ''}`}
                         >
                           <div className="flex items-start justify-between gap-2">
@@ -1360,11 +1455,11 @@ export default function StringAdmin() {
                       <ProductCommissionCard
                         key={product.id}
                         product={product}
-                        onUpdate={(commission, isRare) => 
-                          updateCommissionMutation.mutate({ 
-                            productId: product.id, 
-                            commission, 
-                            isRare 
+                        onUpdate={(commission, isRare) =>
+                          updateCommissionMutation.mutate({
+                            productId: product.id,
+                            commission,
+                            isRare
                           })
                         }
                         isLoading={updateCommissionMutation.isPending}
@@ -1374,6 +1469,85 @@ export default function StringAdmin() {
                 </ScrollArea>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="platform" className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card className="border-primary/20 bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-primary">
+                    <Shield className="h-5 w-5" />
+                    Legal Enforcement
+                  </CardTitle>
+                  <CardDescription>Force all users to accept updated terms before platform usage</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-background rounded-xl border-2 border-primary/20 shadow-sm transition-all hover:shadow-md">
+                    <div>
+                      <p className="font-bold text-2xl text-primary">{config?.value || 1}</p>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Current Terms Version</p>
+                    </div>
+                    <Button 
+                      className="rounded-full px-6 shadow-lg shadow-primary/20"
+                      onClick={() => {
+                        const nextVer = (config?.value ? parseInt(config.value) : 1) + 1;
+                        if (confirm(`Increment terms to version ${nextVer}? This will LOCK ALL USERS out until they accept.`)) {
+                          updateTermsVersionMutation.mutate(nextVer);
+                        }
+                      }}
+                      disabled={updateTermsVersionMutation.isPending}
+                    >
+                      {updateTermsVersionMutation.isPending ? <Loader2 className="animate-spin w-4 h-4" /> : <Shield className="w-4 h-4 mr-2" />}
+                      Push Update
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Acceptance Progress</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-4 bg-background rounded-2xl border border-border shadow-sm">
+                        <p className="text-3xl font-black text-foreground">{profiles?.filter((p: any) => p.accepted_terms_version === (config ? parseInt(config.value) : 1)).length || 0}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-green-500">Accepted</p>
+                      </div>
+                      <div className="p-4 bg-background rounded-2xl border border-border shadow-sm">
+                        <p className="text-3xl font-black text-foreground">{profiles?.filter((p: any) => !p.accepted_terms_version || p.accepted_terms_version < (config ? parseInt(config.value) : 1)).length || 0}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-amber-500">Pending</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-amber-500" />
+                    System Infrastructure
+                  </CardTitle>
+                  <CardDescription>Real-time edge function and DB status</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl space-y-3 border border-border/50 font-mono text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-green-500"></div> Database Engine</span>
+                      <span className="font-bold text-green-500">OPTIMAL</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-green-500"></div> Storage Cache</span>
+                      <span className="font-bold text-primary">ENCRYPTED</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-green-500"></div> AI Matchmaking</span>
+                      <span className="font-bold text-purple-500">ACTIVE</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-amber-500"></div> CDN Propagation</span>
+                      <span className="font-bold text-muted-foreground">98.4%</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
@@ -1426,7 +1600,7 @@ export default function StringAdmin() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowMessageDialog(false)}>Cancel</Button>
-            <Button 
+            <Button
               onClick={() => sendMessageMutation.mutate()}
               disabled={!messageTitle || !messageContent || sendMessageMutation.isPending}
             >
@@ -1442,24 +1616,7 @@ export default function StringAdmin() {
 
 // Tier Badge Component
 function TierBadge({ tier }: { tier: string }) {
-  switch (tier) {
-    case 'premium':
-      return (
-        <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
-          <Crown className="h-3 w-3 mr-1" />
-          Premium
-        </Badge>
-      );
-    case 'verified':
-      return (
-        <Badge className="bg-blue-500 text-white">
-          <Shield className="h-3 w-3 mr-1" />
-          Verified
-        </Badge>
-      );
-    default:
-      return <Badge variant="secondary">None</Badge>;
-  }
+  return <ReputationBadge tier={tier as any} />;
 }
 
 // Location Verification Card

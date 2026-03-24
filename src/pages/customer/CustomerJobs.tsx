@@ -1,6 +1,6 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useCustomer, useCustomerJobs } from "@/hooks/useCustomer";
-import { Briefcase, Clock, CheckCircle, Play, XCircle, Eye, Send } from "lucide-react";
+import { Briefcase, Clock, CheckCircle, Play, XCircle, Eye, Send, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,6 +15,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 type JobStatus = "requested" | "quoted" | "accepted" | "rejected" | "ongoing" | "completed" | "cancelled" | "disputed";
 
@@ -33,26 +34,43 @@ export default function CustomerJobs() {
   const { data: customer } = useCustomer();
   const { data: jobs = [], isLoading } = useCustomerJobs(customer?.id);
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [selectedJob, setSelectedJob] = useState<typeof jobs[0] | null>(null);
   const [updating, setUpdating] = useState(false);
 
-  const acceptQuote = async (jobId: string) => {
+  const handleJobPayment = async (jobId: string) => {
+    if (!user?.email) {
+      toast.error("Please log in to continue");
+      return;
+    }
+
     setUpdating(true);
     try {
-      const { error } = await supabase
-        .from("jobs")
-        .update({ status: "accepted", accepted_at: new Date().toISOString() })
-        .eq("id", jobId);
+      const { data, error } = await supabase.functions.invoke("initialize-payment", {
+        body: {
+          email: user.email,
+          jobId: jobId,
+        },
+      });
 
       if (error) throw error;
-      toast.success("Quote accepted!");
-      queryClient.invalidateQueries({ queryKey: ["customer-jobs"] });
-      setSelectedJob(null);
-    } catch (error) {
-      toast.error("Failed to accept quote");
-    } finally {
+      if (data?.authorization_url) {
+        window.location.assign(data.authorization_url);
+      } else {
+        throw new Error(data?.error || "Failed to initialize payment");
+      }
+    } catch (error: unknown) {
+      console.error("Payment error:", error);
+      const msg = error instanceof Error ? error.message : "Failed to start payment process";
+      toast.error(msg);
       setUpdating(false);
     }
+  };
+
+  const acceptQuote = async (jobId: string) => {
+    // This is now replaced by handleJobPayment for production flow
+    // but kept as a legacy helper if needed
+    handleJobPayment(jobId);
   };
 
   const cancelJob = async (jobId: string) => {
@@ -69,6 +87,45 @@ export default function CustomerJobs() {
       setSelectedJob(null);
     } catch (error) {
       toast.error("Failed to cancel job");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const confirmJobCompletion = async (jobId: string) => {
+    setUpdating(true);
+    try {
+      // Get the job to find the final price (or use quoted_price if final_price isn't set yet)
+      const { data: job, error: jobError } = await supabase
+        .from("jobs")
+        .select("quoted_price, final_price")
+        .eq("id", jobId)
+        .single();
+
+      if (jobError || !job) throw new Error("Could not find job details");
+
+      const finalPrice = job.final_price || job.quoted_price || 0;
+
+      // Use the secure RPC for atomic settlement
+      const { data, error: rpcError } = await supabase.rpc("settle_job_settlement", {
+        p_job_id: jobId,
+        p_final_price: finalPrice
+      });
+
+      if (rpcError) throw rpcError;
+
+      const result = data as { success: boolean; error?: string };
+      if (!result.success) {
+        throw new Error(result.error || "Failed to settle job");
+      }
+
+      toast.success("Job completion confirmed! Funds released to provider.");
+      queryClient.invalidateQueries({ queryKey: ["customer-jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["business-earnings"] });
+      setSelectedJob(null);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Failed to confirm job completion";
+      toast.error(msg);
     } finally {
       setUpdating(false);
     }
@@ -229,15 +286,46 @@ export default function CustomerJobs() {
                   </Button>
                   <Button 
                     className="flex-1"
-                    onClick={() => acceptQuote(selectedJob.id)}
+                    onClick={() => handleJobPayment(selectedJob.id)}
                     disabled={updating}
                   >
-                    Accept Quote
+                    {updating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Pay & Accept Quote"
+                    )}
                   </Button>
                 </div>
               )}
 
-              {["requested", "accepted"].includes(selectedJob.status) && (
+              {selectedJob.status === "completed" && (
+                <div className="pt-4 border-t space-y-3">
+                  <div className="bg-green-50 p-3 rounded-lg flex items-start gap-3 text-green-800 text-sm">
+                    <CheckCircle className="h-5 w-5 shrink-0" />
+                    <div>
+                      <p className="font-medium">The service provider marked this job as done.</p>
+                      <p className="opacity-90">Please confirm if the work was completed to your satisfaction to release the payment.</p>
+                    </div>
+                  </div>
+                  <Button 
+                    className="w-full"
+                    onClick={() => confirmJobCompletion(selectedJob.id)}
+                    disabled={updating}
+                  >
+                    {updating ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                    )}
+                    Yes, Job is Done
+                  </Button>
+                </div>
+              )}
+
+              {["requested", "accepted", "ongoing"].includes(selectedJob.status) && (
                 <Button 
                   variant="destructive" 
                   className="w-full"

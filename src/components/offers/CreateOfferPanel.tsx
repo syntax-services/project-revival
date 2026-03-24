@@ -84,7 +84,7 @@ export function CreateOfferPanel() {
     const fileName = `offers/${user?.id}/${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
-      .from("offer-media")
+      .from("business-images")
       .upload(fileName, file);
 
     if (uploadError) {
@@ -92,7 +92,7 @@ export function CreateOfferPanel() {
       return null;
     }
 
-    const { data } = supabase.storage.from("offer-media").getPublicUrl(fileName);
+    const { data } = supabase.storage.from("business-images").getPublicUrl(fileName);
     return data.publicUrl;
   };
 
@@ -134,13 +134,13 @@ export function CreateOfferPanel() {
     setSaving(true);
     try {
       await createOffer.mutateAsync({
-        offer_type: offerType as 'product' | 'service' | 'employment' | 'collaboration',
+        offer_type: offerType as "product" | "service" | "employment" | "collaboration",
         title: title.trim(),
         description: description.trim() || undefined,
         budget_min: budgetMin ? parseFloat(budgetMin) : undefined,
         budget_max: budgetMax ? parseFloat(budgetMax) : undefined,
         location: location.trim() || undefined,
-        urgency: (urgency as 'low' | 'medium' | 'high' | 'urgent') || undefined,
+        urgency: (urgency as "low" | "medium" | "high" | "urgent") || undefined,
         images: images.length > 0 ? images : undefined,
         video_url: videoUrl.trim() || undefined,
       });

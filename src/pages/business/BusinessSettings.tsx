@@ -77,13 +77,13 @@ export default function BusinessSettings() {
       const filePath = `covers/${businessData.id}/${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("business-media")
+        .from("business-images")
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from("business-media")
+        .from("business-images")
         .getPublicUrl(filePath);
 
       await supabase

@@ -36,7 +36,7 @@ export function useBusinessEarnings(businessId: string | undefined) {
         .eq("business_id", businessId)
         .eq("status", "completed");
 
-      // Get business balance info
+      // Get business balance info from the dedicated wallets table
       const { data: wallet } = await supabase
         .from("business_wallets")
         .select("available_balance, pending_balance, total_withdrawn")
@@ -44,11 +44,21 @@ export function useBusinessEarnings(businessId: string | undefined) {
         .maybeSingle();
 
       const totalOrderRevenue = (orders || []).reduce((sum, o) => sum + Number(o.total || 0), 0);
-      const totalCommission = (orders || []).reduce((sum, o) => sum + Number(o.commission_amount || 0) + Number(o.platform_fee || 0), 0);
-      const totalJobRevenue = (jobs || []).reduce((sum, j) => sum + Number(j.final_price || 0), 0);
       
+      // Standardized Fee Model: platform_fee + commission_amount represents the total platform take.
+      const orderCommission = (orders || []).reduce(
+        (sum, o) => sum + Number(o.commission_amount || 0) + Number(o.platform_fee || 0), 
+        0
+      );
+
+      const totalJobRevenue = (jobs || []).reduce((sum, j) => sum + Number(j.final_price || 0), 0);
+      // Hardcoded 10% commission for jobs as per settlement RPC
+      const jobCommission = totalJobRevenue * 0.1;
+
+      const totalCommission = orderCommission + jobCommission;
       const grossRevenue = totalOrderRevenue + totalJobRevenue;
       const netRevenue = grossRevenue - totalCommission;
+  
 
       return {
         grossRevenue,
@@ -153,15 +163,13 @@ export function useProcessWithdrawal() {
       status: "completed" | "rejected";
       adminNotes?: string;
     }) => {
-      const { error } = await supabase
-        .from("withdrawal_requests")
-        .update({
-          status,
-          admin_notes: adminNotes,
-          processed_at: new Date().toISOString(),
-          processed_by: user?.id,
-        })
-        .eq("id", withdrawalId);
+      // Use secure RPC for atomic withdrawal processing
+      const { error } = await supabase.rpc("process_withdrawal_settlement", {
+        p_withdrawal_id: withdrawalId,
+        p_admin_id: user?.id,
+        p_status: status,
+        p_admin_notes: adminNotes
+      });
 
       if (error) throw error;
     },

@@ -77,8 +77,8 @@ export default function BusinessOverview() {
             statCards.map((stat) => {
               const Icon = stat.icon;
               return (
-                <div 
-                  key={stat.label} 
+                <div
+                  key={stat.label}
                   className={`stat-card ${stat.onClick ? "cursor-pointer hover:border-foreground/20" : ""} ${stat.highlight ? "border-foreground/30 bg-muted/50" : ""}`}
                   onClick={stat.onClick}
                 >

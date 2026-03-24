@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -13,14 +12,30 @@ import { Switch } from "@/components/ui/switch";
 import { TagInput } from "@/components/ui/tag-input";
 import { Plus, Pencil, Trash2, Package, ImageIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Product {
   id: string;
   name: string;
   description: string | null;
   price: number | null;
+  compare_at_price: number | null;
   image_url: string | null;
   in_stock: boolean;
+  is_rare: boolean;
+  commission_percent: number | null;
   tags: string[] | null;
 }
 
@@ -35,6 +50,9 @@ export default function BusinessProducts() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  const [compareAtPrice, setCompareAtPrice] = useState("");
+  const [commissionPercent, setCommissionPercent] = useState("10.0");
+  const [isRare, setIsRare] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [inStock, setInStock] = useState(true);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -61,7 +79,7 @@ export default function BusinessProducts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, description, price, image_url, in_stock, tags")
+        .select("id, name, description, price, compare_at_price, image_url, in_stock, is_rare, commission_percent, tags")
         .eq("business_id", business?.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -74,6 +92,9 @@ export default function BusinessProducts() {
     setName("");
     setDescription("");
     setPrice("");
+    setCompareAtPrice("");
+    setCommissionPercent("10.0");
+    setIsRare(false);
     setTags([]);
     setInStock(true);
     setImageUrl(null);
@@ -87,6 +108,9 @@ export default function BusinessProducts() {
       setName(product.name);
       setDescription(product.description || "");
       setPrice(product.price?.toString() || "");
+      setCompareAtPrice(product.compare_at_price?.toString() || "");
+      setCommissionPercent(product.commission_percent?.toString() || "10.0");
+      setIsRare(product.is_rare || false);
       setTags(product.tags || []);
       setInStock(product.in_stock);
       setImageUrl(product.image_url);
@@ -105,8 +129,9 @@ export default function BusinessProducts() {
       .upload(fileName, file);
 
     if (uploadError) {
-      toast.error("Failed to upload image");
-      return null;
+      console.error("Supabase Upload Error: ", uploadError);
+      toast.error(`Failed to upload image: ${uploadError.message}`);
+      throw new Error(`Upload failed: ${uploadError.message}`);
     }
 
     const { data } = supabase.storage
@@ -130,6 +155,9 @@ export default function BusinessProducts() {
         name: name.trim(),
         description: description.trim() || null,
         price: price ? parseFloat(price) : null,
+        compare_at_price: compareAtPrice ? parseFloat(compareAtPrice) : null,
+        commission_percent: commissionPercent ? parseFloat(commissionPercent) : 10.0,
+        is_rare: isRare,
         tags: tags.length > 0 ? tags : null,
         in_stock: inStock,
         image_url: finalImageUrl,
@@ -186,221 +214,296 @@ export default function BusinessProducts() {
 
   return (
     <DashboardLayout>
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Products</h1>
-          <p className="text-muted-foreground">Manage what you offer to customers</p>
-        </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => openDialog()} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Product
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingProduct ? "Edit Product" : "Add New Product"}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              {/* Image Upload */}
-              <div className="space-y-2">
-                <Label>Product Image</Label>
-                <div
-                  className="relative border-2 border-dashed border-border rounded-2xl p-6 text-center cursor-pointer hover:border-foreground/50 transition-colors"
-                  onClick={() => document.getElementById("product-image")?.click()}
-                >
-                  {imageUrl ? (
-                    <img
-                      src={imageUrl}
-                      alt="Product preview"
-                      className="w-full h-40 object-cover rounded-xl"
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                      <ImageIcon className="h-10 w-10" />
-                      <span>Click to upload image</span>
-                    </div>
-                  )}
-                  <input
-                    id="product-image"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                  />
-                </div>
-              </div>
-
-              {/* Name */}
-              <div className="space-y-2">
-                <Label htmlFor="name">Product Name *</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g., Classic Burger"
-                />
-              </div>
-
-              {/* Tags */}
-              <div className="space-y-2">
-                <Label>Tags / Keywords</Label>
-                <TagInput
-                  value={tags}
-                  onChange={setTags}
-                  placeholder="Add tag..."
-                  maxTags={10}
-                />
-              </div>
-
-              {/* Description */}
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe your product..."
-                  rows={3}
-                />
-              </div>
-
-              {/* Price */}
-              <div className="space-y-2">
-                <Label htmlFor="price">Price</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="0.00"
-                />
-              </div>
-
-              {/* In Stock Toggle */}
-              <div className="flex items-center justify-between">
-                <Label htmlFor="in-stock">Available / In Stock</Label>
-                <Switch
-                  id="in-stock"
-                  checked={inStock}
-                  onCheckedChange={setInStock}
-                />
-              </div>
-
-              {/* Save Button */}
-              <Button
-                onClick={() => saveMutation.mutate()}
-                disabled={!name.trim() || saveMutation.isPending || uploading}
-                className="w-full"
-              >
-                {(saveMutation.isPending || uploading) && (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                )}
-                {editingProduct ? "Update Product" : "Add Product"}
+      <div className="container mx-auto px-4 py-6 pb-24 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Products</h1>
+            <p className="text-muted-foreground">Manage what you offer to customers</p>
+          </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => openDialog()} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Product
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+            </DialogTrigger>
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingProduct ? "Edit Product" : "Add New Product"}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                {/* Image Upload */}
+                <div className="space-y-2">
+                  <Label>Product Image</Label>
+                  <div
+                    className="relative border-2 border-dashed border-border rounded-2xl p-6 text-center cursor-pointer hover:border-foreground/50 transition-colors"
+                    onClick={() => document.getElementById("product-image")?.click()}
+                  >
+                    {imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt="Product preview"
+                        className="w-full h-40 object-cover rounded-xl"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <ImageIcon className="h-10 w-10" />
+                        <span>Click to upload image</span>
+                      </div>
+                    )}
+                    <input
+                      id="product-image"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
 
-      {/* Products Grid */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : products?.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Package className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="font-semibold text-lg mb-2">No products yet</h3>
-            <p className="text-muted-foreground mb-4">
-              Add your first product to showcase to customers
-            </p>
-            <Button onClick={() => openDialog()}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {products?.map((product) => (
-            <Card key={product.id} className="overflow-hidden">
-              {product.image_url ? (
-                <div className="aspect-video w-full overflow-hidden">
-                  <img
-                    src={product.image_url}
-                    alt={product.name}
-                    className="w-full h-full object-cover"
+                {/* Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="name">Product Name *</Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g., Classic Burger"
                   />
                 </div>
-              ) : (
-                <div className="aspect-video w-full bg-muted flex items-center justify-center">
-                  <Package className="h-12 w-12 text-muted-foreground" />
+
+                {/* Tags */}
+                <div className="space-y-2">
+                  <Label>Tags / Keywords</Label>
+                  <TagInput
+                    value={tags}
+                    onChange={setTags}
+                    placeholder="Add tag..."
+                    maxTags={10}
+                  />
                 </div>
-              )}
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg truncate">{product.name}</CardTitle>
-                    {product.tags && product.tags.length > 0 && (
-                      <p className="text-xs text-muted-foreground mt-1 truncate">
-                        {product.tags.join(", ")}
-                      </p>
-                    )}
+
+                {/* Description */}
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Describe your product..."
+                    rows={3}
+                  />
+                </div>
+
+                {/* Price */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Price (₦) *</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      placeholder="0.00"
+                    />
                   </div>
-                  <div className="flex gap-1 shrink-0">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => openDialog(product)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => deleteMutation.mutate(product.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <div className="space-y-2">
+                    <Label htmlFor="compare-at">Compare At (₦)</Label>
+                    <Input
+                      id="compare-at"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={compareAtPrice}
+                      onChange={(e) => setCompareAtPrice(e.target.value)}
+                      placeholder="0.00"
+                    />
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                {product.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                    {product.description}
-                  </p>
-                )}
-                <div className="flex items-center justify-between">
-                  {product.price !== null && (
-                    <span className="font-semibold">
-                      ₦{product.price.toLocaleString()}
-                    </span>
+
+                <div className="space-y-2">
+                  <Label htmlFor="commission">Commission (%)</Label>
+                  <Input
+                    id="commission"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    value={commissionPercent}
+                    onChange={(e) => setCommissionPercent(e.target.value)}
+                  />
+                  <p className="text-[10px] text-muted-foreground">Standard platform fee: 10%</p>
+                </div>
+
+                {/* Toggles */}
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div className="flex items-center justify-between border rounded-lg p-3">
+                    <Label htmlFor="in-stock" className="text-sm">In Stock</Label>
+                    <Switch
+                      id="in-stock"
+                      checked={inStock}
+                      onCheckedChange={setInStock}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between border rounded-lg p-3">
+                    <Label htmlFor="is-rare" className="text-sm">Rare Item</Label>
+                    <Switch
+                      id="is-rare"
+                      checked={isRare}
+                      onCheckedChange={setIsRare}
+                    />
+                  </div>
+                </div>
+
+                {/* Save Button */}
+                <Button
+                  onClick={() => saveMutation.mutate()}
+                  disabled={!name.trim() || saveMutation.isPending || uploading}
+                  className="w-full"
+                >
+                  {(saveMutation.isPending || uploading) && (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   )}
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full ${
-                      product.in_stock
+                  {editingProduct ? "Update Product" : "Add Product"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Products Grid */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : products?.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+              <Package className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="font-semibold text-lg mb-2">No products yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Add your first product to showcase to customers
+              </p>
+              <Button onClick={() => openDialog()}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Product
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {products?.map((product) => (
+              <Card key={product.id} className="overflow-hidden">
+                {product.image_url ? (
+                  <div className="aspect-video w-full overflow-hidden">
+                    <img
+                      src={product.image_url}
+                      alt={product.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="aspect-video w-full bg-muted flex items-center justify-center">
+                    <Package className="h-12 w-12 text-muted-foreground" />
+                  </div>
+                )}
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-lg truncate">{product.name}</CardTitle>
+                        {product.is_rare && (
+                          <Badge variant="secondary" className="text-[10px] h-5 bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200 shrink-0">
+                            Rare
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="font-bold text-primary">
+                         <p className="font-medium">{'\u20A6'}{product.price.toLocaleString()}</p>
+                        </span>
+                        {product.compare_at_price && (
+                          <span className="text-xs text-muted-foreground line-through">
+                            ₦{Number(product.compare_at_price).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                      {product.tags && product.tags.length > 0 && (
+                        <p className="text-[10px] text-muted-foreground mt-1 truncate">
+                          {product.tags.join(", ")}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex gap-1 shrink-0 px-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={() => openDialog(product)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete the product "{product.name}". This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteMutation.mutate(product.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  {product.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                      {product.description}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-between">
+                    {product.price !== null && (
+                      <span className="font-semibold">
+                        ₦{product.price.toLocaleString()}
+                      </span>
+                    )}
+                    <span
+                      className={`text-xs px-2 py-1 rounded-full ${product.in_stock
                         ? "bg-foreground/10 text-foreground"
                         : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {product.in_stock ? "In Stock" : "Out of Stock"}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
+                        }`}
+                    >
+                      {product.in_stock ? "In Stock" : "Out of Stock"}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </DashboardLayout>
   );
 }
