@@ -1,73 +1,65 @@
-# Welcome to your Lovable project
+# String: Hyper-Local Service & Product Discovery Platform
 
-## Project info
+Welcome to the String Platform codebase. String is a premium, AI-powered matchmaking platform designed to intelligently connect businesses and customers.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Overview
 
-## How can I edit this code?
+The platform is designed with scale and performance in mind, using the following stack:
 
-There are several ways of editing your application.
+- **Frontend**: React, TypeScript, Vite, Tailwind CSS, Shadcn UI
+- **Backend & Database**: Supabase (PostgreSQL, Auth, Storage, Edge Functions)
+- **State Management**: TanStack React Query
+- **Routing**: React Router DOM (v6)
 
-**Use Lovable**
+## Key Hardened Features
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+- **Secure Financial Settlement**: Atomic PostgreSQL RPCs for order and job settlement.
+- **Unified Fee Model**: Consistent handling of platform fees and commissions across the entire stack.
+- **Robust Payment Polling**: Memory-safe and optimized Paystack callback verification.
+- **Production-Ready UI**: Unicode-safe currency rendering and data-driven insights.
 
-Changes made via Lovable will be committed automatically to this repo.
+## Project Structure
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```text
+├── src/
+│   ├── components/     # Reusable UI components
+│   ├── contexts/       # React Contexts (Auth, etc.)
+│   ├── hooks/          # Custom hooks for data fetching (Supabase)
+│   ├── integrations/   # Supabase client & generated types
+│   ├── lib/            # Utility functions
+│   └── pages/          # Main application routes
+├── supabase/
+│   ├── functions/      # Edge Functions (Paystack, etc.)
+│   └── migrations/     # Database schema & RPCs
+└── public/             # Static assets
 ```
 
-**Edit a file directly in GitHub**
+## Getting Started
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+1. **Clone the repository**
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+3. **Environment Variables**
+   Create a `.env` file with:
+   ```env
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+4. **Run development server**
+   ```bash
+   npm run dev
+   ```
 
-**Use GitHub Codespaces**
+## Production Verification (Codespaces)
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+To verify the build, run:
+```bash
+npm run build
+```
 
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+To check for linting errors:
+```bash
+npm run lint
+```
