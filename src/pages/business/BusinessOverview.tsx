@@ -28,15 +28,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export default function BusinessOverview() {
   const { profile, user, refreshProfile } = useAuth();
-  const { data: business, isFetched, isLoading: businessLoading } = useBusiness();
+  const { data: business, isFetched, isFetching, isLoading: businessLoading } = useBusiness();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isFetched && !business) {
+    if (isFetched && !isFetching && !business) {
       navigate("/store/complete", { replace: true });
     }
-  }, [business, isFetched, navigate]);
+  }, [business, isFetched, isFetching, navigate]);
 
   // Business registration states for onboarding fallback
   const [setupBizName, setSetupBizName] = useState("");
