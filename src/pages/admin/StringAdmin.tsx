@@ -1228,7 +1228,7 @@ export default function StringAdmin() {
     },
   });
 
-  if (authLoading) {
+  if (checkingAdminFromAuth) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <InterlockingLoader size="lg" label="Securing String Portal..." />
