@@ -10,7 +10,7 @@ export function useBusiness() {
     queryFn: async () => {
       if (!user) return null;
 
-      await (supabase as any).rpc("expire_premium_subscriptions").catch((err: unknown) => {
+      await supabase.rpc("expire_premium_subscriptions").catch((err: unknown) => {
         console.warn("Premium expiry check skipped:", err);
       });
       

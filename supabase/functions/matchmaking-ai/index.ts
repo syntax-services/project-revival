@@ -12,6 +12,27 @@ serve(async (req) => {
     }
 
     try {
+        const authHeader = req.headers.get("Authorization");
+        if (!authHeader) {
+            return new Response(JSON.stringify({ success: false, error: "Missing authorization header" }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+                status: 401,
+            });
+        }
+
+        const token = authHeader.replace("Bearer ", "");
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+        if (authError || !user) {
+            return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+                status: 401,
+            });
+        }
+
         const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
         if (!GROQ_API_KEY) {
             throw new Error("GROQ_API_KEY is not configured");

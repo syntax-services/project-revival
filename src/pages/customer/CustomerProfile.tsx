@@ -93,7 +93,7 @@ export default function CustomerProfile() {
   const [idicDept, setIdicDept] = useState("");
   const [registeringIdic, setRegisteringIdic] = useState(false);
   const [hideIdic, setHideIdic] = useState(false);
-  const [registeringRunner, setRegisteringRunner] = useState(false);
+
   const [ninInput, setNinInput] = useState("");
   const [bvnInput, setBvnInput] = useState("");
   const [verifyingIdentity, setVerifyingIdentity] = useState(false);
@@ -125,7 +125,7 @@ export default function CustomerProfile() {
 
     setRegisteringIdic(true);
     try {
-      const { error } = await (supabase as any).rpc("register_idic_participant", {
+      const { error } = await supabase.rpc("register_idic_participant", {
         p_department: idicDept,
       });
 
@@ -141,24 +141,7 @@ export default function CustomerProfile() {
     }
   };
 
-  const handleRegisterRunner = async () => {
-    if (!user) return;
-    setRegisteringRunner(true);
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_runner: true })
-        .eq('user_id', user.id);
-      if (error) throw error;
-      toast.success("Congratulations! You are now a Campus Runner! ⚡");
-      await refreshProfile();
-    } catch (err: any) {
-      console.error("Failed to register as runner:", err);
-      toast.error(`Error: ${err.message || err.toString()}`);
-    } finally {
-      setRegisteringRunner(false);
-    }
-  };
+
 
   const handleVerifyIdentity = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -272,7 +255,7 @@ export default function CustomerProfile() {
 
       if (rpcError) throw rpcError;
 
-      const { error: locationUpdateError } = await (supabase as any)
+      const { error: locationUpdateError } = await supabase
         .from("businesses")
         .update({
           business_location: formattedLocation,
@@ -290,7 +273,9 @@ export default function CustomerProfile() {
       if (locationUpdateError) throw locationUpdateError;
 
       // 2. Set role switches
-      localStorage.setItem("string_active_role_view", "business");
+      if (profile?.user_id) {
+        localStorage.setItem(`string_active_role_view_${profile.user_id}`, "business");
+      }
 
       // 4. Play success audio chime
       playPremiumMatchChime().catch(console.error);
@@ -309,7 +294,9 @@ export default function CustomerProfile() {
   };
 
   const handleSwitchToAdmin = async () => {
-    localStorage.setItem("string_active_admin_mode", "true");
+    if (profile?.user_id) {
+      localStorage.setItem(`string_active_admin_mode_${profile.user_id}`, "true");
+    }
     await refreshProfile();
     toast.success("Switched to Admin Mode! 🛡️");
     navigate("/admin");
@@ -815,29 +802,7 @@ export default function CustomerProfile() {
               </div>
             )}
 
-            {/* Campus Runner Program Card */}
-            {profile && !profile.is_runner && (
-              <div className="bg-card border border-border/40 rounded-2xl p-4 shadow-sm space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-base">⚡</span>
-                  <h3 className="font-bold text-xs text-foreground uppercase tracking-wider">Campus Runner Program</h3>
-                </div>
-                <p className="text-xs text-muted-foreground leading-tight">
-                  Earn money delivering packages to students across the OOU campuses.
-                </p>
-                <Button
-                  onClick={handleRegisterRunner}
-                  disabled={registeringRunner}
-                  className="w-full h-10 text-xs font-bold rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground shadow-md transition-all duration-300"
-                >
-                  {registeringRunner ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Registering...</>
-                  ) : (
-                    "Apply to Become a Runner"
-                  )}
-                </Button>
-              </div>
-            )}
+
 
             {/* Grid of Main Actions */}
             <div className="grid grid-cols-2 gap-3">
@@ -897,26 +862,7 @@ export default function CustomerProfile() {
                     <ChevronRight className="h-3.5 w-3.5 text-primary/70 group-hover:translate-x-0.5 transition-transform" />
                   </button>
                 )}
-                {profile?.is_runner && (
-                  <button
-                    onClick={async () => {
-                      await switchRole("runner");
-                      toast.success("Switched to Runner View! ⚡");
-                      navigate("/runner");
-                    }}
-                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-emerald-500/[0.02] active:bg-emerald-500/[0.04] transition-all duration-200 group text-left bg-gradient-to-r from-emerald-500/[0.03] to-emerald-500/[0.01]"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-105 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4.5 h-4.5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V18a2.25 2.25 0 0 1 2.25-2.25h15A2.25 2.25 0 0 1 21.75 18v.75c0 .621-.504 1.125-1.125 1.125H16.5m-3-3V9m-4.5 3h4.5M10.5 4.5h3" />
-                        </svg>
-                      </div>
-                      <span className="font-semibold text-emerald-500 text-[13px]">Runner Dashboard ⚡</span>
-                    </div>
-                    <ChevronRight className="h-3.5 w-3.5 text-emerald-500/70 group-hover:translate-x-0.5 transition-transform" />
-                  </button>
-                )}
+
                 {secondaryMenuList.map((item) => (
                   <Link
                     key={item.label}
@@ -994,14 +940,14 @@ export default function CustomerProfile() {
                     <div>
                       <p className="text-xs font-bold uppercase tracking-wider">Account Verified</p>
                       <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
-                        Your NIN/BVN has been cryptographically secured. You have full delivery and withdrawal privileges.
+                        Your NIN/BVN has been cryptographically secured. You have full withdrawal privileges.
                       </p>
                     </div>
                   </div>
                 ) : (
                   <form onSubmit={handleVerifyIdentity} className="space-y-3">
                     <p className="text-xs text-muted-foreground leading-tight">
-                      Submit your 11-digit NIN or BVN to verify your account identity. Required for deliveries and payments.
+                      Submit your 11-digit NIN or BVN to verify your account identity. Required for withdrawals and merchant payments.
                     </p>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">

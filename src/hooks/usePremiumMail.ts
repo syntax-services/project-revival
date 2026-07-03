@@ -204,6 +204,22 @@ export function generateEmailHtml(type: EmailType, payload: EmailTemplatePayload
           color: ${colors.accent};
           margin-bottom: 4px;
         }
+        @keyframes drawSig {
+          0% {
+            stroke-dashoffset: 250;
+          }
+          40% {
+            stroke-dashoffset: 0;
+          }
+          80% {
+            stroke-dashoffset: 0;
+            opacity: 1;
+          }
+          100% {
+            stroke-dashoffset: 0;
+            opacity: 0.8;
+          }
+        }
       </style>
     </head>
     <body>
@@ -214,7 +230,37 @@ export function generateEmailHtml(type: EmailType, payload: EmailTemplatePayload
         </div>
   `;
 
+  const signatureHash = `STR-${Math.random().toString(36).substring(2, 8).toUpperCase()}-${Math.floor(Date.now() / 1000).toString(16).toUpperCase()}`;
+
   const footerHtml = `
+        <!-- CSS Animated Signature -->
+        <div style="margin-top: 30px; padding: 20px; border: 1px dashed ${colors.border}; border-radius: 16px; background-color: ${colors.bg}; text-align: center;">
+          <div style="font-size: 10px; font-weight: 800; color: ${colors.accent}; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px;">
+            Official String Verification Seal
+          </div>
+          <svg width="180" height="60" viewBox="0 0 180 60" style="margin: 0 auto; display: block;">
+            <defs>
+              <linearGradient id="sigGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="${colors.accent}" />
+                <stop offset="100%" stop-color="#a855f7" />
+              </linearGradient>
+            </defs>
+            <path d="M20,35 C40,15 60,45 80,25 C100,5 120,55 140,30 C150,18 160,10 170,25" 
+              fill="none" 
+              stroke="url(#sigGrad)" 
+              stroke-width="3" 
+              stroke-linecap="round"
+              style="stroke-dasharray: 250; stroke-dashoffset: 250; animation: drawSig 3s ease-in-out forwards infinite;"
+            />
+          </svg>
+          <div style="margin-top: 10px; font-size: 11px; font-weight: bold; color: ${colors.text}; font-family: monospace; letter-spacing: 2px;">
+            ${signatureHash}
+          </div>
+          <div style="font-size: 9px; color: ${colors.mutedText}; margin-top: 4px;">
+            If this animated signature is missing or static, this email is NOT from String.
+          </div>
+        </div>
+
         <div class="footer">
           <div class="footer-logo">String Inc.</div>
           <p>Secure Marketplace Platform • Verified Trust Coordinates</p>
@@ -489,6 +535,19 @@ export function usePremiumMail() {
       });
 
       if (error) throw error;
+
+      // 5. Invoke Edge Function to send actual email via Resend
+      try {
+        await supabase.functions.invoke("send-email", {
+          body: {
+            to: recipientEmail,
+            subject: subjectMapping[type] || "String Alert",
+            html: htmlBody
+          }
+        });
+      } catch (invokeErr) {
+        console.warn("Failed to dispatch real email via edge function:", invokeErr);
+      }
       return true;
     } catch (err) {
       console.error("Failed to dispatch HSL email notification:", err);

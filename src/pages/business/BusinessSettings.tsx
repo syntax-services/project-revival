@@ -65,7 +65,12 @@ export default function BusinessSettings() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  // Withdrawal States
+  // Withdrawal & Wallet States
+  const [withdrawalType, setWithdrawalType] = useState<"business" | "coupon">("business");
+  const [businessWallet, setBusinessWallet] = useState<{
+    available_balance: number;
+    pending_escrow: number;
+  } | null>(null);
   const [withdrawConfig, setWithdrawConfig] = useState({ allow: false, minSpend: 5000 });
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [bankName, setBankName] = useState("");
@@ -88,82 +93,115 @@ export default function BusinessSettings() {
           });
         }
 
-        const { data: wds } = await supabase
-          .from("withdrawal_requests")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
+        let query = supabase.from("withdrawal_requests").select("*");
+        if (businessData?.id) {
+          query = query.or(`user_id.eq.${user.id},business_id.eq.${businessData.id}`);
+        } else {
+          query = query.eq("user_id", user.id);
+        }
+
+        const { data: wds } = await query.order("created_at", { ascending: false });
         if (wds) setWithdrawHistory(wds);
       } catch (err) {
         console.warn("Failed to load withdrawal details:", err);
       }
     };
     fetchWithdrawData();
-  }, [user]);
+  }, [user, businessData]);
 
   const handleWithdrawalRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !profile) return;
 
     const amount = Number(withdrawAmount);
-    if (!amount || amount <= 0 || amount > (profile.coupon_balance || 0)) {
-      toast({ variant: "destructive", title: "Invalid Amount", description: "Please enter a valid amount within your balance." });
-      return;
-    }
-
-    if (!withdrawConfig.allow) {
-      toast({ variant: "destructive", title: "Withdrawals locked", description: "Coupon cash withdrawals are currently disabled by admin." });
-      return;
+    
+    // Validation based on withdrawal type
+    if (withdrawalType === "coupon") {
+      if (!amount || amount <= 0 || amount > (profile.coupon_balance || 0)) {
+        toast({ variant: "destructive", title: "Invalid Amount", description: "Please enter a valid amount within your coupon balance." });
+        return;
+      }
+      if (!withdrawConfig.allow) {
+        toast({ variant: "destructive", title: "Withdrawals locked", description: "Coupon cash withdrawals are currently disabled by admin." });
+        return;
+      }
+    } else {
+      if (!businessData) {
+        toast({ variant: "destructive", title: "Business Not Found", description: "No business profile associated with this account." });
+        return;
+      }
+      if (!amount || amount <= 0 || amount > (businessWallet?.available_balance || 0)) {
+        toast({ variant: "destructive", title: "Invalid Amount", description: "Please enter a valid amount within your sales balance." });
+        return;
+      }
     }
 
     setWithdrawing(true);
     try {
+      const insertPayload: any = {
+        amount: amount,
+        bank_name: bankName,
+        account_number: accountNumber,
+        account_name: accountName,
+        withdrawal_type: withdrawalType,
+        status: "pending"
+      };
+
+      if (withdrawalType === "coupon") {
+        insertPayload.user_id = user.id;
+      } else {
+        insertPayload.business_id = businessData.id;
+      }
+
       const { data: withdrawReq, error: insertError } = await supabase
         .from("withdrawal_requests")
-        .insert({
-          user_id: user.id,
-          amount: amount,
-          bank_name: bankName,
-          account_number: accountNumber,
-          account_name: accountName,
-          withdrawal_type: "coupon",
-          status: "pending"
-        })
+        .insert(insertPayload)
         .select("*")
         .single();
 
       if (insertError) throw insertError;
 
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ coupon_balance: Number(profile.coupon_balance || 0) - amount })
-        .eq("user_id", user.id);
+      if (withdrawalType === "coupon") {
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({ coupon_balance: Number(profile.coupon_balance || 0) - amount })
+          .eq("user_id", user.id);
 
-      if (profileError) throw profileError;
+        if (profileError) throw profileError;
+      } else {
+        const newBalance = Number(businessWallet?.available_balance || 0) - amount;
+        const { error: walletError } = await supabase
+          .from("business_wallets")
+          .update({ available_balance: newBalance })
+          .eq("business_id", businessData.id);
 
-      try {
-        await supabase.functions.invoke("paystack-payout", {
-          body: { withdrawalRequestId: withdrawReq.id }
-        });
-      } catch (fErr) {
-        console.warn("Edge function payout call failed:", fErr);
+        if (walletError) throw walletError;
+        
+        setBusinessWallet((prev) => prev ? { ...prev, available_balance: newBalance } : null);
       }
 
-      toast({ title: "Withdrawal processing", description: `Your bank payout request of ₦${amount.toLocaleString()} is processing.` });
+      toast({ 
+        title: "Withdrawal Requested", 
+        description: `Your bank payout request of ₦${amount.toLocaleString()} has been submitted. It will be reviewed by an admin and processed within 2-3 hours.` 
+      });
+      
       setWithdrawAmount("");
       setBankName("");
       setAccountNumber("");
       setAccountName("");
       await refreshProfile();
       
-      const { data: wds } = await supabase
-        .from("withdrawal_requests")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+      // refresh withdrawal history
+      let query = supabase.from("withdrawal_requests").select("*");
+      if (businessData?.id) {
+        query = query.or(`user_id.eq.${user.id},business_id.eq.${businessData.id}`);
+      } else {
+        query = query.eq("user_id", user.id);
+      }
+      const { data: wds } = await query.order("created_at", { ascending: false });
       if (wds) setWithdrawHistory(wds);
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Withdrawal failed", description: err.message });
+      toast({ variant: "destructive", title: "Withdrawal failed", description: err.message || "Failed to submit withdrawal request" });
     } finally {
       setWithdrawing(false);
     }
@@ -191,6 +229,20 @@ export default function BusinessSettings() {
       if (data) {
         setBusinessData(data);
         setInitialLocation(data.business_location);
+
+        // Fetch wallet details
+        const { data: wallet } = await supabase
+          .from("business_wallets")
+          .select("available_balance, pending_escrow")
+          .eq("business_id", data.id)
+          .maybeSingle();
+
+        if (wallet) {
+          setBusinessWallet({
+            available_balance: Number(wallet.available_balance || 0),
+            pending_escrow: Number(wallet.pending_escrow || 0)
+          });
+        }
       }
     };
 
@@ -648,26 +700,62 @@ export default function BusinessSettings() {
             <div>
               <h2 className="font-medium text-foreground">Withdrawal & Wallet</h2>
               <p className="text-sm text-muted-foreground">
-                Withdraw your accumulated coupon bonus cash
+                Withdraw your accumulated revenue or coupon points
               </p>
             </div>
-            <span className="ml-auto font-mono font-bold text-base text-primary">
-              ₦{Number(profile?.coupon_balance || 0).toLocaleString()}
-            </span>
           </div>
 
-          <div className="p-3 bg-muted/40 rounded-xl space-y-2 text-xs border border-border/10">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Withdrawals Enabled:</span>
-              <span className={cn("font-bold", withdrawConfig.allow ? "text-green-500" : "text-red-500")}>
-                {withdrawConfig.allow ? "YES" : "NO"}
-              </span>
+          {/* Balance breakdown */}
+          <div className="grid grid-cols-3 gap-3 p-3 bg-muted/40 rounded-xl text-xs border border-border/10">
+            <div className="text-left space-y-0.5">
+              <span className="text-[10px] text-muted-foreground font-semibold uppercase">Sales Wallet</span>
+              <p className="font-mono font-bold text-sm text-foreground">
+                ₦{Number(businessWallet?.available_balance || 0).toLocaleString()}
+              </p>
+            </div>
+            <div className="text-left space-y-0.5 border-l border-border/10 pl-3">
+              <span className="text-[10px] text-muted-foreground font-semibold uppercase">Pending Escrow</span>
+              <p className="font-mono font-bold text-sm text-muted-foreground">
+                ₦{Number(businessWallet?.pending_escrow || 0).toLocaleString()}
+              </p>
+            </div>
+            <div className="text-left space-y-0.5 border-l border-border/10 pl-3">
+              <span className="text-[10px] text-muted-foreground font-semibold uppercase">Coupon Cash</span>
+              <p className="font-mono font-bold text-sm text-primary">
+                ₦{Number(profile?.coupon_balance || 0).toLocaleString()}
+              </p>
             </div>
           </div>
 
-          {withdrawConfig.allow && (
+          {/* Withdrawal Type Selection */}
+          <div className="space-y-1.5 pt-1">
+            <Label className="text-xs text-muted-foreground">Withdrawal Type</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={withdrawalType === "business" ? "default" : "outline"}
+                onClick={() => setWithdrawalType("business")}
+                className="h-9 rounded-xl font-bold text-xs"
+              >
+                Sales Balance
+              </Button>
+              <Button
+                type="button"
+                variant={withdrawalType === "coupon" ? "default" : "outline"}
+                disabled={!withdrawConfig.allow}
+                onClick={() => setWithdrawalType("coupon")}
+                className="h-9 rounded-xl font-bold text-xs"
+              >
+                Coupon Points {!withdrawConfig.allow && "(Locked)"}
+              </Button>
+            </div>
+          </div>
+
+          {(withdrawalType === "business" || withdrawConfig.allow) && (
             <form onSubmit={handleWithdrawalRequest} className="space-y-3 pt-2 border-t border-border/10">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Request Paystack Bank Payout</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Request Squad Bank Payout
+              </h3>
               
               <div className="space-y-1.5">
                 <Label htmlFor="bankName" className="text-xs text-muted-foreground">Bank Name</Label>
@@ -733,7 +821,7 @@ export default function BusinessSettings() {
                   id="wdAmount"
                   type="number"
                   placeholder="₦ Amount to withdraw"
-                  max={profile?.coupon_balance || 0}
+                  max={withdrawalType === "coupon" ? (profile?.coupon_balance || 0) : (businessWallet?.available_balance || 0)}
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
                   required
@@ -742,7 +830,11 @@ export default function BusinessSettings() {
 
               <Button
                 type="submit"
-                disabled={withdrawing || !withdrawAmount || Number(withdrawAmount) > (profile?.coupon_balance || 0)}
+                disabled={
+                  withdrawing || 
+                  !withdrawAmount || 
+                  Number(withdrawAmount) > (withdrawalType === "coupon" ? (profile?.coupon_balance || 0) : (businessWallet?.available_balance || 0))
+                }
                 className="w-full rounded-xl font-semibold mt-2 shadow-lg h-10 animate-pulse-subtle"
               >
                 {withdrawing ? (

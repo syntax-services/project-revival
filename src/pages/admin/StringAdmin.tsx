@@ -37,7 +37,7 @@ import { cn } from "@/lib/utils";
 type VerificationTier = 'none' | 'basic' | 'verified' | 'premium' | 'elite';
 
 export default function StringAdmin() {
-  const { signOut, user, refreshProfile } = useAuth();
+  const { signOut, user, refreshProfile, isAdmin, loading: checkingAdminFromAuth } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { dispatchEmail } = usePremiumMail();
@@ -525,21 +525,10 @@ export default function StringAdmin() {
     toast.success("Simulated escrow transaction completed! Chime active 🔔");
   };
 
-  // Check if user has admin role
-  const { data: isAdmin, isLoading: checkingAdmin } = useQuery({
-    queryKey: ["admin-check", user?.id],
-    queryFn: async () => {
-      if (!user?.id) return false;
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-      return !!data;
-    },
-    enabled: !!user?.id,
-  });
+  // We now use isAdmin and checkingAdmin directly from useAuth() hook above.
+  const checkingAdmin = checkingAdminFromAuth;
+
+
 
   // Bootstrap admin mutation
   const bootstrapMutation = useMutation({
@@ -553,9 +542,10 @@ export default function StringAdmin() {
     },
     onSuccess: async () => {
       toast.success("Admin access granted! Your account is now elevated. Switch between Admin and User views anytime from your profile settings!");
-      localStorage.setItem("string_active_admin_mode", "false");
+      if (user?.id) {
+        localStorage.setItem(`string_active_admin_mode_${user.id}`, "false");
+      }
       await refreshProfile();
-      queryClient.invalidateQueries({ queryKey: ["admin-check", user?.id] });
       setBootstrapKey("");
       navigate("/", { replace: true });
     },
@@ -1238,7 +1228,7 @@ export default function StringAdmin() {
     },
   });
 
-  if (checkingAdmin) {
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <InterlockingLoader size="lg" label="Securing String Portal..." />
@@ -1308,7 +1298,9 @@ export default function StringAdmin() {
   };
 
   const handleSwitchToUserView = async () => {
-    localStorage.setItem("string_active_admin_mode", "false");
+    if (user?.id) {
+      localStorage.setItem(`string_active_admin_mode_${user.id}`, "false");
+    }
     await refreshProfile();
     toast.success("Switched to normal User View! 🛒");
     navigate("/");
@@ -2895,8 +2887,15 @@ export default function StringAdmin() {
                               <TableRow key={w.id}>
                                 <TableCell>
                                   <div>
-                                    <p className="font-medium">{w.businesses?.company_name}</p>
-                                    <p className="text-xs text-muted-foreground">{w.businesses?.profiles?.email}</p>
+                                    <p className="font-medium">
+                                      {w.businesses?.company_name || w.profiles?.full_name || 'User'}
+                                      <Badge variant="outline" className="ml-2 text-[10px] uppercase">
+                                        {w.withdrawal_type || 'business'}
+                                      </Badge>
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {w.businesses?.profiles?.email || w.profiles?.email || 'N/A'}
+                                    </p>
                                   </div>
                                 </TableCell>
                                 <TableCell className="font-medium">₦{Number(w.amount).toLocaleString()}</TableCell>
@@ -2961,8 +2960,15 @@ export default function StringAdmin() {
                           <div key={w.id} className="bg-card/40 backdrop-blur-md border border-border/40 rounded-2xl p-4 space-y-3 shadow-sm">
                             <div className="flex items-start justify-between">
                               <div>
-                                <p className="font-semibold text-sm">{w.businesses?.company_name}</p>
-                                <p className="text-xs text-muted-foreground">{w.businesses?.profiles?.email}</p>
+                                <p className="font-semibold text-sm">
+                                  {w.businesses?.company_name || w.profiles?.full_name || 'User'}
+                                  <Badge variant="outline" className="ml-1.5 text-[9px] uppercase">
+                                    {w.withdrawal_type || 'business'}
+                                  </Badge>
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {w.businesses?.profiles?.email || w.profiles?.email || 'N/A'}
+                                </p>
                               </div>
                               <Badge variant={
                                 w.status === 'completed' ? 'default' :

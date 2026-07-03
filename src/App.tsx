@@ -11,6 +11,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
+import CompleteOnboarding from "./pages/store/CompleteOnboarding";
+import AuthLinks from "./pages/AuthLinks";
 import Contact from "./pages/Contact";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
@@ -63,7 +65,7 @@ const CustomerNotifications = lazy(() => import("./pages/customer/CustomerNotifi
 const PaymentCallback = lazy(() => import("./pages/customer/PaymentCallback"));
 const Checkout = lazy(() => import("./pages/customer/Checkout"));
 const IDICDashboard = lazy(() => import("./pages/customer/IDICDashboard"));
-const RunnerDashboard = lazy(() => import("./pages/runner/RunnerDashboard"));
+
 
 // Business core pages (Statically imported for instant, zero-delay tab switching)
 import BusinessOverview from "./pages/business/BusinessOverview";
@@ -143,6 +145,8 @@ const App = () => (
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+                  <Route path="/store/complete" element={<ProtectedRoute><CompleteOnboarding /></ProtectedRoute>} />
+                  <Route path="/links" element={<AuthLinks />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/banned" element={<Banned />} />
@@ -163,8 +167,7 @@ const App = () => (
                   <Route path="/payment-callback" element={<ProtectedRoute><PaymentCallback /></ProtectedRoute>} />
                   <Route path="/idic" element={<ProtectedRoute><IDICDashboard /></ProtectedRoute>} />
 
-                  {/* Runner Routes */}
-                  <Route path="/runner" element={<ProtectedRoute requiredUserType="runner"><RunnerDashboard /></ProtectedRoute>} />
+
 
                   {/* Business Routes */}
                   <Route path="/business" element={<ProtectedRoute requiredUserType="business"><BusinessOverview /></ProtectedRoute>} />

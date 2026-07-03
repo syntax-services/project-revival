@@ -49,6 +49,20 @@ export default function BusinessOrders() {
   const [selectedOrder, setSelectedOrder] = useState<typeof orders[0] | null>(null);
   const [updating, setUpdating] = useState(false);
 
+  const handleConfirmReturn = async (orderId: string) => {
+    try {
+      const { error } = await supabase.rpc("confirm_order_return", {
+        p_order_id: orderId,
+        p_actor_type: 'business'
+      });
+      if (error) throw error;
+      toast.success("Return receipt confirmed! Customer refunded successfully.");
+      queryClient.invalidateQueries({ queryKey: ["business-orders"] });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to confirm return");
+    }
+  };
+
   const [trackingInput, setTrackingInput] = useState("");
 
   const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
@@ -187,6 +201,35 @@ export default function BusinessOrders() {
           </Button>
         </div>
         <EscrowTimeline status={status} />
+        
+        {/* Merchant Return Confirmation UI Block */}
+        {order.satisfaction_status === "unsatisfied" && (
+          <div className="mt-3.5 pt-3.5 border-t border-border/40 space-y-2 text-left text-xs">
+            <p className="font-semibold text-amber-500 flex items-center gap-1.5">
+              ⚠️ Shopper Rejected Product (Escrow Locked)
+            </p>
+            {order.return_status === "requested" && (
+              <div className="space-y-1.5 text-slate-400">
+                {!order.return_confirmed_by_business ? (
+                  <>
+                    <p>Collect the product physically from the customer, then click below to confirm receipt:</p>
+                    <Button 
+                      size="sm"
+                      onClick={() => handleConfirmReturn(order.id)}
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl h-8 px-3.5 mt-1"
+                    >
+                      Confirm Return Received
+                    </Button>
+                  </>
+                ) : (
+                  <p className="text-indigo-400 font-semibold flex items-center gap-1">
+                    ✓ You confirmed return receipt. Waiting for shopper to confirm return dispatch...
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   };
@@ -269,37 +312,18 @@ export default function BusinessOrders() {
                 </div>
               )}
 
-              {/* Courier/Runner Info */}
+              {/* Delivery Info */}
               {selectedOrder.delivery_method === "delivery" && (
                 <div className="bg-muted/30 p-3 rounded-2xl border border-border/10 space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Courier/Runner Details</p>
-                    {selectedOrder.runner ? (
-                      <Badge className="bg-emerald-500/10 text-emerald-600 border-none scale-90 capitalize font-black">
-                        {selectedOrder.delivery_status || "accepted"}
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="scale-90 font-black">
-                        Awaiting Courier
-                      </Badge>
-                    )}
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Delivery Details</p>
+                    <Badge variant="outline" className="scale-90 font-black">
+                      Store Delivery
+                    </Badge>
                   </div>
-                  {selectedOrder.runner ? (
-                    <div className="text-xs space-y-1 text-foreground/80">
-                      <p>
-                        Courier: <span className="font-bold text-foreground">{selectedOrder.runner.full_name}</span>
-                      </p>
-                      {selectedOrder.runner.phone && (
-                        <p>
-                          Phone: <a href={`tel:${selectedOrder.runner.phone}`} className="font-bold text-primary underline">{selectedOrder.runner.phone}</a>
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-[11px] text-muted-foreground">
-                      This order is posted to the Runner Gig Board. A student runner will claim it shortly.
-                    </p>
-                  )}
+                  <p className="text-[11px] text-muted-foreground">
+                    This order will be delivered by the store's default delivery method.
+                  </p>
                 </div>
               )}
 

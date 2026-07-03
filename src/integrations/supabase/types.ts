@@ -1307,6 +1307,100 @@ export type Database = {
           user_id: string
         }
       }
+      expire_premium_subscriptions: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      settle_order_settlement: {
+        Args: {
+          p_order_id: string
+        }
+        Returns: Json
+      }
+      process_withdrawal_settlement: {
+        Args: {
+          p_withdrawal_id: string
+          p_admin_id: string
+          p_status: string
+          p_admin_notes: string
+        }
+        Returns: Json
+      }
+      get_business_conversations: {
+        Args: {
+          p_business_id: string
+        }
+        Returns: Json
+      }
+      get_customer_conversations: {
+        Args: {
+          p_customer_id: string
+        }
+        Returns: Json
+      }
+      revoke_referral_bonus: {
+        Args: {
+          p_referral_id: string
+        }
+        Returns: Json
+      }
+      settle_job_settlement: {
+        Args: {
+          p_job_id: string
+          p_final_price: number
+        }
+        Returns: Json
+      }
+      pay_with_wallet: {
+        Args: {
+          p_order_ids: string[]
+        }
+        Returns: Json
+      }
+      respond_to_satisfaction: {
+        Args: {
+          p_order_id: string
+          p_satisfied: boolean
+        }
+        Returns: Json
+      }
+      confirm_order_return: {
+        Args: {
+          p_order_id: string
+          p_actor_type: string
+        }
+        Returns: Json
+      }
+      register_idic_participant: {
+        Args: {
+          p_department: string
+        }
+        Returns: Json
+      }
+      process_referral: {
+        Args: {
+          p_referral_code: string
+        }
+        Returns: Json
+      }
+      check_and_claim_monthly_gift: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      accept_delivery_gig: {
+        Args: {
+          p_order_id: string
+          p_runner_id: string
+        }
+        Returns: Json
+      }
+      complete_delivery_gig: {
+        Args: {
+          p_order_id: string
+          p_runner_id: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

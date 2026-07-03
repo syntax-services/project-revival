@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 
 type AccountType = 'customer' | 'business';
-type ResolvedUserType = AccountType | 'admin' | 'runner';
+type ResolvedUserType = AccountType | 'admin';
 
 interface Profile {
   id: string;
@@ -48,7 +48,7 @@ interface AuthContextType {
   refreshProfile: () => Promise<void>;
   isEmailVerified: boolean;
   hasBothRoles: boolean;
-  switchRole: (role: 'customer' | 'business' | 'runner') => Promise<void>;
+  switchRole: (role: 'customer' | 'business') => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -82,6 +82,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return null;
   };
 
+  const getUserAdminModeKey = (userId: string) => `string_active_admin_mode_${userId}`;
+  const getUserRoleViewKey = (userId: string) => `string_active_role_view_${userId}`;
+
+  const getActiveAdminMode = (userId: string) =>
+    localStorage.getItem(getUserAdminModeKey(userId)) === 'true';
+
+  const getActiveRoleView = (userId: string) =>
+    localStorage.getItem(getUserRoleViewKey(userId));
+
+  const setActiveAdminMode = (userId: string, value: boolean) =>
+    localStorage.setItem(getUserAdminModeKey(userId), value ? 'true' : 'false');
+
+  const setActiveRoleView = (userId: string, role: 'customer' | 'business') =>
+    localStorage.setItem(getUserRoleViewKey(userId), role);
+
+  const clearUserLocalRoleState = (userId: string | null) => {
+    if (!userId) return;
+    localStorage.removeItem(getUserAdminModeKey(userId));
+    localStorage.removeItem(getUserRoleViewKey(userId));
+  };
+
   const getDashboardPath = (
     nextUser: User | null,
     nextProfile: Profile | null,
@@ -99,9 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return '/admin';
     }
 
-    if (nextResolvedUserType === 'runner') {
-      return '/runner';
-    }
+    // Runner role removed for MVP
 
     return nextResolvedUserType === 'business' ? '/business' : '/customer';
   };
@@ -168,31 +187,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const rawProfile = profileResult.data as Profile | null;
-    const nextIsAdmin = !!adminRoleResult.data;
+    const nextIsAdmin = !!adminRoleResult.data || rawProfile?.user_type === 'admin';
     
-    // Auto-initialize active admin mode state for new administrators
-    if (nextIsAdmin && localStorage.getItem("string_active_admin_mode") === null) {
-      localStorage.setItem("string_active_admin_mode", "false");
+    // Auto-initialize active admin mode state for administrators
+    if (nextIsAdmin && userId && localStorage.getItem(getUserAdminModeKey(userId)) === null) {
+      setActiveAdminMode(userId, false);
     }
-    const activeAdminMode = localStorage.getItem("string_active_admin_mode") === "true";
+    const activeAdminMode = getActiveAdminMode(userId);
 
     const hasBusiness = !!businessResult.data;
     const hasCustomer = !!customerResult.data;
     const hasBoth = hasBusiness && hasCustomer;
 
-    const activeRoleView = localStorage.getItem("string_active_role_view");
+    const activeRoleView = getActiveRoleView(userId);
     let chosenAccountType: AccountType = 'customer';
     
-    if (hasBusiness && hasCustomer) {
-      if (activeRoleView === 'customer' || activeRoleView === 'business') {
-        chosenAccountType = activeRoleView as AccountType;
-      } else {
-        chosenAccountType = normalizeAccountType(rawProfile?.user_type) ?? 'customer';
-      }
+    if (activeRoleView === 'customer' || activeRoleView === 'business') {
+      chosenAccountType = activeRoleView as AccountType;
     } else if (hasBusiness) {
       chosenAccountType = 'business';
     } else {
-      chosenAccountType = 'customer';
+      chosenAccountType = normalizeAccountType(rawProfile?.user_type) ?? 'customer';
+    }
+
+    // Generate Squad subaccount on the fly if missing
+    if (rawProfile && !rawProfile.squad_subaccount_id && userId) {
+      supabase.functions.invoke("squad-subaccount", {
+        body: { userId }
+      }).then(({ data }) => {
+        if (data?.subaccountId) {
+          queryClient.invalidateQueries({ queryKey: ["profile"] });
+        }
+      }).catch(err => console.warn("Failed to generate subaccount on the fly:", err));
     }
 
     const normalizedProfileType =
@@ -211,6 +237,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       chosenAccountType &&
       !nextIsAdmin &&
       !hasBoth &&
+      rawProfile.user_type !== 'admin' &&
       rawProfile.user_type !== chosenAccountType
     ) {
       const { error: repairError } = await supabase
@@ -228,7 +255,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       accountType: chosenAccountType,
       resolvedUserType: nextIsAdmin && activeAdminMode
         ? 'admin'
-        : (activeRoleView === 'runner' && rawProfile?.is_runner ? 'runner' : chosenAccountType),
+        : chosenAccountType,
       isAdmin: nextIsAdmin,
       hasBothRoles: hasBoth,
     };
@@ -427,6 +454,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    const userId = user?.id ?? currentUserIdRef.current;
+    clearUserLocalRoleState(userId);
     await supabase.auth.signOut();
     applyResolvedState({
       profile: null,
@@ -437,30 +466,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  const switchRole = async (targetRole: 'customer' | 'business' | 'runner') => {
-    localStorage.setItem("string_active_role_view", targetRole);
+  const switchRole = async (targetRole: 'customer' | 'business') => {
+    if (user?.id) {
+      setActiveRoleView(user.id, targetRole);
+    }
     
     // Optimistic UI updates
-    if (targetRole === 'runner') {
-      setResolvedUserType('runner');
-    } else {
-      setAccountType(targetRole);
-      setResolvedUserType(targetRole);
-      if (profile) {
-        setProfile({ ...profile, user_type: targetRole });
-      }
+    setAccountType(targetRole);
+    setResolvedUserType(targetRole);
+    if (profile) {
+      setProfile({ ...profile, user_type: targetRole });
+    }
 
-      if (user) {
-        try {
-          const { error } = await supabase
-            .from('profiles')
-            .update({ user_type: targetRole })
-            .eq('user_id', user.id);
-          if (error) throw error;
-        } catch (err: any) {
-          console.error("Failed to update profile user_type in database:", err);
-          toast.error(`Database sync issue: ${err.message || err.toString()}`);
-        }
+    if (user) {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ user_type: targetRole })
+          .eq('user_id', user.id);
+        if (error) throw error;
+      } catch (err: any) {
+        console.error("Failed to update profile user_type in database:", err);
+        toast.error(`Database sync issue: ${err.message || err.toString()}`);
       }
     }
     await refreshProfile();

@@ -71,6 +71,34 @@ export default function CustomerOrders() {
     };
   }, [customer?.id, queryClient]);
 
+  const handleSatisfaction = async (orderId: string, satisfied: boolean) => {
+    try {
+      const { error } = await supabase.rpc("respond_to_satisfaction", {
+        p_order_id: orderId,
+        p_satisfied: satisfied
+      });
+      if (error) throw error;
+      toast.success(satisfied ? "Order confirmed as satisfied! 🚀" : "Order marked as unsatisfied. Return flow initiated.");
+      queryClient.invalidateQueries({ queryKey: ["customer-orders"] });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to submit response");
+    }
+  };
+
+  const handleConfirmReturn = async (orderId: string) => {
+    try {
+      const { error } = await supabase.rpc("confirm_order_return", {
+        p_order_id: orderId,
+        p_actor_type: 'shopper'
+      });
+      if (error) throw error;
+      toast.success("Return confirmed! Refund will be credited once the merchant also confirms.");
+      queryClient.invalidateQueries({ queryKey: ["customer-orders"] });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to confirm return");
+    }
+  };
+
   const filterOrders = (status: string) => {
     let filtered = orders;
     if (status === "active") {
@@ -197,18 +225,6 @@ export default function CustomerOrders() {
                 businessName={order.businesses.company_name || "Business"}
               />
             )}
-            {canConfirmOrder(order) && customer && (
-              <OrderConfirmation
-                orderId={order.id}
-                businessId={order.business_id}
-                customerId={customer.id}
-                orderNumber={order.id.slice(0, 8).toUpperCase()}
-                onConfirmed={() => {
-                  queryClient.invalidateQueries({ queryKey: ["customer-orders"] });
-                  setSelectedOrder(null);
-                }}
-              />
-            )}
             {order.status === "pending" && (
               <Button 
                 size="sm" 
@@ -238,6 +254,64 @@ export default function CustomerOrders() {
           </div>
         </div>
         <EscrowTimeline status={status} />
+        
+        {/* Customer Satisfaction Escrow UI Block */}
+        {(order.status === "shipped" || order.status === "delivered") && (
+          <div className="mt-3.5 pt-3.5 border-t border-border/40 space-y-2 text-left">
+            {order.satisfaction_status === "pending" && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-foreground">
+                  Have you received this order and are you satisfied with the product?
+                </p>
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm"
+                    onClick={() => handleSatisfaction(order.id, true)}
+                    className="bg-green-600 hover:bg-green-700 text-white font-bold text-xs rounded-xl h-8 px-3.5"
+                  >
+                    Yes, satisfied
+                  </Button>
+                  <Button 
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => handleSatisfaction(order.id, false)}
+                    className="text-xs font-bold rounded-xl h-8 px-3.5"
+                  >
+                    No, reject item
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {order.satisfaction_status === "unsatisfied" && (
+              <div className="space-y-2 text-xs">
+                <p className="font-semibold text-amber-500 flex items-center gap-1.5">
+                  ⚠️ Product Rejected (Escrow Funds Locked)
+                </p>
+                {order.return_status === "requested" && (
+                  <div className="space-y-1.5 text-slate-400">
+                    {!order.return_confirmed_by_shopper ? (
+                      <>
+                        <p>Please return the product physically to the merchant. Once returned, confirm below:</p>
+                        <Button 
+                          size="sm"
+                          onClick={() => handleConfirmReturn(order.id)}
+                          className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl h-8 px-3.5 mt-1"
+                        >
+                          Confirm Returned
+                        </Button>
+                      </>
+                    ) : (
+                      <p className="text-indigo-400 font-semibold flex items-center gap-1">
+                        ✓ You confirmed the return. Waiting for merchant to confirm receipt...
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   };
@@ -347,37 +421,18 @@ export default function CustomerOrders() {
                 </div>
               )}
 
-              {/* Courier/Runner Info */}
+              {/* Delivery Info */}
               {selectedOrder.delivery_method === "delivery" && (
                 <div className="bg-muted/30 p-3 rounded-2xl border border-border/10 space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Courier/Runner Details</p>
-                    {selectedOrder.runner ? (
-                      <Badge className="bg-emerald-500/10 text-emerald-600 border-none scale-90 capitalize font-black">
-                        {selectedOrder.delivery_status || "accepted"}
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="scale-90 font-black">
-                        Awaiting Courier
-                      </Badge>
-                    )}
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Delivery Details</p>
+                    <Badge variant="outline" className="scale-90 font-black">
+                      Store Delivery
+                    </Badge>
                   </div>
-                  {selectedOrder.runner ? (
-                    <div className="text-xs space-y-1 text-foreground/80">
-                      <p>
-                        Courier: <span className="font-bold text-foreground">{selectedOrder.runner.full_name}</span>
-                      </p>
-                      {selectedOrder.runner.phone && (
-                        <p>
-                          Phone: <a href={`tel:${selectedOrder.runner.phone}`} className="font-bold text-primary underline">{selectedOrder.runner.phone}</a>
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-[11px] text-muted-foreground">
-                      This order is posted to the Runner Gig Board. A student runner will claim it shortly.
-                    </p>
-                  )}
+                  <p className="text-[11px] text-muted-foreground">
+                    This order will be delivered by the store's default delivery method.
+                  </p>
                 </div>
               )}
 

@@ -2,3 +2,18 @@ project_id = "kxynwcuhgawnhqoexpti"
 
 [functions.bootstrap-admin]
 verify_jwt = false
+
+# Explicitly permit external webhook callbacks to reach in-function signature verification.
+# Webhook endpoints should not be blocked by Supabase JWT enforcement.
+[functions.squad-webhook]
+verify_jwt = false
+
+[functions.paystack-webhook]
+verify_jwt = false
+
+# initialize-payment, paystack-payout, and matchmaking-ai remain JWT enforced by default.
+
+# The following functions require JWT validation enforced at the platform gate (default behavior):
+# - initialize-payment (verify_jwt = true)
+# - paystack-payout (verify_jwt = true)
+# - matchmaking-ai (verify_jwt = true)

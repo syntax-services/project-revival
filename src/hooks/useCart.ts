@@ -102,10 +102,35 @@ export function useCart() {
       const needsSync = localItems.some(item => item.id.startsWith("local_"));
       if (!needsSync) return;
 
+      const failedItemIds: string[] = [];
+
       for (const item of localItems) {
-        if (item.id.startsWith("local_")) {
-          try {
-            await supabase.from("cart_items").insert({
+        if (!item.id.startsWith("local_")) continue;
+
+        try {
+          const { data: existing, error: existingError } = await supabase
+            .from("cart_items")
+            .select("id, quantity")
+            .eq("customer_id", customer.id)
+            .eq("business_id", item.business_id)
+            .eq(item.product_id ? "product_id" : "service_id", item.product_id || item.service_id)
+            .maybeSingle();
+
+          if (existingError) {
+            throw existingError;
+          }
+
+          if (existing) {
+            const { error: updateError } = await supabase
+              .from("cart_items")
+              .update({ quantity: existing.quantity + item.quantity })
+              .eq("id", existing.id);
+
+            if (updateError) {
+              throw updateError;
+            }
+          } else {
+            const { error: insertError } = await supabase.from("cart_items").insert({
               customer_id: customer.id,
               business_id: item.business_id,
               product_id: item.product_id,
@@ -113,14 +138,25 @@ export function useCart() {
               quantity: item.quantity,
               notes: item.notes,
             });
-          } catch {
-            // Ignore sync errors
+
+            if (insertError) {
+              throw insertError;
+            }
           }
+        } catch (error) {
+          failedItemIds.push(item.id);
         }
       }
 
-      // Clear local storage and refetch
-      localStorage.removeItem(LOCAL_STORAGE_KEY);
+      if (failedItemIds.length === 0) {
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
+      } else {
+        const remainingItems = localItems.filter(
+          (item) => !item.id.startsWith("local_") || failedItemIds.includes(item.id),
+        );
+        saveLocalCart(remainingItems);
+      }
+
       queryClient.invalidateQueries({ queryKey: ["cart"] });
     };
 

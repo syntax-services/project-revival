@@ -26,15 +26,13 @@ export function parseLocationZone(addressText: string): OouZone {
   if (
     text.includes('main campus') ||
     text.includes('permanent site') ||
-    text.includes(' ps') ||
-    text.includes('ps ') ||
+    /\b(?:ps|sms)\b/.test(text) ||
     text.includes('senate') ||
     text.includes('science class') ||
     text.includes('science faculty') ||
     text.includes('faculty of science') ||
     text.includes('law faculty') ||
     text.includes('faculty of law') ||
-    text.includes('sms') ||
     text.includes('social science') ||
     text.includes('oou library') ||
     text.includes('library') ||
@@ -65,7 +63,7 @@ export function parseLocationZone(addressText: string): OouZone {
     text.includes('garage') ||
     text.includes('ago garage') ||
     text.includes('palace') ||
-    text.includes('oba') ||
+    /\boba\b/.test(text) ||
     text.includes('post office') ||
     text.includes('roundabout')
   ) {

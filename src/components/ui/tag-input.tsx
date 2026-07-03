@@ -32,6 +32,28 @@ export const TagInput = React.forwardRef<HTMLDivElement, TagInputProps>(
       onChange(value.filter((tag) => tag !== tagToRemove));
     };
 
+    const processInputValue = (val: string) => {
+      if (val.includes(",")) {
+        const parts = val.split(",");
+        const lastPart = parts.pop() || "";
+        
+        const currentTags = [...value];
+        parts.forEach((part) => {
+          const trimmed = part.trim();
+          if (trimmed && !currentTags.includes(trimmed)) {
+            if (!maxTags || currentTags.length < maxTags) {
+              currentTags.push(trimmed);
+            }
+          }
+        });
+        
+        onChange(currentTags);
+        setInputValue(lastPart);
+      } else {
+        setInputValue(val);
+      }
+    };
+
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Enter" || e.key === ",") {
         e.preventDefault();
@@ -69,7 +91,7 @@ export const TagInput = React.forwardRef<HTMLDivElement, TagInputProps>(
             type="text"
             value={inputValue}
             onChange={(e) => {
-              setInputValue(e.target.value);
+              processInputValue(e.target.value);
               setShowSuggestions(true);
             }}
             onKeyDown={handleKeyDown}

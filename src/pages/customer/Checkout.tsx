@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Truck, Store, ShieldCheck } from "lucide-react";
+import { Loader2, ArrowLeft, Truck, Store, ShieldCheck, CreditCard, Wallet, Building, Copy, Landmark, CheckCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { StructuredLocationPicker } from "@/components/location/StructuredLocationPicker";
 import { StructuredLocationSelection, formatStructuredLocation, getLocationCoords } from "@/hooks/useStructuredLocations";
@@ -29,6 +29,30 @@ export default function Checkout() {
   const [instructions, setInstructions] = useState("");
   const [processing, setProcessing] = useState(false);
   const [deliveryLocation, setDeliveryLocation] = useState<StructuredLocationSelection | null>(null);
+
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "wallet" | "bank_transfer">("card");
+  const [virtualAccount, setVirtualAccount] = useState<{
+    accountNumber: string;
+    bankName: string;
+    accountName: string;
+    expectedAmount: number;
+    reference: string;
+  } | null>(null);
+  const [transferTimer, setTransferTimer] = useState(1800); // 30 minutes in seconds
+
+  useEffect(() => {
+    if (!virtualAccount) return;
+    const interval = setInterval(() => {
+      setTransferTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [virtualAccount]);
 
   // Determine what businesses we are checkouting from
   const businessesToCheckout = useMemo(() => {
@@ -210,7 +234,7 @@ export default function Checkout() {
           ? deliveryLocation.landmark.id
           : null;
 
-        await (supabase as any)
+        await supabase
           .from("customers")
           .update({
             location_area_id: deliveryLocation.area.id,
@@ -240,7 +264,7 @@ export default function Checkout() {
         const bizDeliveryFee = deliveryType === "standard" ? (computedDeliveryFees[bizId] ?? Math.round(deliveryFee / Object.keys(businessesToCheckout).length)) : 0;
         const bizDiscount = hasIdicDiscount ? Math.round(bizSubtotal * 0.1) : 0;
         const bizTotal = bizSubtotal + bizDeliveryFee - bizDiscount;
-        const commissionAmount = Math.round(bizSubtotal * 0.1); // 10% commission
+        const commissionAmount = Math.round(bizSubtotal * 0.06); // 6% flat commission
 
         const orderPayload = {
           business_id: bizId,
@@ -267,7 +291,7 @@ export default function Checkout() {
           } : {},
         };
 
-        const { data: newOrder, error: orderErr } = await (supabase as any)
+        const { data: newOrder, error: orderErr } = await supabase
           .from("orders")
           .insert(orderPayload)
           .select("id")
@@ -279,11 +303,35 @@ export default function Checkout() {
         orderIds.push(newOrder.id);
       }
 
-      // Initialize Paystack payment for the total sum of all orders
+      if (paymentMethod === "wallet") {
+        // Execute Wallet Checkout RPC
+        const { data: walletData, error: walletErr } = await supabase.rpc("pay_with_wallet", {
+          p_order_ids: orderIds
+        });
+
+        if (walletErr) throw walletErr;
+        const result = walletData as any;
+        if (!result || !result.success) {
+          throw new Error(result?.error || "Failed to complete wallet payment transaction");
+        }
+
+        // Clear customer cart
+        await supabase.from("cart_items").delete().eq("customer_id", customer.id);
+
+        toast({
+          title: "Order Placed Successfully! 🎉",
+          description: "Paid instantly using your String Wallet balance.",
+        });
+        navigate("/customer/profile");
+        return;
+      }
+
+      // Initialize Squad payment (Card or Dynamic Bank Transfer)
       const payload = {
         email: user.email,
         amount: total,
-        orderId: orderIds.join(","), // pass comma-separated list of order IDs
+        orderId: orderIds.join(","),
+        paymentMethod: paymentMethod, // 'card' or 'bank_transfer'
         metadata: {
           order_id: orderIds.join(","),
           multiple_stores: true
@@ -295,21 +343,130 @@ export default function Checkout() {
       });
 
       if (payErr) throw payErr;
-      if (!payData?.success || !payData?.authorization_url) {
-        throw new Error(payData?.error || "Failed to initialize payment gateway transaction");
+      
+      if (paymentMethod === "bank_transfer") {
+        if (!payData?.success || !payData?.virtual_account_number) {
+          throw new Error(payData?.error || "Failed to generate dynamic virtual account");
+        }
+
+        // Clear customer cart
+        await supabase.from("cart_items").delete().eq("customer_id", customer.id);
+
+        setVirtualAccount({
+          accountNumber: payData.virtual_account_number,
+          bankName: payData.bank_name || "GTBank",
+          accountName: payData.account_name || "String Marketplace Payment",
+          expectedAmount: payData.amount || total,
+          reference: payData.reference
+        });
+        setTransferTimer(1800); // 30 minutes countdown
+        toast({
+          title: "Virtual Account Generated",
+          description: "Please transfer the exact total to complete your checkout.",
+        });
+        setProcessing(false);
+      } else {
+        if (!payData?.success || !payData?.authorization_url) {
+          throw new Error(payData?.error || "Failed to initialize payment gateway transaction");
+        }
+
+        // Clear customer cart
+        await supabase.from("cart_items").delete().eq("customer_id", customer.id);
+        window.location.href = payData.authorization_url;
       }
-
-      // Clear customer cart upon order creation
-      await supabase.from("cart_items").delete().eq("customer_id", customer.id);
-
-      window.location.href = payData.authorization_url;
-
     } catch (err: any) {
       console.error("Payment error:", err);
       toast({ variant: "destructive", title: "Checkout Error", description: err.message || "Failed to initialize checkout" });
       setProcessing(false);
     }
   };
+
+  if (virtualAccount) {
+    const minutes = Math.floor(transferTimer / 60);
+    const seconds = transferTimer % 60;
+    const formattedTime = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+
+    const handleCopy = () => {
+      navigator.clipboard.writeText(virtualAccount.accountNumber);
+      toast({
+        title: "Copied!",
+        description: "Account number copied to clipboard.",
+      });
+    };
+
+    return (
+      <DashboardLayout>
+        <div className="max-w-xl mx-auto p-6 md:p-10 animate-fade-in pb-24 space-y-6">
+          <div className="bg-card border border-border/20 rounded-[28px] p-8 shadow-premium text-center space-y-6">
+            <div className="flex justify-center">
+              <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center text-primary animate-pulse">
+                <Landmark className="h-8 w-8" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h1 className="text-2xl font-black text-foreground">Direct Bank Transfer</h1>
+              <p className="text-sm text-muted-foreground">
+                Please transfer the exact amount below to the dynamic virtual account. The system will auto-detect your transfer.
+              </p>
+            </div>
+
+            <div className="p-6 bg-muted/30 rounded-2xl space-y-4 text-left border border-border/10">
+              <div className="flex justify-between items-center pb-3 border-b border-border/10">
+                <span className="text-xs text-muted-foreground font-semibold uppercase">Expected Amount</span>
+                <span className="text-lg font-black text-primary">₦{virtualAccount.expectedAmount.toLocaleString()}</span>
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Bank Name</span>
+                <p className="text-sm font-bold text-foreground">{virtualAccount.bankName}</p>
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Account Name</span>
+                <p className="text-sm font-bold text-foreground">{virtualAccount.accountName}</p>
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Account Number</span>
+                <div className="flex items-center justify-between bg-background border border-border/30 rounded-xl px-3 h-11">
+                  <span className="font-mono font-bold text-base tracking-widest text-foreground">{virtualAccount.accountNumber}</span>
+                  <Button variant="ghost" size="icon" onClick={handleCopy} className="h-8 w-8 rounded-lg">
+                    <Copy className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
+              <p className="text-xs font-bold text-amber-600 dark:text-amber-400">
+                ⏰ Dynamic Account expires in: {formattedTime}
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                Do not transfer funds after the timer expires. We are waiting for Squad settlement updates.
+              </p>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <Button 
+                onClick={() => navigate("/customer/profile")} 
+                className="w-full h-11 rounded-full font-bold shadow-md"
+              >
+                <CheckCircle className="mr-2 h-4 w-4" /> Go to My Orders
+              </Button>
+              <Button 
+                variant="ghost" 
+                onClick={() => setVirtualAccount(null)} 
+                className="w-full h-11 rounded-full text-xs text-muted-foreground hover:text-foreground"
+              >
+                Cancel / Choose Another Method
+              </Button>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -324,7 +481,7 @@ export default function Checkout() {
 
         <div className="space-y-1">
           <h1 className="text-3xl font-black tracking-tight text-foreground">Secure Checkout</h1>
-          <p className="text-sm text-muted-foreground">Complete your order with Paystack secure payment</p>
+          <p className="text-sm text-muted-foreground">Complete your order securely with Squad</p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-10 pt-4">
@@ -405,9 +562,73 @@ export default function Checkout() {
                 </div>
               </div>
             )}
+
+            {/* Payment Method Selector */}
+            <div className="space-y-4 pt-4 border-t border-border/10">
+              <h2 className="text-lg font-bold tracking-tight text-foreground">Payment Method</h2>
+              <RadioGroup 
+                value={paymentMethod} 
+                onValueChange={(val) => setPaymentMethod(val as "card" | "wallet" | "bank_transfer")}
+                className="grid grid-cols-3 gap-4"
+              >
+                <div>
+                  <RadioGroupItem value="card" id="card" className="peer sr-only" />
+                  <Label 
+                    htmlFor="card" 
+                    className="flex flex-col items-center justify-center rounded-2xl border border-border/30 bg-card p-4 hover:bg-accent/40 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/[0.02] peer-data-[state=checked]:text-primary cursor-pointer transition-all duration-300 h-full text-center"
+                  >
+                    <CreditCard className="h-5 w-5 mb-2 shrink-0" />
+                    <span className="text-xs font-bold leading-tight">Debit Card / USSD</span>
+                  </Label>
+                </div>
+                
+                <div>
+                  <RadioGroupItem value="bank_transfer" id="bank_transfer" className="peer sr-only" />
+                  <Label 
+                    htmlFor="bank_transfer" 
+                    className="flex flex-col items-center justify-center rounded-2xl border border-border/30 bg-card p-4 hover:bg-accent/40 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/[0.02] peer-data-[state=checked]:text-primary cursor-pointer transition-all duration-300 h-full text-center"
+                  >
+                    <Building className="h-5 w-5 mb-2 shrink-0" />
+                    <span className="text-xs font-bold leading-tight">Bank Transfer</span>
+                  </Label>
+                </div>
+
+                <div>
+                  <RadioGroupItem 
+                    value="wallet" 
+                    id="wallet" 
+                    className="peer sr-only" 
+                    disabled={!profile?.verification_level || profile.verification_level < 2} 
+                  />
+                  <Label 
+                    htmlFor="wallet" 
+                    className={`flex flex-col items-center justify-center rounded-2xl border border-border/30 bg-card p-4 hover:bg-accent/40 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/[0.02] peer-data-[state=checked]:text-primary cursor-pointer transition-all duration-300 h-full text-center ${
+                      (!profile?.verification_level || profile.verification_level < 2) ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                  >
+                    <Wallet className="h-5 w-5 mb-1 shrink-0" />
+                    <span className="text-xs font-bold leading-tight">String Wallet</span>
+                    <span className="text-[10px] font-mono text-muted-foreground mt-0.5">
+                      ₦{Number(profile?.wallet_balance || 0).toLocaleString()}
+                    </span>
+                  </Label>
+                </div>
+              </RadioGroup>
+              
+              {(!profile?.verification_level || profile.verification_level < 2) && (
+                <p className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl p-2.5 font-medium leading-normal animate-pulse-subtle">
+                  ⚠️ Verify your identity (NIN/BVN) in your profile page to activate and checkout using your String Wallet balance.
+                </p>
+              )}
+
+              {paymentMethod === "wallet" && Number(profile?.wallet_balance || 0) < total && (
+                <p className="text-[10px] text-red-600 dark:text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-2.5 font-medium leading-normal">
+                  ❌ Insufficient Wallet Balance. Please choose another payment method or fund your wallet.
+                </p>
+              )}
+            </div>
           </div>
 
-          {/* Right Column: Order Summary */}
           <div>
             <div className="bg-card/45 backdrop-blur-md border border-border/20 rounded-[28px] p-6 shadow-sm sticky top-24 space-y-6">
               <h2 className="text-lg font-bold tracking-tight text-foreground">Order Summary</h2>
@@ -481,7 +702,7 @@ export default function Checkout() {
               <Button 
                 className="w-full h-12 text-base rounded-full shadow-premium hover:shadow-premium-lg transition-all duration-300" 
                 onClick={handlePayment}
-                disabled={processing}
+                disabled={processing || (paymentMethod === "wallet" && Number(profile?.wallet_balance || 0) < total)}
               >
                 {processing ? (
                   <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Processing...</>
@@ -492,12 +713,12 @@ export default function Checkout() {
               
               {hasIdicDiscount && (
                 <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl p-2.5 text-center text-xs font-bold animate-pulse">
-                  🏆 IDIC Competitor Promo Applied! (10% Off)
+                  🎉 IDIC Competitor Promo Applied! (10% Off)
                 </div>
               )}
 
               <p className="text-center text-[10px] text-muted-foreground flex items-center justify-center gap-1 opacity-70">
-                <ShieldCheck className="w-3.5 h-3.5 text-primary" /> 100% Secure Transaction via Paystack
+                <ShieldCheck className="w-3.5 h-3.5 text-primary" /> 100% Secure Transaction via Squad
               </p>
             </div>
           </div>

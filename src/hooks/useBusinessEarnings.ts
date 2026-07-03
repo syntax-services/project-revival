@@ -164,6 +164,16 @@ export function useProcessWithdrawal() {
       status: "completed" | "rejected";
       adminNotes?: string;
     }) => {
+      // Trigger actual payout via Squad if completing
+      if (status === "completed") {
+        const { data: edgeData, error: edgeError } = await supabase.functions.invoke("paystack-payout", {
+          body: { withdrawalRequestId: withdrawalId }
+        });
+        if (edgeError || !edgeData?.success) {
+          throw new Error(edgeError?.message || edgeData?.error || "Squad transfer initiation failed");
+        }
+      }
+
       // Use secure RPC for atomic withdrawal processing
       const { error } = await supabase.rpc("process_withdrawal_settlement", {
         p_withdrawal_id: withdrawalId,

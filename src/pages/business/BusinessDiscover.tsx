@@ -75,10 +75,10 @@ export default function BusinessDiscover() {
   const [selectedItem, setSelectedItem] = useState<DiscoverItem | null>(null);
   const [imageIndex, setImageIndex] = useState(0);
   const [followedBusinessIds, setFollowedBusinessIds] = useState<string[]>([]);
-  const [mounted, setMounted] = useState(false);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
-    setMounted(true);
+    setPortalTarget(document.getElementById("search-bar-portal"));
   }, []);
 
   useEffect(() => {
@@ -204,7 +204,7 @@ export default function BusinessDiscover() {
         (item?.name || "").toLowerCase().includes(q) ||
         (item?.business?.company_name || "").toLowerCase().includes(q) ||
         (item?.category || "").toLowerCase().includes(q) ||
-        (item?.tags || []).some((tag) => tag.toLowerCase().includes(q));
+        (item?.tags || []).some((tag) => tag && typeof tag === "string" && tag.toLowerCase().includes(q));
       const matchesType =
         itemTypeFilter === "all" ||
         (itemTypeFilter === "products" && !item.isService) ||
@@ -279,7 +279,7 @@ export default function BusinessDiscover() {
   return (
     <DashboardLayout>
       <div className="min-h-screen bg-background pb-20 px-4 md:px-6 animate-fade-in max-w-7xl mx-auto">
-        {mounted && document.getElementById("search-bar-portal") && createPortal(
+        {portalTarget && createPortal(
           <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-2 md:px-6">
             <div className="relative w-full max-w-[360px]">
               <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60" />

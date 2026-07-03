@@ -44,8 +44,18 @@ serve(async (req) => {
     const textBody = await req.text();
 
     if (!signature) {
-      console.warn("Missing x-squad-signature header, processing with mock/lax verification in sandbox");
-    } else {
+      if (Deno.env.get("SQUAD_WEBHOOK_ALLOW_INSECURE") === "true") {
+        console.warn("Missing x-squad-signature header; insecure webhook acceptance is enabled for sandbox testing");
+      } else {
+        console.error("Missing x-squad-signature header");
+        return new Response(JSON.stringify({ error: "Missing signature" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401,
+        });
+      }
+    }
+
+    if (signature) {
       // HMAC SHA-512 verification using Web Crypto API
       const encoder = new TextEncoder();
       const key = await crypto.subtle.importKey(
@@ -163,17 +173,17 @@ serve(async (req) => {
                 if (netAmount > 0) {
                   const { data: wallet } = await supabase
                     .from("business_wallets")
-                    .select("pending_balance")
+                    .select("pending_escrow")
                     .eq("business_id", order.business_id)
                     .maybeSingle();
 
-                  const currentPending = Number(wallet?.pending_balance || 0);
+                  const currentPendingEscrow = Number(wallet?.pending_escrow || 0);
 
                   await supabase
                     .from("business_wallets")
                     .upsert({
                       business_id: order.business_id,
-                      pending_balance: currentPending + netAmount,
+                      pending_escrow: currentPendingEscrow + netAmount,
                       updated_at: new Date().toISOString()
                     }, { onConflict: "business_id" });
                 }

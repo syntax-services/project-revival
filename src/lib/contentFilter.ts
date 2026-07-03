@@ -64,21 +64,32 @@ const NUMBER_WORDS: Record<string, string[]> = {
 const NUMBER_WORD_PATTERNS: RegExp[] = [];
 Object.entries(NUMBER_WORDS).forEach(([, words]) => {
   words.forEach(word => {
-    NUMBER_WORD_PATTERNS.push(new RegExp(`\\b${word}\\b`, 'gi'));
+    NUMBER_WORD_PATTERNS.push(new RegExp(`\\b${word}\\b`, 'i')); // drop global 'g' flag
   });
 });
 
-// Suspicious patterns that might indicate contact sharing
+// Join all words into a single alternation pattern for contiguous sequence testing
+const sortedNumberWords = Object.values(NUMBER_WORDS)
+  .flat()
+  .sort((a, b) => b.length - a.length);
+
+const numberWordPattern = `(?:${sortedNumberWords.join('|')})`;
+
+// Match 5 or more contiguous/adjacent number words separated by space, dot, comma, or dash
+export const NUMBER_WORD_SEQUENCE_REGEX = new RegExp(`\\b${numberWordPattern}(?:[\\s\\-.,]+${numberWordPattern}){4,}\\b`, 'gi');
+
+// Suspicious patterns that might indicate contact sharing (no 'g' flag to avoid stateful test() state)
 const SUSPICIOUS_PATTERNS = [
-  // "Call me", "DM me", "Message me" patterns
-  /\b(?:call|text|message|dm|pm|hit|reach|contact)\s*(?:me|us)?\s*(?:on|at|via|@|:)?\s*\d*/gi,
+  // "Call me", "DM me", "Message me" patterns followed by digits/numbers (no bare words)
+  /\b(?:call|text|message|dm|pm|hit|reach|contact)\s*(?:me|us)?\s*(?:on|at|via|@|:)?\s*\d+/i,
+  /\b(?:call|text|message|dm|pm|hit|reach|contact)\s+(?:me|us)\b/i,
   
   // "My number is", "Add me on" patterns
-  /\b(?:my|our)\s*(?:number|digits|contact|handle|username|account)\s*(?:is|are|:)?\s*/gi,
-  /\b(?:add|follow|find)\s*(?:me|us)\s*(?:on|at|@)?\s*/gi,
+  /\b(?:my|our)\s*(?:number|digits|contact|handle|username|account)\s*(?:is|are|:)?\s*/i,
+  /\b(?:add|follow|find)\s*(?:me|us)\s*(?:on|at|@)?\s*/i,
   
-  // Attempts to spell out numbers
-  /\b(?:zero|one|two|three|four|five|six|seven|eight|nine)\s*[-,.\s]*(?:zero|one|two|three|four|five|six|seven|eight|nine)/gi,
+  // Attempts to spell out numbers (require at least 3 adjacent spelled out digits to avoid false positives)
+  /\b(?:zero|one|two|three|four|five|six|seven|eight|nine)\s*[-,.\s]+(?:zero|one|two|three|four|five|six|seven|eight|nine)\s*[-,.\s]+(?:zero|one|two|three|four|five|six|seven|eight|nine)/i,
 ];
 
 export interface ContentFilterResult {
@@ -95,35 +106,31 @@ export function filterContent(content: string): ContentFilterResult {
 
   // Check social media patterns
   SOCIAL_PATTERNS.forEach(pattern => {
-    const matches = content.match(pattern);
-    if (matches) {
+    const regex = new RegExp(pattern.source, pattern.flags);
+    const matches = Array.from(sanitizedContent.matchAll(regex), (match) => match[0]);
+    if (matches.length) {
       matches.forEach(match => {
         if (!violations.includes('Social media handle detected')) {
           violations.push('Social media handle detected');
         }
         violationCount++;
-        sanitizedContent = sanitizedContent.replace(match, '[REMOVED]');
+        sanitizedContent = sanitizedContent.replace(new RegExp(match.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '[REMOVED]');
       });
     }
   });
 
-  // Check for number word sequences (like "oh eight one...")
-  let numberWordCount = 0;
-  NUMBER_WORD_PATTERNS.forEach(pattern => {
-    if (pattern.test(content)) {
-      numberWordCount++;
-    }
-  });
-  
-  // If we see 4+ number words, it's likely a phone number in disguise
-  if (numberWordCount >= 4) {
+  // Check for number word sequences in a contiguous phrase
+  const numberWordRegex = new RegExp(NUMBER_WORD_SEQUENCE_REGEX.source, NUMBER_WORD_SEQUENCE_REGEX.flags);
+  const numberWordMatches = Array.from(content.matchAll(numberWordRegex));
+  if (numberWordMatches.length > 0) {
     violations.push('Potential phone number in words detected');
-    violationCount += numberWordCount;
+    violationCount += numberWordMatches.length;
   }
 
   // Check suspicious patterns
   SUSPICIOUS_PATTERNS.forEach(pattern => {
-    if (pattern.test(content)) {
+    const regex = new RegExp(pattern.source, pattern.flags);
+    if (regex.test(content)) {
       if (!violations.includes('Suspicious contact sharing attempt')) {
         violations.push('Suspicious contact sharing attempt');
       }

@@ -87,6 +87,15 @@ export default function TermsOfService() {
                             These terms are governed by the laws of the Federal Republic of Nigeria.
                         </p>
                     </section>
+
+                    <section className="space-y-4 bg-primary/5 border border-primary/10 p-5 rounded-2xl">
+                        <h2 className="text-xl font-bold text-foreground">9. Transaction Security & Communication Rules</h2>
+                        <ul className="list-disc pl-6 space-y-2 text-sm">
+                            <li><strong>Escrow Protection:</strong> String functions as a marketplace connector. While physical delivery takes place off-app, payments must go through the in-app wallet and escrow system.</li>
+                            <li><strong>Off-Platform Communication Ban:</strong> Bypassing the platform by sharing phone numbers or personal payment links to transact outside String is strictly prohibited. Accounts violating this will be permanently banned.</li>
+                            <li><strong>Email Verification Signature:</strong> Every official transaction notice or notification email from String contains a dynamic CSS-animated moving signature. Any email claiming to be from String that lacks this animated signature is a scam. Do not interact with it.</li>
+                        </ul>
+                    </section>
                 </div>
             </div>
         </div>

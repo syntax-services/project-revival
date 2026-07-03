@@ -30,6 +30,13 @@ export default function BusinessOverview() {
   const { profile, user, refreshProfile } = useAuth();
   const { data: business, isLoading: businessLoading } = useBusiness();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!businessLoading && !business) {
+      navigate("/store/complete", { replace: true });
+    }
+  }, [business, businessLoading, navigate]);
 
   // Business registration states for onboarding fallback
   const [setupBizName, setSetupBizName] = useState("");
@@ -101,7 +108,6 @@ export default function BusinessOverview() {
   const { data: stats, isLoading: statsLoading } = useBusinessStats(business?.id);
   const { data: orders = [], isLoading: ordersLoading } = useBusinessOrders(business?.id);
   const { data: jobs = [], isLoading: jobsLoading } = useBusinessJobs(business?.id);
-  const navigate = useNavigate();
 
 
 

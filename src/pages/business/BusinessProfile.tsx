@@ -40,7 +40,9 @@ export default function BusinessProfile() {
   const { data: business } = useBusiness();
 
   const handleSwitchToAdmin = async () => {
-    localStorage.setItem("string_active_admin_mode", "true");
+    if (profile?.user_id) {
+      localStorage.setItem(`string_active_admin_mode_${profile.user_id}`, "true");
+    }
     await refreshProfile();
     toast.success("Switched to Admin Mode! 🛡️");
     navigate("/admin");

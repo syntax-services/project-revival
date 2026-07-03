@@ -30,7 +30,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
   const navigate = useNavigate();
 
   const handleSwitchToAdmin = async () => {
-    localStorage.setItem("string_active_admin_mode", "true");
+    if (user?.id) {
+      localStorage.setItem(`string_active_admin_mode_${user.id}`, "true");
+    }
     await refreshProfile();
     toast.success("Switched to Admin Mode! 🛡️");
     navigate("/admin");

@@ -3,6 +3,7 @@ import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
+import jsxA11y from "eslint-plugin-jsx-a11y";
 
 export default tseslint.config(
   { ignores: ["dist"] },
@@ -16,6 +17,7 @@ export default tseslint.config(
     plugins: {
       "react-hooks": reactHooks,
       "react-refresh": reactRefresh,
+      "jsx-a11y": jsxA11y,
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
@@ -24,6 +26,11 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-empty-object-type": "warn",
       "no-useless-escape": "warn",
+      // Accessibility rules from jsx-a11y
+      "jsx-a11y/alt-text": "warn",
+      "jsx-a11y/anchor-is-valid": "warn",
+      "jsx-a11y/no-static-element-interactions": "warn",
+      "jsx-a11y/click-events-have-key-events": "warn",
     },
   },
 );

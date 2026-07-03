@@ -125,6 +125,25 @@ export default function BusinessMessages() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [avatars, setAvatars] = useState<Record<string, string>>({});
+  const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.visualViewport) {
+        setViewportHeight(window.visualViewport.height);
+      } else {
+        setViewportHeight(window.innerHeight);
+      }
+    };
+    
+    window.visualViewport?.addEventListener("resize", handleResize);
+    window.addEventListener("resize", handleResize);
+    
+    return () => {
+      window.visualViewport?.removeEventListener("resize", handleResize);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
 
   // ── Voice Recording States ──
   const [isRecording, setIsRecording] = useState(false);
@@ -147,10 +166,16 @@ export default function BusinessMessages() {
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || "audio/webm" });
+        const recordedMime = mediaRecorder.mimeType || "audio/webm";
+        const fileExt = recordedMime.includes("mp4") || recordedMime.includes("aac")
+          ? "mp4"
+          : recordedMime.includes("ogg")
+            ? "ogg"
+            : "webm";
+        const audioBlob = new Blob(audioChunksRef.current, { type: recordedMime });
         setSending(true);
         try {
-          const fileName = `audio_${Date.now()}.webm`;
+          const fileName = `audio_${Date.now()}.${fileExt}`;
           const filePath = `chats/${selectedConversation!.id}/${fileName}`;
           
           const { error: uploadError } = await supabase.storage
@@ -595,9 +620,10 @@ export default function BusinessMessages() {
           <div
             className={cn(
               "flex-1 flex flex-col bg-background",
-              selectedConversation && "fixed inset-0 z-[80]",
+              selectedConversation && "fixed inset-x-0 top-0 z-[80]",
               !selectedConversation && "hidden lg:flex"
             )}
+            style={selectedConversation ? { height: `${viewportHeight}px` } : undefined}
           >
             {selectedConversation ? (
               <>
