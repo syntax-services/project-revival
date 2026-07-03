@@ -11,6 +11,9 @@ verify_jwt = false
 [functions.paystack-webhook]
 verify_jwt = false
 
+[functions.didit-webhook]
+verify_jwt = false
+
 # initialize-payment, paystack-payout, and matchmaking-ai remain JWT enforced by default.
 
 # The following functions require JWT validation enforced at the platform gate (default behavior):
