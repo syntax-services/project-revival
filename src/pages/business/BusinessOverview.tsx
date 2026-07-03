@@ -28,7 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export default function BusinessOverview() {
   const { profile, user, refreshProfile } = useAuth();
-  const { data: business, isFetched } = useBusiness();
+  const { data: business, isFetched, isLoading: businessLoading } = useBusiness();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
