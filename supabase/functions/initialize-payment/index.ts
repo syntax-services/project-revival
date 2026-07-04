@@ -174,8 +174,10 @@ serve(async (req) => {
     let resolvedOrderId = orderId ?? null;
     let createdOrderId: string | null = null;
 
-    // Only create a new order if it's NOT a job payment and NO orderId is provided
-    if (!jobId && !resolvedOrderId) {
+    const isFunding = safeMetadata.type === "funding";
+
+    // Only create a new order if it's NOT a job payment, NOT a wallet funding request, and NO orderId is provided
+    if (!jobId && !resolvedOrderId && !isFunding) {
       if (!resolvedBusinessId) {
         throw new Error("Business ID is required");
       }

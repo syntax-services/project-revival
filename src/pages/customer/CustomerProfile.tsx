@@ -50,12 +50,16 @@ import { StructuredLocationPicker } from "@/components/location/StructuredLocati
 import { StructuredLocationSelection, formatStructuredLocation, getLocationCoords } from "@/hooks/useStructuredLocations";
 
 export default function CustomerProfile() {
-  const { profile, signOut, refreshProfile, isAdmin, hasBothRoles, switchRole } = useAuth();
+  const { user, profile, signOut, refreshProfile, isAdmin, hasBothRoles, switchRole } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: customer } = useCustomer();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+
+  // Funding States
+  const [fundingAmount, setFundingAmount] = useState("");
+  const [funding, setFunding] = useState(false);
 
   // Feedback states
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
@@ -94,8 +98,6 @@ export default function CustomerProfile() {
   const [registeringIdic, setRegisteringIdic] = useState(false);
   const [hideIdic, setHideIdic] = useState(false);
 
-  const [ninInput, setNinInput] = useState("");
-  const [bvnInput, setBvnInput] = useState("");
   const [verifyingIdentity, setVerifyingIdentity] = useState(false);
 
   useEffect(() => {
@@ -143,37 +145,67 @@ export default function CustomerProfile() {
 
 
 
-  const handleVerifyIdentity = async (e: React.FormEvent) => {
+  const handleFundWallet = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
-
-    const value = (ninInput.trim() || bvnInput.trim()).replace(/\D/g, "");
-    if (value.length !== 11) {
-      toast.error("NIN or BVN must be exactly 11 digits.");
+    if (!user?.email) {
+      toast.error("User email not found. Please log in again.");
       return;
     }
 
-    setVerifyingIdentity(true);
+    const amountNum = Number(fundingAmount);
+    if (!amountNum || amountNum <= 0) {
+      toast.error("Please enter a valid amount to deposit.");
+      return;
+    }
+
+    setFunding(true);
     try {
-      const mockHash = `hash-${value.slice(0, 4)}-xxxx-${value.slice(7)}`;
-      const columnToUpdate = ninInput.trim() ? { nin_hash: mockHash } : { bvn_hash: mockHash };
-      
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          verification_level: 2,
-          ...columnToUpdate
-        })
-        .eq("user_id", user.id);
+      const { data, error } = await supabase.functions.invoke("initialize-payment", {
+        body: {
+          email: user.email,
+          total: amountNum,
+          metadata: {
+            type: "funding",
+            user_id: user.id
+          }
+        }
+      });
 
       if (error) throw error;
-      toast.success("Identity successfully verified! Level 2 unlocked. 🎉");
-      setNinInput("");
-      setBvnInput("");
-      await refreshProfile();
+
+      if (data?.authorization_url) {
+        toast.success("Redirecting to Squad secure checkout...");
+        window.location.assign(data.authorization_url);
+      } else {
+        throw new Error(data?.error || "Failed to initialize deposit");
+      }
+    } catch (err: any) {
+      console.error("Deposit error:", err);
+      toast.error(err.message || "Could not connect to Squad.");
+    } finally {
+      setFunding(false);
+    }
+  };
+
+  const handleVerifyIdentity = async () => {
+    if (!user) return;
+    setVerifyingIdentity(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("didit-session", {
+        body: {
+          session_kind: "customer",
+          callback: window.location.href,
+        },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        window.location.assign(data.url);
+      } else {
+        throw new Error("Failed to initialize verification session.");
+      }
     } catch (err: any) {
       console.error("Verification failed:", err);
-      toast.error(`Verification error: ${err.message || err.toString()}`);
+      toast.error(err.message || err.toString());
     } finally {
       setVerifyingIdentity(false);
     }
@@ -940,55 +972,27 @@ export default function CustomerProfile() {
                     <div>
                       <p className="text-xs font-bold uppercase tracking-wider">Account Verified</p>
                       <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
-                        Your NIN/BVN has been cryptographically secured. You have full withdrawal privileges.
+                        Your identity has been cryptographically secured via Didit. You have full withdrawal privileges.
                       </p>
                     </div>
                   </div>
                 ) : (
-                  <form onSubmit={handleVerifyIdentity} className="space-y-3">
+                  <div className="space-y-3">
                     <p className="text-xs text-muted-foreground leading-tight">
-                      Submit your 11-digit NIN or BVN to verify your account identity. Required for withdrawals and merchant payments.
+                      Verify your identity using Didit (NIN / Passport) to enable payout withdrawals and unlock full shopper benefits.
                     </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <Label htmlFor="nin-inp" className="text-[10px] font-bold text-muted-foreground uppercase">NIN (11 digits)</Label>
-                        <Input
-                          id="nin-inp"
-                          type="text"
-                          maxLength={11}
-                          disabled={!!bvnInput}
-                          placeholder="National ID"
-                          value={ninInput}
-                          onChange={(e) => setNinInput(e.target.value.replace(/\D/g, ""))}
-                          className="h-9 rounded-xl border-border/20 bg-muted/30 text-xs font-semibold font-mono focus-visible:ring-primary"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="bvn-inp" className="text-[10px] font-bold text-muted-foreground uppercase">BVN (11 digits)</Label>
-                        <Input
-                          id="bvn-inp"
-                          type="text"
-                          maxLength={11}
-                          disabled={!!ninInput}
-                          placeholder="Bank Verification"
-                          value={bvnInput}
-                          onChange={(e) => setBvnInput(e.target.value.replace(/\D/g, ""))}
-                          className="h-9 rounded-xl border-border/20 bg-muted/30 text-xs font-semibold font-mono focus-visible:ring-primary"
-                        />
-                      </div>
-                    </div>
                     <Button
-                      type="submit"
-                      disabled={verifyingIdentity || (!ninInput && !bvnInput)}
-                      className="w-full h-10 text-xs font-bold rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground shadow-md transition-all duration-300"
+                      onClick={handleVerifyIdentity}
+                      disabled={verifyingIdentity}
+                      className="w-full h-10 text-xs font-bold rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground shadow-md transition-all duration-300 flex items-center justify-center gap-2"
                     >
                       {verifyingIdentity ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying...</>
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Initializing...</>
                       ) : (
-                        "Verify Identity"
+                        <>Verify Identity with Didit 🛡️</>
                       )}
                     </Button>
-                  </form>
+                  </div>
                 )}
               </div>
             </div>
@@ -1015,19 +1019,22 @@ export default function CustomerProfile() {
               </div>
               
               <div className="p-4 space-y-5">
-                {/* Points & Referral Stats */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-2xl bg-muted/20 border border-border/20 p-4 flex flex-col items-center justify-center text-center relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <Star className="h-5 w-5 text-yellow-500 fill-yellow-500/20 mb-2" />
-                    <p className="text-2xl font-black text-foreground tracking-tighter">₦{totalPoints.toLocaleString()}</p>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Total Balance</p>
+                {/* Wallet & Points Stats */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-2xl bg-muted/20 border border-border/20 p-3 flex flex-col items-center justify-center text-center relative overflow-hidden group">
+                    <CreditCard className="h-4.5 w-4.5 text-emerald-500 mb-1.5" />
+                    <p className="text-sm font-extrabold text-foreground tracking-tight">₦{Number(profile?.wallet_balance || 0).toLocaleString()}</p>
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Wallet Cash</p>
                   </div>
-                  <div className="rounded-2xl bg-muted/20 border border-border/20 p-4 flex flex-col items-center justify-center text-center relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <Users className="h-5 w-5 text-blue-500 mb-2" />
-                    <p className="text-2xl font-black text-foreground tracking-tighter">{totalReferrals.toLocaleString()}</p>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">Friends Referred</p>
+                  <div className="rounded-2xl bg-muted/20 border border-border/20 p-3 flex flex-col items-center justify-center text-center relative overflow-hidden group">
+                    <Star className="h-4.5 w-4.5 text-yellow-500 fill-yellow-500/20 mb-1.5" />
+                    <p className="text-sm font-extrabold text-foreground tracking-tight">₦{totalPoints.toLocaleString()}</p>
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Coupon Cash</p>
+                  </div>
+                  <div className="rounded-2xl bg-muted/20 border border-border/20 p-3 flex flex-col items-center justify-center text-center relative overflow-hidden group">
+                    <Users className="h-4.5 w-4.5 text-blue-500 mb-1.5" />
+                    <p className="text-sm font-extrabold text-foreground tracking-tight">{totalReferrals.toLocaleString()}</p>
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Referred</p>
                   </div>
                 </div>
 
@@ -1087,11 +1094,40 @@ export default function CustomerProfile() {
                   </div>
                 </div>
 
+                {/* Minimalist Wallet Fund Section */}
+                <div className="border-t border-border/10 pt-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-bold text-xs text-foreground tracking-tight">Fund Wallet</h4>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Deposit secure funds instantly via GTCO Squad</p>
+                    </div>
+                    <Badge variant="outline" className="text-[8px] font-bold tracking-wider px-2 py-0.5 bg-emerald-500/5 text-emerald-500 border-emerald-500/20 uppercase">SQUAD SECURE</Badge>
+                  </div>
+
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3 text-sm font-bold text-muted-foreground">₦</span>
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      value={fundingAmount}
+                      onChange={(e) => setFundingAmount(e.target.value)}
+                      className="pl-7 pr-24 h-11 rounded-xl bg-muted/20 border-border/20 focus-visible:ring-emerald-500/30 font-bold text-sm"
+                    />
+                    <Button
+                      onClick={handleFundWallet}
+                      disabled={funding || !fundingAmount || Number(fundingAmount) <= 0}
+                      className="absolute right-1.5 h-8 rounded-lg font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all"
+                    >
+                      {funding ? "Processing..." : "Deposit"}
+                    </Button>
+                  </div>
+                </div>
+
                 {/* Local Bank Withdrawal Form */}
                 <form onSubmit={handleWithdrawalRequest} className="border-t border-border/10 pt-4 space-y-4">
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Request Naira Bank Payout</p>
-                    <Badge variant="secondary" className="text-[8px] font-bold tracking-wider px-2 py-0.5 bg-primary/10 text-primary border-primary/20">PAYSTACK SECURE</Badge>
+                    <Badge variant="secondary" className="text-[8px] font-bold tracking-wider px-2 py-0.5 bg-emerald-500/10 text-emerald-600 border-emerald-500/20">SQUAD SECURE</Badge>
                   </div>
 
                   {/* Purchase Volume Bridge Warning Progress */}

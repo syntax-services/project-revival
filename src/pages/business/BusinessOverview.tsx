@@ -32,12 +32,6 @@ export default function BusinessOverview() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (isFetched && !isFetching && !business) {
-      navigate("/store/complete", { replace: true });
-    }
-  }, [business, isFetched, isFetching, navigate]);
-
   // Business registration states for onboarding fallback
   const [setupBizName, setSetupBizName] = useState("");
   const [setupBizType, setSetupBizType] = useState<"goods" | "services" | "both">("both");
@@ -211,81 +205,32 @@ export default function BusinessOverview() {
     },
   ];
 
-  if (!businessLoading && !business) {
-    return (
-      <DashboardLayout>
-        <div className="max-w-xl mx-auto space-y-6 pb-24 lg:pb-8 animate-fade-in mt-6 text-left">
-          <Card className="border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl p-6 sm:p-8 rounded-3xl">
-            <CardHeader className="text-center pb-4">
-              <div className="mx-auto h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mb-3 animate-pulse">
-                <Store className="h-6 w-6" />
-              </div>
-              <CardTitle className="text-2xl font-bold text-foreground">Initialize Merchant Studio Node</CardTitle>
-              <CardDescription className="text-xs text-muted-foreground mt-1">
-                Provision a secondary merchant profile under this login. Switch back and forth anytime!
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1">
-                <Label htmlFor="setup-biz-name" className="text-xs font-semibold">Business Shop Name *</Label>
-                <Input
-                  id="setup-biz-name"
-                  value={setupBizName}
-                  onChange={(e) => setSetupBizName(e.target.value)}
-                  placeholder="e.g. Campus Corner Cafe"
-                  className="rounded-xl mt-1"
-                />
-              </div>
 
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold">Business Type *</Label>
-                <Select value={setupBizType} onValueChange={(val: any) => setSetupBizType(val)}>
-                  <SelectTrigger className="rounded-xl mt-1">
-                    <SelectValue placeholder="Select business type" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="goods">🏪 Goods (Food, drinks, accessories, etc.)</SelectItem>
-                    <SelectItem value="services">🛠️ Services (Styling, Tutoring, coding, etc.)</SelectItem>
-                    <SelectItem value="both">💼 Both Goods & Services</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1">
-                <StructuredLocationPicker
-                  label="Store pickup / delivery point *"
-                  value={setupBizLocation}
-                  onChange={setSetupBizLocation}
-                  compact
-                />
-              </div>
-
-              <Button
-                onClick={handleRegisterBusiness}
-                disabled={registeringBusiness || !setupBizName || !setupBizLocation}
-                className="w-full mt-4 bg-primary hover:bg-primary/95 text-white font-bold py-3 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
-              >
-                {registeringBusiness ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Launching...
-                  </>
-                ) : (
-                  <>
-                    Launch Merchant Studio 🚀
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </DashboardLayout>
-    );
-  }
 
   return (
     <DashboardLayout>
       <div className="space-y-6 pb-24 lg:pb-8 animate-fade-in">
+
+        {/* Uninitialized Store Alert Banner */}
+        {!isLoading && !business && (
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="space-y-1">
+              <h3 className="font-bold text-amber-500 text-sm flex items-center gap-1.5">
+                <Store className="h-4 w-4" /> Setup Profile & Launch Store
+              </h3>
+              <p className="text-xs text-muted-foreground max-w-xl">
+                Your merchant shop is not initialized yet. Complete your profile details and set up your pickup address in Settings to activate your shop listings, receive orders, and withdraw sales payouts.
+              </p>
+            </div>
+            <Button 
+              size="sm"
+              className="bg-amber-500 hover:bg-amber-600 text-white shrink-0 font-bold rounded-xl text-xs h-9 cursor-pointer"
+              onClick={() => navigate("/business/settings")}
+            >
+              Complete Setup Now
+            </Button>
+          </div>
+        )}
 
         {/* Unverified Location Alert Banner */}
         {!isLoading && business && !business.location_verified && (

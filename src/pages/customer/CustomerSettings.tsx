@@ -11,6 +11,8 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ThemeCustomizer } from "@/components/ui/theme-customizer";
 import { TagInput } from "@/components/ui/tag-input";
 import { useReferral } from "@/hooks/useReferral";
+import { StructuredLocationPicker } from "@/components/location/StructuredLocationPicker";
+import { StructuredLocationSelection, formatStructuredLocation, getLocationCoords } from "@/hooks/useStructuredLocations";
 import { cn } from "@/lib/utils";
 import {
   User,
@@ -36,6 +38,11 @@ interface CustomerData {
   interests: string[];
   preferred_categories: string[];
   location: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  location_area_id?: string | null;
+  location_street_id?: string | null;
+  location_landmark_id?: string | null;
 }
 
 interface MarketplaceSettings {
@@ -94,6 +101,8 @@ export default function CustomerSettings() {
   
   const [fullName, setFullName] = useState(profile?.full_name || "");
   const [phone, setPhone] = useState(profile?.phone || "");
+  const [structuredLocation, setStructuredLocation] = useState<StructuredLocationSelection | null>(null);
+  const [initialLocation, setInitialLocation] = useState<string | null>(null);
   const [customerData, setCustomerData] = useState<CustomerData>({
     interests: [],
     preferred_categories: [],
@@ -117,41 +126,24 @@ export default function CustomerSettings() {
   const [bvnInput, setBvnInput] = useState("");
   const [verifyingIdentity, setVerifyingIdentity] = useState(false);
 
-  const handleVerifyIdentity = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleVerifyIdentity = async () => {
     if (!user) return;
-
-    const value = (ninInput.trim() || bvnInput.trim()).replace(/\D/g, "");
-    if (value.length !== 11) {
-      toast({
-        variant: "destructive",
-        title: "Validation Error",
-        description: "NIN or BVN must be exactly 11 digits.",
-      });
-      return;
-    }
 
     setVerifyingIdentity(true);
     try {
-      const mockHash = `hash-${value.slice(0, 4)}-xxxx-${value.slice(7)}`;
-      const columnToUpdate = ninInput.trim() ? { nin_hash: mockHash } : { bvn_hash: mockHash };
-      
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          verification_level: 2,
-          ...columnToUpdate
-        })
-        .eq("user_id", user.id);
+      const { data, error } = await supabase.functions.invoke("didit-session", {
+        body: {
+          session_kind: "customer",
+          callback: window.location.href,
+        },
+      });
 
       if (error) throw error;
-      toast({
-        title: "Identity Verified",
-        description: "Your Level 2 verification has been successfully approved.",
-      });
-      setNinInput("");
-      setBvnInput("");
-      await refreshProfile();
+      if (data?.url) {
+        window.location.assign(data.url);
+      } else {
+        throw new Error("Failed to initialize verification session.");
+      }
     } catch (err: any) {
       console.error("Verification failed:", err);
       toast({
@@ -214,7 +206,7 @@ export default function CustomerSettings() {
       
       const { data: customer } = await supabase
         .from("customers")
-        .select("id, interests, preferred_categories, location")
+        .select("id, interests, preferred_categories, location, latitude, longitude, location_area_id, location_street_id, location_landmark_id")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -224,7 +216,13 @@ export default function CustomerSettings() {
           interests: customer.interests || [],
           preferred_categories: customer.preferred_categories || [],
           location: customer.location,
+          latitude: customer.latitude,
+          longitude: customer.longitude,
+          location_area_id: customer.location_area_id,
+          location_street_id: customer.location_street_id,
+          location_landmark_id: customer.location_landmark_id,
         });
+        setInitialLocation(customer.location);
 
         // Fetch Extended settings
         const { data: settings } = await supabase
@@ -268,17 +266,41 @@ export default function CustomerSettings() {
         })
         .eq("user_id", user.id);
 
+      const selectedLocationLabel = structuredLocation ? formatStructuredLocation(structuredLocation) : customerData.location;
+      const locationChanged = selectedLocationLabel !== initialLocation;
+      const finalCoords = structuredLocation ? getLocationCoords(structuredLocation) : null;
+      const finalLandmarkId = structuredLocation?.landmark?.id && !structuredLocation.landmark.id.startsWith("default-")
+        ? structuredLocation.landmark.id
+        : null;
+
       // Update customer data
       const { data: customer } = await supabase
         .from("customers")
         .update({
           interests: customerData.interests,
           preferred_categories: customerData.preferred_categories,
-          location: customerData.location,
+          location: selectedLocationLabel,
+          latitude: finalCoords ? finalCoords.latitude : customerData.latitude,
+          longitude: finalCoords ? finalCoords.longitude : customerData.longitude,
+          location_area_id: structuredLocation?.area.id ?? customerData.location_area_id ?? null,
+          location_street_id: structuredLocation?.street.id ?? customerData.location_street_id ?? null,
+          location_landmark_id: structuredLocation ? finalLandmarkId : (customerData.location_landmark_id ?? null),
+          location_verified: locationChanged ? false : undefined,
         })
         .eq("user_id", user.id)
         .select("id")
         .single();
+
+      if (finalCoords) {
+        await supabase
+          .from("profiles")
+          .update({
+            latitude: finalCoords.latitude,
+            longitude: finalCoords.longitude,
+          })
+          .eq("user_id", user.id);
+      }
+      setInitialLocation(selectedLocationLabel);
 
       if (customer) {
         // Update extended settings
@@ -369,16 +391,16 @@ export default function CustomerSettings() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="location" className="text-xs text-muted-foreground">Location</Label>
-              <Input
-                id="location"
-                value={customerData.location || ""}
-                onChange={(e) =>
-                  setCustomerData((prev) => ({ ...prev, location: e.target.value }))
-                }
-                placeholder="City, Country"
-                className="google-input"
+              <StructuredLocationPicker
+                label="Delivery Address / Location"
+                value={structuredLocation}
+                onChange={setStructuredLocation}
               />
+              {!structuredLocation && customerData.location && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Current saved location: {customerData.location}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -404,50 +426,22 @@ export default function CustomerSettings() {
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleVerifyIdentity} className="space-y-3">
-                <p className="text-xs text-muted-foreground leading-tight">
-                  Verify your NIN or BVN to unlock full delivery checkout privileges.
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground leading-relaxed leading-normal bg-muted/40 border border-border/10 p-3.5 rounded-2xl">
+                  Verify your identity using Didit (NIN / Passport) to unlock full checkout and delivery privileges on the String marketplace.
                 </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <Label htmlFor="set-nin" className="text-[10px] font-bold text-muted-foreground">NIN (11 digits)</Label>
-                    <Input
-                      id="set-nin"
-                      type="text"
-                      maxLength={11}
-                      disabled={!!bvnInput}
-                      placeholder="National ID"
-                      value={ninInput}
-                      onChange={(e) => setNinInput(e.target.value.replace(/\D/g, ""))}
-                      className="google-input font-mono text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="set-bvn" className="text-[10px] font-bold text-muted-foreground">BVN (11 digits)</Label>
-                    <Input
-                      id="set-bvn"
-                      type="text"
-                      maxLength={11}
-                      disabled={!!ninInput}
-                      placeholder="Bank Verification"
-                      value={bvnInput}
-                      onChange={(e) => setBvnInput(e.target.value.replace(/\D/g, ""))}
-                      className="google-input font-mono text-xs"
-                    />
-                  </div>
-                </div>
                 <Button
-                  type="submit"
-                  disabled={verifyingIdentity || (!ninInput && !bvnInput)}
-                  className="w-full h-9 text-xs font-bold rounded-xl"
+                  onClick={handleVerifyIdentity}
+                  disabled={verifyingIdentity}
+                  className="w-full h-10 text-xs font-bold rounded-2xl bg-primary text-primary-foreground hover:bg-primary/95 flex items-center justify-center gap-2"
                 >
                   {verifyingIdentity ? (
-                    <><Loader2 className="mr-2 h-4.5 w-4.5 animate-spin" /> Verifying...</>
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Starting Didit...</>
                   ) : (
-                    "Verify Identity"
+                    <>Verify Identity with Didit 🛡️</>
                   )}
                 </Button>
-              </form>
+              </div>
             )}
           </div>
         </div>

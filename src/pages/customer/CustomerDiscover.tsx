@@ -4,11 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCart } from "@/hooks/useCart";
 import { PremiumHome } from "@/components/ui/custom-icons";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, MoreHorizontal, UserPlus, Loader2, Store, ShoppingCart, ShoppingBag, Share2, ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { Search, MoreHorizontal, UserPlus, Loader2, Store, MessageSquare, MessageCircle, Share2, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -62,7 +61,6 @@ export default function CustomerDiscover() {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
   
   const [businesses, setBusinesses] = useState<any[]>([]);
   const [items, setItems] = useState<DiscoverItem[]>([]);
@@ -227,16 +225,44 @@ export default function CustomerDiscover() {
     });
   }, [items, search, itemTypeFilter, categoryFilter, priceFilter]);
 
-  const handleAddToCart = (item: DiscoverItem, e?: React.MouseEvent) => {
+  const handleContactBusiness = async (item: DiscoverItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (!item?.business?.id) return;
+    if (!item?.business?.id || !user) {
+      toast({ variant: "destructive", title: "Authentication required", description: "Please log in to contact the business owner" });
+      return;
+    }
     
-    addToCart.mutate({
-      businessId: item.business.id,
-      productId: !item.isService ? item.id : undefined,
-      serviceId: item.isService ? item.id : undefined,
-      quantity: 1
-    });
+    try {
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+        
+      if (!customer) {
+        toast({ variant: "destructive", title: "Profile incomplete", description: "Please complete your shopper profile to message merchants." });
+        return;
+      }
+      
+      const { data: existingConv } = await supabase
+        .from("conversations")
+        .select("id")
+        .eq("customer_id", customer.id)
+        .eq("business_id", item.business.id)
+        .maybeSingle();
+
+      if (!existingConv) {
+        await supabase.from("conversations").insert({
+          customer_id: customer.id,
+          business_id: item.business.id
+        });
+      }
+
+      navigate("/customer/messages");
+    } catch (err) {
+      console.error(err);
+      toast({ variant: "destructive", title: "Error", description: "Failed to start chat with business owner." });
+    }
   };
 
   const handleFollowStore = async (businessId: string | undefined, e?: React.MouseEvent) => {
@@ -405,15 +431,15 @@ export default function CustomerDiscover() {
                         {typeof item?.price === "number" ? `₦${item.price.toLocaleString()}` : (item?.price || "Contact")}
                       </p>
                     </div>
-                    {/* Add to Cart Premium String Button */}
+                    {/* Contact Business Owner Button */}
                     {item.isOrderable && (
                       <Button 
                         variant="ghost" 
                         size="icon" 
                         className="h-8 w-8 shrink-0 rounded-full hover:bg-primary/10 hover:text-primary transition-colors text-muted-foreground"
-                        onClick={(e) => handleAddToCart(item, e)}
+                        onClick={(e) => handleContactBusiness(item, e)}
                       >
-                        <ShoppingBag className="h-5 w-5" />
+                        <MessageSquare className="h-5 w-5" />
                       </Button>
                     )}
                   </div>
@@ -555,12 +581,11 @@ export default function CustomerDiscover() {
               <div className="p-4 border-t border-border/40 bg-card shrink-0 flex gap-3">
                 {selectedItem.isOrderable ? (
                   <Button 
-                    className="flex-1 h-12 rounded-full font-bold text-base shadow-premium"
-                    onClick={() => { handleAddToCart(selectedItem); setSelectedItem(null); }}
-                    disabled={addToCart.isPending}
+                    className="flex-1 h-12 rounded-full font-bold text-base shadow-premium flex items-center justify-center gap-2"
+                    onClick={() => { handleContactBusiness(selectedItem); setSelectedItem(null); }}
                   >
-                    {addToCart.isPending ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <ShoppingBag className="mr-2 h-6 w-6" />}
-                    Add to Cart
+                    <MessageSquare className="h-5 w-5" />
+                    Contact Business Owner
                   </Button>
                 ) : (
                   <Button 

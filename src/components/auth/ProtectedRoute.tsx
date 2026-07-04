@@ -42,7 +42,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Decision on email verification: Enforced via a banner on DashboardLayout and strictly checked at
   // key business/checkout boundaries, rather than route-level blocking, to allow partial feature access.
   if (!profile.onboarding_completed && !isAdmin && !allowAdminBootstrap) {
-    if (!location.pathname.startsWith("/onboarding") && !location.pathname.startsWith("/store/complete")) {
+    if (!location.pathname.startsWith("/onboarding")) {
       return <Navigate to="/onboarding" replace />;
     }
   }

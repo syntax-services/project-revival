@@ -45,14 +45,14 @@ export default function BusinessBoost() {
 
       if (error) throw error;
       if (data?.authorization_url) {
-        toast.success("Redirecting to Paystack secure checkout...");
+        toast.success("Redirecting to Squad secure checkout...");
         window.location.assign(data.authorization_url);
       } else {
         throw new Error(data?.error || "Failed to initialize booster payment");
       }
     } catch (err: any) {
       console.error("Booster payment initialization error:", err);
-      toast.error(err.message || "Could not connect to Paystack. Please try again.");
+      toast.error(err.message || "Could not connect to Squad. Please try again.");
     } finally {
       setLoadingPayment(false);
     }

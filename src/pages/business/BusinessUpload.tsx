@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { optimizeImage } from "@/lib/imageOptimizer";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBusiness } from "@/hooks/useBusiness";
@@ -39,7 +40,8 @@ const serviceCategories = [
 
 export default function BusinessUpload() {
   const { user } = useAuth();
-  const { data: business } = useBusiness();
+  const { data: business, isFetched } = useBusiness();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("product");
   const [saving, setSaving] = useState(false);
@@ -248,6 +250,28 @@ export default function BusinessUpload() {
       setLocationInput("");
     }
   };
+
+  if (isFetched && !business) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-6 space-y-5">
+          <div className="h-16 w-16 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20 animate-pulse">
+            <Package className="h-8 w-8" />
+          </div>
+          <h2 className="text-xl font-bold text-foreground tracking-tight">Setup Required</h2>
+          <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">
+            Please complete your store setup in settings first to unlock product listings, service bookings, and customer communications.
+          </p>
+          <Button 
+            onClick={() => navigate("/business/settings")} 
+            className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs h-10 rounded-xl px-6 transition-all active:scale-95 shadow-md hover:shadow-lg"
+          >
+            Go to Settings & Initialize
+          </Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>

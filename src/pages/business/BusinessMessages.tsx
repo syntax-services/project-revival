@@ -111,6 +111,16 @@ const AudioPlayer = ({ src, isSelf }: { src: string; isSelf: boolean }) => {
   );
 };
 
+const formatLastMessage = (content: string | null) => {
+  if (!content) return "";
+  if (content.startsWith("[IMAGE]:")) return "📷 Photo";
+  if (content.startsWith("[AUDIO_NOTE]:")) return "🎤 Voice Note";
+  if (content.startsWith("[BID_OFFER]:")) return "🛒 Custom Bid Offer";
+  if (content.startsWith("[VIDEO]:")) return "🎥 Video";
+  if (content.startsWith("[FILE]:")) return "📄 File Attachment";
+  return content;
+};
+
 export default function BusinessMessages() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -596,15 +606,22 @@ export default function BusinessMessages() {
                                 </Badge>
                               )}
                             </span>
-                            {conv.unread_count > 0 && (
-                              <span className="h-5 w-5 rounded-full bg-primary text-xs text-primary-foreground flex items-center justify-center">
-                                {conv.unread_count}
-                              </span>
-                            )}
+                            <div className="flex items-center gap-2">
+                              {conv.last_message_at && (
+                                <span className="text-[10px] text-muted-foreground font-semibold">
+                                  {format(new Date(conv.last_message_at), "HH:mm")}
+                                </span>
+                              )}
+                              {conv.unread_count > 0 && (
+                                <span className="h-5 w-5 rounded-full bg-primary text-xs text-primary-foreground flex items-center justify-center">
+                                  {conv.unread_count}
+                                </span>
+                              )}
+                            </div>
                           </div>
                           {conv.last_message && (
-                            <p className="text-sm text-muted-foreground truncate">
-                              {conv.last_message}
+                            <p className="text-sm text-muted-foreground truncate font-medium">
+                              {formatLastMessage(conv.last_message)}
                             </p>
                           )}
                         </div>

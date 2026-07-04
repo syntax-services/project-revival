@@ -2,8 +2,9 @@ import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Package, Star, ShoppingCart, Crown } from "lucide-react";
-import { useCart } from "@/hooks/useCart";
+import { Package, Star, MessageSquare, Crown } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 interface Product {
@@ -30,7 +31,7 @@ interface ProductGridProps {
 
 export function ProductGrid({ products }: ProductGridProps) {
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { user, profile } = useAuth();
 
   // Sort featured products first
   const sortedProducts = [...products].sort((a, b) => {
@@ -39,17 +40,57 @@ export function ProductGrid({ products }: ProductGridProps) {
     return 0;
   });
 
-  const handleAddToCart = async (product: Product) => {
-    if (!product.in_stock) {
-      toast.error("This product is out of stock");
+  const handleContactBusiness = async (product: Product) => {
+    if (!user) {
+      toast.error("Please log in to contact the business owner");
       return;
     }
-    
-    addToCart.mutate({
-      productId: product.id,
-      businessId: product.business_id,
-      quantity: 1,
-    });
+
+    if (profile?.user_type === "business" && product.business_id) {
+      // Get the current user's business ID to prevent messaging themselves
+      const { data: ownBiz } = await supabase
+        .from("businesses")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (ownBiz && ownBiz.id === product.business_id) {
+        toast.info("This is your own business listing.");
+        return;
+      }
+    }
+
+    try {
+      const { data: customer } = await supabase
+        .from("customers")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!customer) {
+        toast.error("Please complete your shopper profile to message merchants.");
+        return;
+      }
+
+      const { data: existingConv } = await supabase
+        .from("conversations")
+        .select("id")
+        .eq("customer_id", customer.id)
+        .eq("business_id", product.business_id)
+        .maybeSingle();
+
+      if (!existingConv) {
+        await supabase.from("conversations").insert({
+          customer_id: customer.id,
+          business_id: product.business_id,
+        });
+      }
+
+      navigate("/customer/messages");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to contact business owner.");
+    }
   };
 
   if (products.length === 0) {
@@ -142,15 +183,14 @@ export function ProductGrid({ products }: ProductGridProps) {
               </div>
             )}
 
-            {/* Add to Cart */}
+            {/* Contact Business Owner */}
             <Button
-              className="w-full mt-3"
+              className="w-full mt-3 font-semibold rounded-xl"
               size="sm"
-              onClick={() => handleAddToCart(product)}
-              disabled={!product.in_stock || addToCart.isPending}
+              onClick={() => handleContactBusiness(product)}
             >
-              <ShoppingCart className="h-4 w-4 mr-1" />
-              Add to Cart
+              <MessageSquare className="h-4 w-4 mr-1.5" />
+              Contact Business Owner
             </Button>
           </CardContent>
         </Card>

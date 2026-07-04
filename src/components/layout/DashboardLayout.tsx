@@ -9,10 +9,11 @@ import { cn } from "@/lib/utils";
 import stringLogoLight from "@/assets/string-logo-light.png";
 import stringLogoDark from "@/assets/String-logo-dark.png";
 import { useAuth } from "@/contexts/AuthContext";
-import { AlertCircle, Plus, MessageSquare, ArrowRight, X, ShieldCheck } from "lucide-react";
+import { AlertCircle, Plus, MessageSquare, ArrowRight, X, ShieldCheck, Store } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { playChatAlert } from "@/hooks/useAudioSignals";
+import { useBusiness } from "@/hooks/useBusiness";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -28,6 +29,30 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
   const { isEmailVerified, user, resolvedUserType, isAdmin, refreshProfile, hasBothRoles, switchRole } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+
+  const { data: business, isFetched } = useBusiness();
+
+  const isBusinessPage = location.pathname.startsWith("/business");
+  const isAllowedPath = location.pathname === "/business" || location.pathname === "/business/settings";
+  const showBlocker = false;
+
+  const BlockerContent = () => (
+    <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-6 space-y-5">
+      <div className="h-16 w-16 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20">
+        <Store className="h-8 w-8" />
+      </div>
+      <h2 className="text-xl font-bold text-foreground">Setup Required</h2>
+      <p className="text-sm text-muted-foreground max-w-sm">
+        Please complete your store setup in settings first to unlock product listings, service bookings, and customer communications.
+      </p>
+      <button 
+        onClick={() => navigate("/business/settings")} 
+        className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs h-10 rounded-xl px-6"
+      >
+        Go to Settings & Initialize
+      </button>
+    </div>
+  );
 
   const handleSwitchToAdmin = async () => {
     if (user?.id) {
@@ -294,7 +319,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
             </Link>
           )}
           <NotificationsPopup />
-          {resolvedUserType === "customer" && <CartPopup />}
+          {/* Removed CartPopup for MVP chat handshake model */}
         </div>
       </header>
 
@@ -350,7 +375,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                     style={{ willChange: 'transform' }}
                   >
                     {isCurrent ? (
-                      children
+                      showBlocker ? <BlockerContent /> : children
                     ) : globalCachedTabsHtml[tabPath] ? (
                       <div className="w-full h-full" dangerouslySetInnerHTML={{ __html: globalCachedTabsHtml[tabPath] }} />
                     ) : (
@@ -394,7 +419,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                 willChange: 'transform'
               }}
             >
-              {children}
+              {showBlocker ? <BlockerContent /> : children}
             </div>
           </div>
         )}

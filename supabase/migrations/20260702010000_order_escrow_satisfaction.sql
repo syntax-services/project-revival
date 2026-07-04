@@ -133,6 +133,7 @@ END;
 $$;
 
 -- 4. Define or replace withdrawal settlement processor
+DROP FUNCTION IF EXISTS public.process_withdrawal_settlement(UUID, UUID, TEXT, TEXT);
 CREATE OR REPLACE FUNCTION public.process_withdrawal_settlement(
   p_withdrawal_id UUID,
   p_admin_id UUID,

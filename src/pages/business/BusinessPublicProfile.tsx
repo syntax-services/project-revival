@@ -453,9 +453,9 @@ export default function BusinessPublicProfile() {
                         </Badge>
                       </div>
                       {profile?.user_type === "customer" && product.in_stock && (
-                        <Button className="w-full mt-3" onClick={() => addToCart(product)} size="sm">
-                          <ShoppingCart className="h-4 w-4 mr-2" />
-                          Add to Cart
+                        <Button className="w-full mt-3 font-semibold rounded-xl" onClick={startChat} size="sm">
+                          <MessageCircle className="h-4 w-4 mr-2" />
+                          Contact Business Owner
                         </Button>
                       )}
                     </div>
@@ -513,77 +513,8 @@ export default function BusinessPublicProfile() {
           )}
         </div>
 
-        {/* Floating Cart Button */}
-        {cart.length > 0 && (
-          <div className="fixed bottom-20 left-4 right-4 lg:bottom-6 lg:left-auto lg:right-6 lg:w-auto z-40">
-            <Button onClick={() => setShowCart(true)} className="w-full lg:w-auto shadow-lg">
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              View Cart ({cart.reduce((sum, item) => sum + item.quantity, 0)} items) • {'\u20A6'}{cartTotal.toLocaleString()}
-            </Button>
-          </div>
-        )}
+        {/* Floating Cart Button & Dialog removed for MVP chat handshake model */}
       </div>
-
-      {/* Cart Dialog */}
-      <Dialog open={showCart} onOpenChange={setShowCart}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Your Cart</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {cart.map((item) => (
-              <div key={item.product.id} className="flex items-center justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground truncate">{item.product.name}</p>
-                  <p className="text-sm text-muted-foreground">₦{(item.product.price || 0).toLocaleString()} each</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateCartQuantity(item.product.id, -1)}>
-                    <Minus className="h-3 w-3" />
-                  </Button>
-                  <span className="w-8 text-center">{item.quantity}</span>
-                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateCartQuantity(item.product.id, 1)}>
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-
-            <div className="border-t pt-4">
-              <div className="flex justify-between font-medium">
-                <span>Subtotal</span>
-                <span>₦{cartTotal.toLocaleString()}</span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Delivery fees and service charges will be added at checkout
-              </p>
-            </div>
-
-            <Button className="w-full" onClick={proceedToCheckout} disabled={cart.length === 0}>
-              Proceed to Checkout
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Checkout Flow */}
-      {business && (
-        <CheckoutFlow
-          isOpen={showCheckout}
-          onClose={() => setShowCheckout(false)}
-          businessId={business.id}
-          businessName={business.company_name}
-          cartItems={cart.map((item) => ({
-            productId: item.product.id,
-            name: item.product.name,
-            price: item.product.price || 0,
-            quantity: item.quantity,
-            imageUrl: item.product.image_url || undefined,
-            commissionPercent: item.product.commission_percent || undefined,
-          }))}
-          onSuccess={handleCheckoutSuccess}
-        />
-      )}
 
       {/* Service Request Dialog */}
       <Dialog open={!!selectedService} onOpenChange={() => setSelectedService(null)}>

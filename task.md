@@ -13,3 +13,11 @@
   - `[x]` Add deposit-to-spent checks and limit velocity block controls in withdrawal code.
 - `[x]` 6. Verification & Compilation
   - `[x]` Run TypeScript type-safety check (Successful, 0 errors).
+
+## Minimalist Wallets, Chat Handshake, and Storage Audit Phase
+- `[x]` 1. Delete complete onboarding blockers & CompleteOnboarding page
+- `[x]` 2. Change Add to Cart features to Contact Business Owner direct chat
+- `[x]` 3. Design minimalist in-app wallets for shopper & business settings
+- `[x]` 4. Secure Didit identity verification on customer profile
+- `[x]` 5. Audit storage buckets and deploy unrestricted RLS policies
+- `[x]` 6. Verify project-wide TypeScript safety & build correctness

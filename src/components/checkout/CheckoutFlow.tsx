@@ -175,7 +175,7 @@ export function CheckoutFlow({
     },
   });
 
-  // Initialize Paystack payment
+  // Initialize Squad payment
   const initializePayment = async () => {
     if (!customer || !user?.email) {
       toast.error("Please complete your profile first");
