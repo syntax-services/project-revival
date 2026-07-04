@@ -33,6 +33,7 @@ import {
   ChevronDown,
   Store,
   AlertTriangle,
+  User,
 } from "lucide-react";
 
 interface BusinessData {
