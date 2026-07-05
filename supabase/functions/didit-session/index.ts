@@ -37,46 +37,7 @@ serve(async (req) => {
     const diditWorkflowId = Deno.env.get("DIDIT_WORKFLOW_ID");
 
     if (!diditApiKey) {
-      console.warn("DIDIT_API_KEY is not configured. Falling back to mock verification.");
-      
-      const mockSessionId = "mock_didit_session_" + Math.random().toString(36).substr(2, 9);
-      const redirectUrl = new URL(callback || `${req.headers.get("origin") || "https://www.string.com.ng"}/customer/profile`);
-      redirectUrl.searchParams.set("verificationSessionId", mockSessionId);
-      redirectUrl.searchParams.set("status", "Approved");
-      
-      // Auto-approve in database for demo purposes
-      if (session_kind === "business") {
-        await supabase
-          .from("businesses")
-          .update({ verified: true, verification_tier: "verified" })
-          .eq("user_id", user.id);
-      } else {
-        await supabase
-          .from("profiles")
-          .update({ verification_level: 2 })
-          .eq("user_id", user.id);
-
-        await supabase
-          .from("immutable_kyc_archive")
-          .insert({
-            user_id: user.id,
-            full_name: user.user_metadata?.full_name || 'Demo User',
-            email: user.email || 'demo@string.me',
-            verification_level: 2
-          });
-      }
-
-      return new Response(
-        JSON.stringify({ 
-          url: redirectUrl.toString(), 
-          session_id: mockSessionId,
-          is_mock: true 
-        }), 
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        }
-      );
+      throw new Error("DIDIT_API_KEY is not configured");
     }
 
     // Call Didit API v3 to create session

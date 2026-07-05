@@ -15,6 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { StructuredLocationPicker } from "@/components/location/StructuredLocationPicker";
 import { StructuredLocationSelection, formatStructuredLocation, getLocationCoords } from "@/hooks/useStructuredLocations";
 import { estimateDeliveryFee } from "@/lib/structuredDelivery";
+import { getEdgeFunctionErrorMessage } from "@/lib/edgeFunctionErrors";
 
 export default function Checkout() {
   const [searchParams] = useSearchParams();
@@ -342,7 +343,9 @@ export default function Checkout() {
         body: payload
       });
 
-      if (payErr) throw payErr;
+      if (payErr) {
+        throw new Error(await getEdgeFunctionErrorMessage(payErr, "Failed to initialize checkout"));
+      }
       
       if (paymentMethod === "bank_transfer") {
         if (!payData?.success || !payData?.virtual_account_number) {

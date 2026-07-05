@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { StringPremiumIcon } from "@/components/business/VerificationBadge";
 import { playPremiumMatchChime } from "@/hooks/useAudioSignals";
+import { getEdgeFunctionErrorMessage } from "@/lib/edgeFunctionErrors";
 
 export default function BusinessBoost() {
   const { user } = useAuth();
@@ -43,7 +44,9 @@ export default function BusinessBoost() {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(await getEdgeFunctionErrorMessage(error, "Could not connect to Squad."));
+      }
       if (data?.authorization_url) {
         toast.success("Redirecting to Squad secure checkout...");
         window.location.assign(data.authorization_url);

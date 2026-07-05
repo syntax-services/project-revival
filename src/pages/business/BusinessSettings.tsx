@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { StructuredLocationPicker } from "@/components/location/StructuredLocationPicker";
 import { StructuredLocationSelection, formatStructuredLocation, getLocationCoords } from "@/hooks/useStructuredLocations";
+import { getEdgeFunctionErrorMessage } from "@/lib/edgeFunctionErrors";
 import {
   Building2,
   MapPin,
@@ -124,7 +125,9 @@ export default function BusinessSettings() {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(await getEdgeFunctionErrorMessage(error, "Could not connect to Squad."));
+      }
 
       if (data?.authorization_url) {
         toast({ title: "Redirecting...", description: "Redirecting to Squad secure checkout page." });

@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { getEdgeFunctionErrorMessage } from "@/lib/edgeFunctionErrors";
 
 type JobStatus = "requested" | "quoted" | "accepted" | "rejected" | "ongoing" | "completed" | "cancelled" | "disputed";
 
@@ -53,7 +54,9 @@ export default function CustomerJobs() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(await getEdgeFunctionErrorMessage(error, "Failed to start payment process"));
+      }
       if (data?.authorization_url) {
         window.location.assign(data.authorization_url);
       } else {

@@ -14,6 +14,7 @@ import {
   CheckCircle, AlertCircle, CreditCard 
 } from "lucide-react";
 import { toast } from "sonner";
+import { getEdgeFunctionErrorMessage } from "@/lib/edgeFunctionErrors";
 
 interface CartItem {
   productId: string;
@@ -163,7 +164,9 @@ export function CheckoutFlow({
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(await getEdgeFunctionErrorMessage(error, "Failed to get payment URL"));
+      }
       if (!data?.success || !data.authorization_url) {
         throw new Error(data?.error || "Failed to get payment URL");
       }

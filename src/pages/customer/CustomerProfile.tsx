@@ -48,6 +48,7 @@ import { playPremiumMatchChime } from "@/hooks/useAudioSignals";
 import { cn } from "@/lib/utils";
 import { StructuredLocationPicker } from "@/components/location/StructuredLocationPicker";
 import { StructuredLocationSelection, formatStructuredLocation, getLocationCoords } from "@/hooks/useStructuredLocations";
+import { getEdgeFunctionErrorMessage } from "@/lib/edgeFunctionErrors";
 
 export default function CustomerProfile() {
   const { user, profile, signOut, refreshProfile, isAdmin, hasBothRoles, switchRole } = useAuth();
@@ -171,7 +172,9 @@ export default function CustomerProfile() {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(await getEdgeFunctionErrorMessage(error, "Could not connect to Squad."));
+      }
 
       if (data?.authorization_url) {
         toast.success("Redirecting to Squad secure checkout...");
@@ -197,7 +200,9 @@ export default function CustomerProfile() {
           callback: window.location.href,
         },
       });
-      if (error) throw error;
+      if (error) {
+        throw new Error(await getEdgeFunctionErrorMessage(error, "Failed to start Didit verification."));
+      }
       if (data?.url) {
         window.location.assign(data.url);
       } else {

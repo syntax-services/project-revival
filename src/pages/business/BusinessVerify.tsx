@@ -19,6 +19,7 @@ import { playVerificationChime } from "@/hooks/useAudioSignals";
 import { InterlockingLoader } from "@/components/ui/interlocking-loader";
 import { StructuredLocationPicker } from "@/components/location/StructuredLocationPicker";
 import { StructuredLocationSelection, formatStructuredLocation, getLocationCoords } from "@/hooks/useStructuredLocations";
+import { getEdgeFunctionErrorMessage } from "@/lib/edgeFunctionErrors";
 
 export default function BusinessVerify() {
   const { user, refreshProfile } = useAuth();
@@ -163,7 +164,9 @@ export default function BusinessVerify() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(await getEdgeFunctionErrorMessage(error, "Failed to start Didit verification."));
+      }
       if (data?.url) {
         window.location.assign(data.url);
       } else {

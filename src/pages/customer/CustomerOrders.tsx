@@ -18,6 +18,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { getEdgeFunctionErrorMessage } from "@/lib/edgeFunctionErrors";
 
 type OrderStatus = "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded";
 
@@ -238,10 +239,15 @@ export default function CustomerOrders() {
                        total: order.total
                      }
                    });
+                   if (error) {
+                     toast.error(await getEdgeFunctionErrorMessage(error, "Failed to resume payment"));
+                     return;
+                   }
+
                    if (data?.authorization_url) {
                      window.location.assign(data.authorization_url);
                    } else {
-                     toast.error("Failed to resume payment");
+                     toast.error(data?.error || "Failed to resume payment");
                    }
                 }}
               >

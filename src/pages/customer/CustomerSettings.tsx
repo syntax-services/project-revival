@@ -14,6 +14,7 @@ import { useReferral } from "@/hooks/useReferral";
 import { StructuredLocationPicker } from "@/components/location/StructuredLocationPicker";
 import { StructuredLocationSelection, formatStructuredLocation, getLocationCoords } from "@/hooks/useStructuredLocations";
 import { cn } from "@/lib/utils";
+import { getEdgeFunctionErrorMessage } from "@/lib/edgeFunctionErrors";
 import {
   User,
   MapPin,
@@ -138,7 +139,9 @@ export default function CustomerSettings() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(await getEdgeFunctionErrorMessage(error, "Failed to start Didit verification."));
+      }
       if (data?.url) {
         window.location.assign(data.url);
       } else {
