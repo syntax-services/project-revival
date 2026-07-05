@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const SQUAD_SECRET_KEY = Deno.env.get("SQUAD_SECRET_KEY") || Deno.env.get("PAYSTACK_SECRET_KEY");
+    const SQUAD_SECRET_KEY = Deno.env.get("SQUAD_SECRET_KEY");
     if (!SQUAD_SECRET_KEY) {
       throw new Error("SQUAD_SECRET_KEY is not configured in the environment variables");
     }
