@@ -40,6 +40,10 @@ serve(async (req) => {
       throw new Error("DIDIT_API_KEY is not configured");
     }
 
+    if (!diditWorkflowId) {
+      throw new Error("DIDIT_WORKFLOW_ID is not configured");
+    }
+
     // Call Didit API v3 to create session
     console.log(`Initiating Didit session for user ${user.id} (${session_kind})`);
 
@@ -51,10 +55,7 @@ serve(async (req) => {
       callback: callbackUrl,
     };
 
-    // Add workflow_id if configured
-    if (diditWorkflowId) {
-      diditBody.workflow_id = diditWorkflowId;
-    }
+    diditBody.workflow_id = diditWorkflowId;
 
     const response = await fetch("https://verification.didit.me/v3/session/", {
       method: "POST",

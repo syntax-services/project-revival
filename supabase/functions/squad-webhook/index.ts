@@ -82,10 +82,25 @@ serve(async (req) => {
     console.log("Squad webhook event parsed:", event.event);
 
     const txRef = event.body?.transaction_ref || event.transaction_ref;
-    const meta = event.body?.meta || {};
+    let meta = event.body?.meta || {};
     const amount = Number(event.body?.amount || 0) / 100; // convert Kobo to NGN
 
     if (txRef) {
+      const { data: existingTx, error: existingTxError } = await supabase
+        .from("payment_transactions")
+        .select("metadata")
+        .eq("paystack_reference", txRef)
+        .maybeSingle();
+
+      if (existingTxError) {
+        console.error("Error loading existing transaction metadata:", existingTxError);
+      }
+
+      const savedMeta = existingTx?.metadata && typeof existingTx.metadata === "object"
+        ? existingTx.metadata as Record<string, unknown>
+        : {};
+      meta = { ...savedMeta, ...meta };
+
       // 1. Update transaction log
       const { error: txError } = await supabase
         .from("payment_transactions")
@@ -93,7 +108,10 @@ serve(async (req) => {
           status: "success",
           paid_at: new Date().toISOString(),
           payment_method: "squad",
-          metadata: event,
+          metadata: {
+            ...meta,
+            provider_event: event,
+          },
         })
         .eq("paystack_reference", txRef);
 

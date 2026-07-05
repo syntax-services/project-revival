@@ -252,13 +252,6 @@ serve(async (req) => {
       initiate_type: "inline",
       transaction_ref: transactionRef,
       callback_url: getCallbackUrl(req),
-      meta: {
-        order_id: resolvedOrderId,
-        job_id: jobId ?? null,
-        user_id: user.id,
-        delivery_type: normalizedDeliveryType,
-        ...safeMetadata,
-      }
     };
 
     if (userProfile?.squad_subaccount_id) {
@@ -312,13 +305,18 @@ serve(async (req) => {
       amount: paymentAmount,
       currency: "NGN",
       status: "pending",
-      paystack_reference: squadData.data.transaction_ref,
+      paystack_reference: squadData.data.transaction_ref || transactionRef,
       paystack_access_code: squadData.data.merchant_id,
       metadata: {
         initialized_at: new Date().toISOString(),
+        order_id: resolvedOrderId,
+        job_id: jobId ?? null,
+        user_id: user.id,
         delivery_type: normalizedDeliveryType,
         payment_gateway: "squad",
+        provider_transaction_ref: squadData.data.transaction_ref || transactionRef,
         ...(isFunding ? { type: "funding" } : {}),
+        ...safeMetadata,
       },
     };
     if (resolvedOrderId) {
