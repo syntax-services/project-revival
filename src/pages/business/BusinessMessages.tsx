@@ -136,21 +136,27 @@ export default function BusinessMessages() {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [avatars, setAvatars] = useState<Record<string, string>>({});
   const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
+  const [viewportOffsetTop, setViewportOffsetTop] = useState(0);
 
   useEffect(() => {
     const handleResize = () => {
       if (window.visualViewport) {
-        setViewportHeight(window.visualViewport.height);
+        setViewportHeight(Math.floor(window.visualViewport.height));
+        setViewportOffsetTop(Math.floor(window.visualViewport.offsetTop || 0));
       } else {
         setViewportHeight(window.innerHeight);
+        setViewportOffsetTop(0);
       }
     };
     
+    handleResize();
     window.visualViewport?.addEventListener("resize", handleResize);
+    window.visualViewport?.addEventListener("scroll", handleResize);
     window.addEventListener("resize", handleResize);
     
     return () => {
       window.visualViewport?.removeEventListener("resize", handleResize);
+      window.visualViewport?.removeEventListener("scroll", handleResize);
       window.removeEventListener("resize", handleResize);
     };
   }, []);
@@ -636,11 +642,11 @@ export default function BusinessMessages() {
           {/* Message Thread */}
           <div
             className={cn(
-              "flex-1 flex flex-col bg-background",
-              selectedConversation && "fixed inset-x-0 top-0 z-[80]",
+              "flex-1 flex flex-col bg-background min-h-0",
+              selectedConversation && "fixed inset-x-0 z-[80] overflow-hidden overscroll-contain",
               !selectedConversation && "hidden lg:flex"
             )}
-            style={selectedConversation ? { height: `${viewportHeight}px` } : undefined}
+            style={selectedConversation ? { top: `${viewportOffsetTop}px`, height: `${viewportHeight}px` } : undefined}
           >
             {selectedConversation ? (
               <>
@@ -670,7 +676,7 @@ export default function BusinessMessages() {
                 {/* Messages */}
                 <div 
                   ref={scrollContainerRef}
-                  className="flex-1 overflow-y-auto px-3 py-4 space-y-4 scrollbar-none scroll-smooth bg-muted/10"
+                  className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-4 pb-8 space-y-4 scrollbar-none scroll-smooth bg-muted/10"
                 >
                   <div className="space-y-4">
                     {messages.map((msg) => (
@@ -789,13 +795,13 @@ export default function BusinessMessages() {
                 </div>
 
                 {/* Input */}
-                <div className="p-3 border-t border-border/10 bg-background/95 backdrop-blur-xl shrink-0">
+                <div className="px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] border-t border-border/10 bg-background/95 backdrop-blur-xl shrink-0">
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
                       handleSend();
                     }}
-                    className="flex items-center gap-2 max-w-4xl mx-auto"
+                    className="flex items-end gap-2 max-w-4xl mx-auto"
                   >
                     <div className="flex-1 flex items-center gap-2 bg-muted/20 border border-border/10 rounded-full px-3 py-1.5 shadow-none focus-within:border-primary/20 focus-within:ring-1 focus-within:ring-primary/10 transition-all duration-300">
                       <input

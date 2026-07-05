@@ -979,5 +979,14 @@ body.chat-active header.dashboard-header,
 body.chat-active nav.bottom-nav {
   display: none !important;
 }
+
+body.chat-active {
+  overflow: hidden !important;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  overscroll-behavior: none;
+}
+
 body { overscroll-behavior-x: none; }
 

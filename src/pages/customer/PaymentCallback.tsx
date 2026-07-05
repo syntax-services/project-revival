@@ -3,8 +3,10 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/useCart";
-import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+
+type PaymentKind = "order" | "funding" | "job";
 
 export default function PaymentCallback() {
   const [searchParams] = useSearchParams();
@@ -13,6 +15,8 @@ export default function PaymentCallback() {
   const { clearCart } = useCart();
   
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
+  const [paymentKind, setPaymentKind] = useState<PaymentKind>("order");
+  const [amount, setAmount] = useState<number | null>(null);
 
   useEffect(() => {
     if (!reference) {
@@ -22,20 +26,31 @@ export default function PaymentCallback() {
 
     const checkStatus = async () => {
       try {
-        // Clear the cart since checkout was initiated
-        clearCart.mutate();
-
         // The webhook handles actual verification, but we can optimistically show success
         // or poll the payment_transactions table
         const { data, error } = await supabase
           .from("payment_transactions")
-          .select("status")
+          .select("status, amount, order_id, metadata")
           .eq("paystack_reference", reference)
           .single();
 
         if (error) throw error;
+
+        const metadata = data.metadata && typeof data.metadata === "object" && !Array.isArray(data.metadata)
+          ? data.metadata as Record<string, unknown>
+          : {};
+        const nextKind: PaymentKind =
+          metadata.type === "funding" ? "funding" :
+          metadata.job_id ? "job" :
+          "order";
+
+        setPaymentKind(nextKind);
+        setAmount(Number(data.amount || 0));
         
         if (["success", "completed", "pending"].includes(data.status)) {
+          if (nextKind === "order" || nextKind === "job") {
+            clearCart.mutate();
+          }
           // Even if pending, we consider it a success flow on the frontend until webhook confirms
           setStatus("success");
         } else {
@@ -43,8 +58,7 @@ export default function PaymentCallback() {
         }
       } catch (err) {
         console.error("Error verifying payment callback:", err);
-        // Default to success UI if we can't verify because the webhook will handle it anyway
-        setStatus("success");
+        setStatus("error");
       }
     };
 
@@ -64,21 +78,44 @@ export default function PaymentCallback() {
         {status === "success" && (
           <div className="flex flex-col items-center gap-6 animate-in zoom-in-50 duration-500">
             <div className="w-24 h-24 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-              <CheckCircle2 className="h-12 w-12 text-green-600 dark:text-green-400" />
+              {paymentKind === "funding" ? (
+                <Wallet className="h-12 w-12 text-green-600 dark:text-green-400" />
+              ) : (
+                <CheckCircle2 className="h-12 w-12 text-green-600 dark:text-green-400" />
+              )}
             </div>
             <div className="space-y-2">
-              <h2 className="text-3xl font-bold">Payment Successful!</h2>
+              <h2 className="text-3xl font-bold">
+                {paymentKind === "funding" ? "Wallet Funded!" : "Payment Successful!"}
+              </h2>
               <p className="text-muted-foreground text-lg max-w-md">
-                Your order has been placed and the business has been notified.
+                {paymentKind === "funding"
+                  ? `Your String wallet deposit${amount ? ` of ₦${amount.toLocaleString()}` : ""} is being confirmed. Your balance will update once Squad settlement arrives.`
+                  : paymentKind === "job"
+                    ? "Your job payment has been received and the provider has been notified."
+                    : "Your order has been placed and the business has been notified."}
               </p>
             </div>
             <div className="flex gap-4 mt-4">
-              <Button onClick={() => navigate("/customer/orders")}>
-                Track Order
-              </Button>
-              <Button variant="outline" onClick={() => navigate("/customer/discover")}>
-                Continue Shopping
-              </Button>
+              {paymentKind === "funding" ? (
+                <>
+                  <Button onClick={() => navigate("/customer/profile")}>
+                    View Wallet
+                  </Button>
+                  <Button variant="outline" onClick={() => navigate("/customer")}>
+                    Go Home
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button onClick={() => navigate(paymentKind === "job" ? "/customer/jobs" : "/customer/orders")}>
+                    {paymentKind === "job" ? "View Job" : "Track Order"}
+                  </Button>
+                  <Button variant="outline" onClick={() => navigate("/customer/discover")}>
+                    Continue Shopping
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         )}

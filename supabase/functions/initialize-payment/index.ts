@@ -245,6 +245,38 @@ serve(async (req) => {
       .eq("user_id", user.id)
       .maybeSingle();
 
+    let squadSubaccountId = userProfile?.squad_subaccount_id || null;
+    let squadSubaccountError: string | null = null;
+    if (!squadSubaccountId) {
+      try {
+        const subaccountResponse = await fetch(`${supabaseUrl}/functions/v1/squad-subaccount`, {
+          method: "POST",
+          headers: {
+            Authorization: authHeader,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ userId: user.id }),
+        });
+
+        const subaccountText = await subaccountResponse.text();
+        let subaccountData: { success?: boolean; subaccountId?: string; error?: string } = {};
+        try {
+          subaccountData = JSON.parse(subaccountText);
+        } catch {
+          throw new Error(`Squad subaccount returned invalid response (${subaccountResponse.status}): ${subaccountText.slice(0, 200)}`);
+        }
+
+        if (!subaccountResponse.ok || !subaccountData.success || !subaccountData.subaccountId) {
+          throw new Error(subaccountData.error || `Failed to create Squad subaccount (${subaccountResponse.status})`);
+        }
+
+        squadSubaccountId = subaccountData.subaccountId;
+      } catch (error) {
+        squadSubaccountError = error instanceof Error ? error.message : "Failed to create Squad subaccount";
+        console.warn(`Continuing payment without Squad subaccount for user ${user.id}: ${squadSubaccountError}`);
+      }
+    }
+
     const requestBody: any = {
       email,
       amount: amountInKobo,
@@ -254,8 +286,8 @@ serve(async (req) => {
       callback_url: getCallbackUrl(req),
     };
 
-    if (userProfile?.squad_subaccount_id) {
-      requestBody.subaccount_id = userProfile.squad_subaccount_id;
+    if (squadSubaccountId) {
+      requestBody.subaccount_id = squadSubaccountId;
     }
 
     console.log("Sending to Squad API:", JSON.stringify(requestBody));
@@ -314,6 +346,8 @@ serve(async (req) => {
         user_id: user.id,
         delivery_type: normalizedDeliveryType,
         payment_gateway: "squad",
+        squad_subaccount_id: squadSubaccountId,
+        squad_subaccount_error: squadSubaccountError,
         provider_transaction_ref: squadData.data.transaction_ref || transactionRef,
         ...(isFunding ? { type: "funding" } : {}),
         ...safeMetadata,

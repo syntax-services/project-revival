@@ -8,6 +8,9 @@ verify_jwt = false
 [functions.squad-webhook]
 verify_jwt = false
 
+[functions.squad-subaccount]
+verify_jwt = false
+
 [functions.paystack-webhook]
 verify_jwt = false
 
