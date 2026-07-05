@@ -265,6 +265,8 @@ serve(async (req) => {
       requestBody.subaccount_id = userProfile.squad_subaccount_id;
     }
 
+    console.log("Sending to Squad API:", JSON.stringify(requestBody));
+
     const squadResponse = await fetch("https://api-d.squadco.com/transaction/initiate", {
       method: "POST",
       headers: {
@@ -274,7 +276,10 @@ serve(async (req) => {
       body: JSON.stringify(requestBody),
     });
 
-    const squadData = await squadResponse.json() as {
+    const squadRawText = await squadResponse.text();
+    console.log(`Squad API response (${squadResponse.status}):`, squadRawText);
+
+    let squadData: {
       status: number;
       success: boolean;
       message?: string;
@@ -285,16 +290,25 @@ serve(async (req) => {
       };
     };
 
+    try {
+      squadData = JSON.parse(squadRawText);
+    } catch (_) {
+      if (createdOrderId) {
+        await supabase.from("orders").delete().eq("id", createdOrderId);
+      }
+      throw new Error(`Squad returned invalid response (HTTP ${squadResponse.status}): ${squadRawText.substring(0, 200)}`);
+    }
+
     if (!squadResponse.ok || !squadData.success || !squadData.data) {
       if (createdOrderId) {
         await supabase.from("orders").delete().eq("id", createdOrderId);
       }
-      throw new Error(squadData.message || "Failed to initialize payment with Squad");
+      throw new Error(squadData.message || `Squad payment failed (HTTP ${squadResponse.status})`);
     }
 
-    const { error: txError } = await supabase.from("payment_transactions").insert({
+    // Build transaction record — omit order_id for wallet funding
+    const txRecord: Record<string, unknown> = {
       user_id: user.id,
-      order_id: resolvedOrderId,
       amount: paymentAmount,
       currency: "NGN",
       status: "pending",
@@ -304,14 +318,21 @@ serve(async (req) => {
         initialized_at: new Date().toISOString(),
         delivery_type: normalizedDeliveryType,
         payment_gateway: "squad",
+        ...(isFunding ? { type: "funding" } : {}),
       },
-    });
+    };
+    if (resolvedOrderId) {
+      txRecord.order_id = resolvedOrderId;
+    }
+
+    const { error: txError } = await supabase.from("payment_transactions").insert(txRecord);
 
     if (txError) {
+      console.error("Failed to insert payment_transactions:", txError);
       if (createdOrderId) {
         await supabase.from("orders").delete().eq("id", createdOrderId);
       }
-      throw new Error("Failed to store payment transaction");
+      throw new Error(`Failed to store payment transaction: ${txError.message}`);
     }
 
     return new Response(

@@ -32,17 +32,19 @@ serve(async (req) => {
       throw new Error("session_kind is required ('business' or 'customer')");
     }
 
+    // Check for Didit credentials
     const diditApiKey = Deno.env.get("DIDIT_API_KEY");
+    const diditWorkflowId = Deno.env.get("DIDIT_WORKFLOW_ID");
+
     if (!diditApiKey) {
-      console.warn("DIDIT_API_KEY is not configured in Supabase. Falling back to mock verification.");
+      console.warn("DIDIT_API_KEY is not configured. Falling back to mock verification.");
       
-      // Generate a mock verification session URL that redirects to callback with mock query parameters
       const mockSessionId = "mock_didit_session_" + Math.random().toString(36).substr(2, 9);
-      const redirectUrl = new URL(callback);
+      const redirectUrl = new URL(callback || `${req.headers.get("origin") || "https://www.string.com.ng"}/customer/profile`);
       redirectUrl.searchParams.set("verificationSessionId", mockSessionId);
       redirectUrl.searchParams.set("status", "Approved");
       
-      // Auto-approve in database for demo purposes when DIDIT_API_KEY is missing
+      // Auto-approve in database for demo purposes
       if (session_kind === "business") {
         await supabase
           .from("businesses")
@@ -54,7 +56,6 @@ serve(async (req) => {
           .update({ verification_level: 2 })
           .eq("user_id", user.id);
 
-        // Also add compliance archive record
         await supabase
           .from("immutable_kyc_archive")
           .insert({
@@ -78,33 +79,44 @@ serve(async (req) => {
       );
     }
 
-    // Call Didit API to create session
+    // Call Didit API v3 to create session
     console.log(`Initiating Didit session for user ${user.id} (${session_kind})`);
-    
-    // Map internal session_kind to Didit's kinds: business -> business, customer -> individual
-    const diditKind = session_kind === "business" ? "business" : "individual";
+
+    const callbackUrl = callback || `${req.headers.get("origin") || "https://www.string.com.ng"}/customer/profile`;
+
+    // Build the request body for Didit v3
+    const diditBody: Record<string, unknown> = {
+      vendor_data: user.id,
+      callback: callbackUrl,
+    };
+
+    // Add workflow_id if configured
+    if (diditWorkflowId) {
+      diditBody.workflow_id = diditWorkflowId;
+    }
 
     const response = await fetch("https://verification.didit.me/v3/session/", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${diditApiKey}`,
+        "x-api-key": diditApiKey,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        vendor_data: user.id,
-        callback: callback,
-        session_kind: diditKind
-      })
+      body: JSON.stringify(diditBody)
     });
 
     if (!response.ok) {
       const errText = await response.text();
       console.error(`Didit API returned error: ${response.status} - ${errText}`);
-      throw new Error(`Didit API failed: ${errText}`);
+      throw new Error(`Didit API failed (${response.status}): ${errText}`);
     }
 
     const data = await response.json();
-    return new Response(JSON.stringify(data), {
+    
+    // The Didit v3 API returns { session_id, url } for the verification page
+    return new Response(JSON.stringify({
+      url: data.url || data.verification_url || data.session_url,
+      session_id: data.session_id || data.id,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
