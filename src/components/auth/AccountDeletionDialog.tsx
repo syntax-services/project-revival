@@ -66,29 +66,22 @@ export function AccountDeletionDialog({
         navigate("/customer", { replace: true });
       } else {
         // ── 2. FULL USER ACCOUNT DELETION ──
+        const { error } = await supabase.rpc("delete_user_account" as any);
+        if (error) {
+          throw new Error(error.message || "Failed to permanently delete user account");
+        }
+
         try {
-          await supabase.rpc("delete_user_account" as any);
-        } catch (rpcErr) {
-          console.warn("RPC delete_user_account fallback:", rpcErr);
-          await supabase
-            .from("businesses")
-            .delete()
-            .eq("user_id", user.id);
-          await supabase
-            .from("customers")
-            .delete()
-            .eq("user_id", user.id);
-          await supabase
-            .from("profiles")
-            .delete()
-            .eq("user_id", user.id);
+          await supabase.auth.signOut({ scope: "global" });
+        } catch {
+          // Ignore if already signed out by server deletion
         }
 
         localStorage.clear();
         sessionStorage.clear();
-        toast.success("Your account and all associated profiles have been deleted.");
-        await signOut();
-        navigate("/auth", { replace: true });
+        toast.success("Your account and all associated data have been permanently deleted.");
+        window.location.href = "/auth";
+        return;
       }
     } catch (err: any) {
       console.error("Deletion failed:", err);
