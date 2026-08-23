@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,12 @@ import stringLogoLight from "@/assets/string-logo-light.png";
 import stringLogoDark from "@/assets/String-logo-dark.png";
 
 export default function ResetPassword() {
+  usePageMeta({
+    title: "Set New Password | Secure Access",
+    description: "Update and finalize your new String account password securely.",
+    keywords: ["String change password","new password","security"],
+    });
+
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,12 @@ import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
 export default function BusinessPayments() {
+  usePageMeta({
+    title: "Earnings, Wallet & Bank Withdrawals",
+    description: "Track your sales revenue, view completed escrow payouts, and withdraw funds directly to your Nigerian bank account.",
+    keywords: ["merchant wallet","bank withdrawals","sales revenue","payouts"],
+    });
+
   const { data: business } = useBusiness();
   const navigate = useNavigate();
 

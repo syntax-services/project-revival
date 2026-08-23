@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBusiness } from "@/hooks/useBusiness";
 import { useBusinessReviewsWithDetails, useRespondToReview } from "@/hooks/useReviews";
@@ -15,6 +16,12 @@ import {
 import { Star, MessageCircle } from "lucide-react";
 
 export default function BusinessReviews() {
+  usePageMeta({
+    title: "Customer Reviews & Reputation Score",
+    description: "Read feedback from campus buyers and build your 5-star merchant reputation.",
+    keywords: ["customer reviews","reputation score","merchant ratings"],
+    });
+
   const { data: business } = useBusiness();
   const { data: reviews, isLoading } = useBusinessReviewsWithDetails(business?.id);
   const respondMutation = useRespondToReview();

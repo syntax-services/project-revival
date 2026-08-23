@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { optimizeImage } from "@/lib/imageOptimizer";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBusiness, useBusinessServices } from "@/hooks/useBusiness";
@@ -80,6 +81,12 @@ const serviceCategories = [
 ];
 
 export default function BusinessServices() {
+  usePageMeta({
+    title: "Manage Services & Offerings",
+    description: "List and manage your freelance offerings, service packages, turnaround times, and custom quote rates.",
+    keywords: ["manage services","freelance rates","service listings"],
+    });
+
   const { user } = useAuth();
   const { data: business } = useBusiness();
   const { data: services = [], isLoading } = useBusinessServices(business?.id);

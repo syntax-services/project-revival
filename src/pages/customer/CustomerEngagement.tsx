@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,6 +18,12 @@ interface Request {
 }
 
 export default function CustomerEngagement() {
+  usePageMeta({
+    title: "Campus Activity & Community Rewards",
+    description: "View your community activity, marketplace interactions, and campus rewards on String.",
+    keywords: ["campus activity","community rewards"],
+    });
+
   const { user } = useAuth();
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);

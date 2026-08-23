@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { Link } from "react-router-dom";
 import { optimizeImage } from "@/lib/imageOptimizer";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -44,6 +45,12 @@ interface Product {
 }
 
 export default function BusinessProducts() {
+  usePageMeta({
+    title: "Manage Products & Inventory",
+    description: "Add, edit, and organize your product catalogue, pricing, inventory stock, and rare item tags.",
+    keywords: ["manage products","inventory","stock management"],
+    });
+
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);

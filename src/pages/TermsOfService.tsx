@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
@@ -18,6 +19,12 @@ import {
 import { toast } from "sonner";
 
 export default function TermsOfService() {
+  usePageMeta({
+    title: "Terms of Service & Community Guidelines",
+    description: "Read String's official terms of service, platform rules, merchant standards, and NDPA compliance policies.",
+    keywords: ["String terms of service","legal policy","NDPA compliance","campus marketplace rules"],
+    });
+
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<string | null>(null);
 

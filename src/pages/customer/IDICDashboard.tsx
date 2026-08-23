@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -40,6 +41,12 @@ interface IDICMatch {
 }
 
 export default function IDICDashboard() {
+  usePageMeta({
+    title: "IDIC Tournament & Campus Leaderboards",
+    description: "Inter-Department Information Competition standings, department registrations, and prizes.",
+    keywords: ["IDIC tournament","campus competition","leaderboards"],
+    });
+
   const { profile } = useAuth();
   const isAdmin = profile?.user_type === "admin";
   const navigate = useNavigate();

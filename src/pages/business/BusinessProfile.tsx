@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { toast } from "sonner";
 import { optimizeImage } from "@/lib/imageOptimizer";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -35,6 +36,12 @@ import {
 import { format } from "date-fns";
 
 export default function BusinessProfile() {
+  usePageMeta({
+    title: "Storefront Profile & Branding Settings",
+    description: "Customize your business name, cover banner, logo, campus location, and store description.",
+    keywords: ["storefront profile","branding","store settings"],
+    });
+
   const { profile, signOut, refreshProfile, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { data: business } = useBusiness();

@@ -1,4 +1,5 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { useCustomer, useCustomerJobs } from "@/hooks/useCustomer";
 import { Briefcase, Clock, CheckCircle, Play, XCircle, Eye, Send, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,12 @@ const statusConfig: Record<JobStatus, { label: string; icon: typeof Clock; varia
 };
 
 export default function CustomerJobs() {
+  usePageMeta({
+    title: "Service Requests & Custom Quotes",
+    description: "Track quotes and bids from campus freelancers and service providers.",
+    keywords: ["service quotes","hire student freelancers","campus jobs"],
+    });
+
   const { data: customer } = useCustomer();
   const { data: jobs = [], isLoading } = useCustomerJobs(customer?.id);
   const queryClient = useQueryClient();

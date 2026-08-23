@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,6 +43,12 @@ import { AdminReferralsTab } from "@/components/admin/tabs/AdminReferralsTab";
 import { AdminBroadcastTab } from "@/components/admin/tabs/AdminBroadcastTab";
 
 export default function StringAdmin() {
+  usePageMeta({
+    title: "Admin Command Center",
+    description: "Institutional platform management, verification reviews, system config, broadcasts, and financial audits.",
+    noindex: true,
+    });
+
  const { signOut, user, refreshProfile, isAdmin, loading: checkingAdminFromAuth } = useAuth();
  const navigate = useNavigate();
  const queryClient = useQueryClient();

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +37,12 @@ import { useNavigate } from "react-router-dom";
 import { getMaskedAssetUrl } from "@/lib/assetMask";
 
 export default function AdminDashboard() {
+  usePageMeta({
+    title: "Admin Operations & Moderation",
+    description: "Platform analytics, merchant approvals, and moderation console.",
+    noindex: true,
+    });
+
   const { signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();

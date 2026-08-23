@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,6 +48,12 @@ interface BusinessData {
 }
 
 export default function BusinessSettings() {
+  usePageMeta({
+    title: "Merchant Operating & Account Settings",
+    description: "Manage operating hours, payout bank details, campus location, and store notifications.",
+    keywords: ["business settings","operating hours","payout details"],
+    });
+
   const { user, profile, refreshProfile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();

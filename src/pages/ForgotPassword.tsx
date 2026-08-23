@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,12 @@ import stringLogoDark from "@/assets/String-logo-dark.png";
 import { usePremiumMail } from "@/hooks/usePremiumMail";
 
 export default function ForgotPassword() {
+  usePageMeta({
+    title: "Reset Your Password | Account Recovery",
+    description: "Recover your String account password securely to regain access to your campus marketplace dashboard.",
+    keywords: ["String password reset","account recovery","forgot password"],
+    });
+
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);

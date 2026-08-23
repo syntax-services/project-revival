@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBusiness, useBusinessJobs } from "@/hooks/useBusiness";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,6 +33,12 @@ const statusConfig: Record<JobStatus, { label: string; icon: typeof Clock; varia
 };
 
 export default function BusinessJobs() {
+  usePageMeta({
+    title: "Client Service Requests & Job Bids",
+    description: "Review client job briefs, send pricing bids, and manage active service contracts.",
+    keywords: ["client requests","job bids","freelance jobs"],
+    });
+
   const { data: business } = useBusiness();
   const { data: jobs = [], isLoading } = useBusinessJobs(business?.id);
   const queryClient = useQueryClient();

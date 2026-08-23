@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/hooks/useCart";
@@ -18,6 +19,12 @@ import { CheckoutDeliveryMatrix } from "@/components/checkout/CheckoutDeliveryMa
 import { CheckoutOrderSummary } from "@/components/checkout/CheckoutOrderSummary";
 
 export default function Checkout() {
+  usePageMeta({
+    title: "Secure Escrow Checkout",
+    description: "Review your cart and pay safely using String's protected campus escrow system.",
+    keywords: ["escrow checkout","secure payment","Squad payment"],
+    });
+
   const [searchParams] = useSearchParams();
   const businessId = searchParams.get("business");
   const { user, profile } = useAuth();

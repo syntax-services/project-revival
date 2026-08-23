@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { useNavigate } from "react-router-dom";
 import { optimizeImage } from "@/lib/imageOptimizer";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -123,6 +124,12 @@ const initialServiceDraft: ServiceDraft = {
 };
 
 export default function BusinessUpload() {
+  usePageMeta({
+    title: "Add New Product or Service Listing",
+    description: "Quickly upload photos, set pricing, and publish new goods or services to the campus marketplace.",
+    keywords: ["upload product","add listing","new item"],
+    });
+
   const { user, profile } = useAuth();
   const { data: business } = useBusiness();
   const navigate = useNavigate();

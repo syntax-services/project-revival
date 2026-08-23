@@ -1,4 +1,5 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { 
   TrendingUp, 
   Target, 
@@ -36,6 +37,12 @@ const GROWTH_TIPS = [
 ];
 
 export default function BusinessGrowth() {
+  usePageMeta({
+    title: "Store Growth & Sales Acceleration",
+    description: "Growth tools, referral campaigns, and merchant marketing strategies to scale your campus business.",
+    keywords: ["business growth","referral campaigns","marketing"],
+    });
+
   return (
     <DashboardLayout>
       <div className="space-y-6 pb-6">

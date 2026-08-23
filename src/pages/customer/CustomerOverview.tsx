@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCustomer, useCustomerStats } from "@/hooks/useCustomer";
@@ -49,6 +50,12 @@ interface SocialFeedPost {
 }
 
 export default function CustomerOverview() {
+  usePageMeta({
+    title: "Campus Discovery Feed & Trending Goods",
+    description: "Explore trending campus items, latest merchant drops, and student community posts tailored for you.",
+    keywords: ["campus feed","trending student items","campus fashion","buy electronics on campus"],
+    });
+
  const { user, profile, isAdmin } = useAuth();
  const navigate = useNavigate();
  const { data: customer } = useCustomer();

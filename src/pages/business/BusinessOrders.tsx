@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBusiness, useBusinessOrders } from "@/hooks/useBusiness";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,6 +41,12 @@ interface OrderItem {
 }
 
 export default function BusinessOrders() {
+  usePageMeta({
+    title: "Manage Orders & Deliveries",
+    description: "Process incoming orders, track delivery milestones, and confirm item handoffs for payout releases.",
+    keywords: ["merchant orders","delivery management","escrow payouts"],
+    });
+
  const { data: business } = useBusiness();
  const { data: orders = [], isLoading } = useBusinessOrders(business?.id);
  const queryClient = useQueryClient();

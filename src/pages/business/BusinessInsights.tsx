@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,6 +29,12 @@ interface Stats {
 }
 
 export default function BusinessInsights() {
+  usePageMeta({
+    title: "Sales Insights & Business Intelligence",
+    description: "Actionable data on your top-performing items, peak shopping hours, and campus buyer demographics.",
+    keywords: ["sales insights","growth intelligence","buyer demographics"],
+    });
+
   const { user } = useAuth();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);

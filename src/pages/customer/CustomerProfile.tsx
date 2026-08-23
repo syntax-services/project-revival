@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { toast } from "sonner";
 import { optimizeImage } from "@/lib/imageOptimizer";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -43,6 +44,12 @@ import { CustomerRegisterBusinessModal } from "@/components/customer/profile/Cus
 import { AdminModeIcon, MerchantModeIcon } from "@/components/layout/UserRoleSwitcher";
 
 export default function CustomerProfile() {
+  usePageMeta({
+    title: "My Student Profile & Account Center",
+    description: "Manage your personal student profile, campus identity, saved bookmarks, and marketplace activity.",
+    keywords: ["student profile","String account","campus ID"],
+    });
+
   const { profile, signOut, refreshProfile, isAdmin, hasBothRoles, switchRole } = useAuth();
   const navigate = useNavigate();
   const { data: customer } = useCustomer();

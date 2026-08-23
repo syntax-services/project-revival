@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,12 @@ import { supabase } from "@/integrations/supabase/client";
 type PaymentKind = "order" | "funding" | "job";
 
 export default function PaymentCallback() {
+  usePageMeta({
+    title: "Payment Verification",
+    description: "Verifying your transaction status and escrow funding.",
+    noindex: true,
+    });
+
   const [searchParams] = useSearchParams();
   const reference = searchParams.get("reference");
   const navigate = useNavigate();

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/hooks/useBusiness";
@@ -13,6 +14,12 @@ import { playPremiumMatchChime } from "@/hooks/useAudioSignals";
 import { getEdgeFunctionErrorMessage } from "@/lib/edgeFunctionErrors";
 
 export default function BusinessBoost() {
+  usePageMeta({
+    title: "Boost Store Visibility & Top Search Rank",
+    description: "Subscribe to monthly Boosters to rank #1 in campus searches and get 10x more unique buyer impressions.",
+    keywords: ["boost store","search ranking","sponsored listings","visibility"],
+    });
+
   const { user } = useAuth();
   const { data: business } = useBusiness();
   const queryClient = useQueryClient();

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -96,6 +97,12 @@ const ToggleSwitch = ({
 );
 
 export default function CustomerSettings() {
+  usePageMeta({
+    title: "Account & Privacy Settings",
+    description: "Customize notification preferences, change password, and manage security options.",
+    keywords: ["account settings","security"],
+    });
+
   const { user, profile, signOut, refreshProfile } = useAuth();
   const { toast } = useToast();
   const { location, loading: locationLoading, requestLocation } = useUserLocation();

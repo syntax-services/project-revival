@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
@@ -22,6 +23,12 @@ import { formatDistanceToNow } from "date-fns";
 import { StructuredLocationSelection, formatStructuredLocation, getLocationCoords } from "@/hooks/useStructuredLocations";
 
 export default function BusinessOverview() {
+  usePageMeta({
+    title: "Merchant Dashboard & Sales Hub",
+    description: "Monitor your daily store sales, unique view analytics, incoming messages, and live catalog performance.",
+    keywords: ["merchant dashboard","store sales","analytics","business overview"],
+    });
+
   const { profile, user, refreshProfile } = useAuth();
   const { data: business, isLoading: businessLoading } = useBusiness();
   const queryClient = useQueryClient();

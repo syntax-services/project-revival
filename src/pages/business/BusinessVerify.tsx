@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/hooks/useBusiness";
@@ -22,6 +23,12 @@ import { StructuredLocationSelection, formatStructuredLocation, getLocationCoord
 import { getEdgeFunctionErrorMessage } from "@/lib/edgeFunctionErrors";
 
 export default function BusinessVerify() {
+  usePageMeta({
+    title: "Merchant Verification & Verified Badge",
+    description: "Complete Didit / IDIC merchant verification to unlock the Verified Merchant badge and build customer trust.",
+    keywords: ["merchant verification","verified badge","trust and safety"],
+    });
+
  const { user, refreshProfile } = useAuth();
  const { data: business } = useBusiness();
  const queryClient = useQueryClient();

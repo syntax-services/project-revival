@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,12 @@ const signupSchema = z.object({
 });
 
 export default function Auth() {
+  usePageMeta({
+    title: "Sign In & Register | Campus Marketplace Account",
+    description: "Sign in or create your String account to buy, sell, and connect with verified businesses across Nigerian universities.",
+    keywords: ["String login","String signup","register merchant account","campus marketplace login","Nigeria student sign up"],
+    });
+
   const [searchParams] = useSearchParams();
   const mode = searchParams.get("mode") || "signup";
   const [isLogin, setIsLogin] = useState(mode === "login");

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAdminMessages } from "@/hooks/useAdminMessages";
@@ -27,6 +28,12 @@ import { Separator } from "@/components/ui/separator";
 import { EmailPreviewDialog } from "@/components/notifications/EmailPreviewDialog";
 
 export default function CustomerNotifications() {
+  usePageMeta({
+    title: "Notifications & Live Updates",
+    description: "Stay up to date with instant alerts on order updates, price drops, messages, and campus announcements.",
+    keywords: ["notifications","order alerts"],
+    });
+
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification, isLoading: loadingNotifs } = useNotifications();
   const { messages: adminMessages, isLoading: loadingAdmin } = useAdminMessages();
 

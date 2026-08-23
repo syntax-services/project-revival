@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { CreateOfferPanel } from "@/components/offers/CreateOfferPanel";
 import { OffersList } from "@/components/offers/OffersList";
@@ -6,6 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Package, ListChecks } from "lucide-react";
 
 export default function CustomerOffers() {
+  usePageMeta({
+    title: "Special Offers, Deals & Campus Discounts",
+    description: "View active campus merchant discounts, exclusive promotions, and price-drop alerts.",
+    keywords: ["campus discounts","student deals","flash sales"],
+    });
+
   const [activeTab, setActiveTab] = useState("browse");
 
   return (

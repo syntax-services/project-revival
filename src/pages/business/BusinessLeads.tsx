@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBusiness } from "@/hooks/useBusiness";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,6 +45,12 @@ const urgencyColors: Record<string, string> = {
 };
 
 export default function BusinessLeads() {
+  usePageMeta({
+    title: "Potential Buyers & Campus Leads",
+    description: "Discover students looking for items in your category and send tailored offers.",
+    keywords: ["sales leads","campus buyers","targeted offers"],
+    });
+
   const { data: business } = useBusiness();
   const navigate = useNavigate();
   const queryClient = useQueryClient();

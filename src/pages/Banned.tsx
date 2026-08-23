@@ -1,9 +1,16 @@
 import { Button } from "@/components/ui/button";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { ShieldAlert, Mail, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 export default function Banned() {
+  usePageMeta({
+    title: "Account Notice | String Trust & Safety",
+    description: "Account suspension or restriction information and support appeal channel.",
+    keywords: ["String account status","trust and safety"],
+    });
+
   const { signOut } = useAuth();
   const navigate = useNavigate();
 

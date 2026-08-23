@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useCustomer } from "@/hooks/useCustomer";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,6 +32,12 @@ interface SavedProductItem {
 }
 
 export default function CustomerSavedBusinesses() {
+  usePageMeta({
+    title: "Saved Stores & Favorite Merchants",
+    description: "Quick access to your bookmarked businesses and subscribed campus storefronts.",
+    keywords: ["saved stores","favorite merchants","wishlist"],
+    });
+
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: customer } = useCustomer();

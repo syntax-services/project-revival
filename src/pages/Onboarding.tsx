@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +11,12 @@ import { Loader2, ArrowRight, Gift } from "lucide-react";
 import type { Json } from "@/integrations/supabase/types";
 
 export default function Onboarding() {
+  usePageMeta({
+    title: "Welcome to String | Account Setup & Campus Selection",
+    description: "Set up your profile, choose your university campus, and start buying or selling goods on String.",
+    keywords: ["String onboarding","campus selection","profile setup"],
+    });
+
   const { user, profile, refreshProfile, dashboardPath } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();

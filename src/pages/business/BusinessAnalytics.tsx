@@ -1,4 +1,5 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { useBusiness, useBusinessStats } from "@/hooks/useBusiness";
 import { useBusinessAnalytics } from "@/hooks/useAnalytics";
 import { useState } from "react";
@@ -37,6 +38,12 @@ import {
 const CHART_COLORS = ["hsl(var(--foreground))", "hsl(var(--muted-foreground))", "hsl(var(--accent-foreground))", "hsl(var(--secondary-foreground))"];
 
 export default function BusinessAnalytics() {
+  usePageMeta({
+    title: "Store Analytics & Unique Account Views",
+    description: "Deep dive into unique account views (1 Account = 1 Viewer), search impressions, conversion rates, and revenue trends.",
+    keywords: ["store analytics","unique viewers","conversion rate","traffic"],
+    });
+
   const { data: business } = useBusiness();
   const [period, setPeriod] = useState<"week" | "month" | "all">("month");
   const { data: analytics, isLoading } = useBusinessAnalytics(business?.id, period);

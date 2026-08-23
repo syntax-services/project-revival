@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,6 +8,12 @@ import { Loader2, CheckCircle2, XCircle, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function AuthLinks() {
+  usePageMeta({
+    title: "Account Verification & Direct Access Portal",
+    description: "Access verified direct portal links for String accounts and merchant dashboards.",
+    keywords: ["String portal","access links"],
+    });
+
  const [searchParams] = useSearchParams();
  const navigate = useNavigate();
  const { refreshProfile, dashboardPath } = useAuth();

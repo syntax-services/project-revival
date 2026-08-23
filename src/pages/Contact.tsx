@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,12 @@ const faqs: FAQItem[] = [
 ];
 
 export default function Contact() {
+  usePageMeta({
+    title: "Contact & Support | Campus Help Center",
+    description: "Get in touch with String customer support for inquiries, dispute resolution, and merchant assistance.",
+    keywords: ["String support","contact String","campus marketplace help","customer service"],
+    });
+
   const { user } = useAuth();
   const { toast } = useToast();
   const [ticketSubject, setTicketSubject] = useState("");

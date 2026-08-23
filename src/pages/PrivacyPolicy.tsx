@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
@@ -20,6 +21,12 @@ import {
 import { toast } from "sonner";
 
 export default function PrivacyPolicy() {
+  usePageMeta({
+    title: "Privacy Policy & Data Protection",
+    description: "Learn how String protects your personal data, transactions, and campus location under Nigerian data privacy laws (NDPA).",
+    keywords: ["String privacy policy","data protection Nigeria","NDPA compliance"],
+    });
+
   const navigate = useNavigate();
 
   const handlePrint = () => {

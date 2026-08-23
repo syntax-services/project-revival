@@ -1,4 +1,5 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { useCustomer, useCustomerOrders } from "@/hooks/useCustomer";
 import { Package, Clock, CheckCircle2, Truck, XCircle, Eye, ShieldCheck, MapPin, CheckCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +41,12 @@ interface OrderItem {
 }
 
 export default function CustomerOrders() {
+  usePageMeta({
+    title: "My Orders & Purchase History",
+    description: "Track your marketplace purchases, escrow deposits, delivery status, and order receipts.",
+    keywords: ["track orders","campus deliveries","escrow purchases"],
+    });
+
  const { user } = useAuth();
  const { data: customer } = useCustomer();
  const { data: orders = [], isLoading } = useCustomerOrders(customer?.id);

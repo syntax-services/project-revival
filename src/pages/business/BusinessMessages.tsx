@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +43,12 @@ interface Conversation {
 }
 
 export default function BusinessMessages() {
+  usePageMeta({
+    title: "Customer Inquiries & Sales Chats",
+    description: "Chat directly with interested buyers, negotiate prices, and send custom invoices in real time.",
+    keywords: ["customer chat","sales inquiries","direct messaging"],
+    });
+
   const { user } = useAuth();
   const { toast } = useToast();
   const [conversations, setConversations] = useState<Conversation[]>([]);

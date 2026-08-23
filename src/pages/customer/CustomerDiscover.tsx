@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -60,6 +61,12 @@ interface DiscoverItem {
 }
 
 export default function CustomerDiscover() {
+  usePageMeta({
+    title: "Discover Goods, Services & Campus Stores",
+    description: "Search and filter thousands of campus products, textbooks, electronics, fashion, and skilled student services.",
+    keywords: ["search campus marketplace","find student stores","campus services","buy secondhand textbooks"],
+    });
+
  const { user } = useAuth();
  const { toast } = useToast();
  const navigate = useNavigate();

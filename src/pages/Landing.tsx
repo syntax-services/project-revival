@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -235,6 +236,12 @@ const categories = [
 ];
 
 export default function Landing() {
+  usePageMeta({
+    title: "Nigeria's Verified Campus Marketplace & Services",
+    description: "Connect with verified student merchants, discover trending campus goods, gadgets, fashion, and hire skilled student freelancers on String.",
+    keywords: ["String","String Nigeria","campus marketplace","student commerce","buy and sell on campus","verified merchants","university market"],
+    });
+
  const { dashboardPath, user } = useAuth();
  const [searchQuery, setSearchQuery] = useState("");
  const [promoOpen, setPromoOpen] = useState(false);
