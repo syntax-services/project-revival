@@ -175,9 +175,12 @@ serve(async (req) => {
     let createdOrderId: string | null = null;
 
     const isFunding = safeMetadata.type === "funding";
+    const isBooster = safeMetadata.type === "booster";
+    const isSubscription = safeMetadata.type === "subscription";
+    const isNonOrderPayment = isFunding || isBooster || isSubscription;
 
-    // Only create a new order if it's NOT a job payment, NOT a wallet funding request, and NO orderId is provided
-    if (!jobId && !resolvedOrderId && !isFunding) {
+    // Only create a new order if it's NOT a job payment, NOT a non-order payment (booster/funding/subscription), and NO orderId is provided
+    if (!jobId && !resolvedOrderId && !isNonOrderPayment) {
       if (!resolvedBusinessId) {
         throw new Error("Business ID is required");
       }

@@ -20,7 +20,7 @@ function scanFile(filePath: string) {
   const styleObjRegex = /style={{[^}]*\b(width|height)\s*:\s*\d+[^}]*}}/g;
   const styleMatches = content.match(styleObjRegex);
   if (styleMatches) {
-    reportLines.push(`🎨 ${relative}: Inline style with numeric dimensions → ${styleMatches.length} occurrences`);
+    reportLines.push(` ${relative}: Inline style with numeric dimensions → ${styleMatches.length} occurrences`);
   }
 
   // 3. Images without alt attribute (only for .tsx files)
@@ -68,5 +68,5 @@ function walk(dir: string) {
 walk(srcDir);
 
 const reportPath = path.resolve(__dirname, '../../audit-report.md');
-fs.writeFileSync(reportPath, `# UI/UX Audit Report\n\n${reportLines.join('\n') || '✅ No issues found.'}\n`);
+fs.writeFileSync(reportPath, `# UI/UX Audit Report\n\n${reportLines.join('\n') || ' No issues found.'}\n`);
 console.log('Audit completed. Report written to audit-report.md');

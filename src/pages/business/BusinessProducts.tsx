@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { optimizeImage } from "@/lib/imageOptimizer";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,7 +82,19 @@ export default function BusinessProducts() {
     setImageUrl(null);
     setImageFile(null);
     setEditingProduct(null);
+    localStorage.removeItem("string_products_manager_draft");
   };
+
+  useEffect(() => {
+    if (!editingProduct && isDialogOpen) {
+      const hasContent = name || description || price || tags.length > 0;
+      if (hasContent) {
+        localStorage.setItem("string_products_manager_draft", JSON.stringify({
+          name, description, price, compareAtPrice, commissionPercent, isRare, tags, inStock, isOrderable, imageUrl
+        }));
+      }
+    }
+  }, [editingProduct, isDialogOpen, name, description, price, compareAtPrice, commissionPercent, isRare, tags, inStock, isOrderable, imageUrl]);
 
   const openDialog = (product?: Product) => {
     if (product) {
@@ -97,7 +110,27 @@ export default function BusinessProducts() {
       setIsOrderable(product.is_orderable ?? true);
       setImageUrl(product.image_url);
     } else {
-      resetForm();
+      setEditingProduct(null);
+      try {
+        const saved = localStorage.getItem("string_products_manager_draft");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setName(parsed.name || "");
+          setDescription(parsed.description || "");
+          setPrice(parsed.price || "");
+          setCompareAtPrice(parsed.compareAtPrice || "");
+          setCommissionPercent(parsed.commissionPercent || "10.0");
+          setIsRare(!!parsed.isRare);
+          setTags(parsed.tags || []);
+          setInStock(parsed.inStock ?? true);
+          setIsOrderable(parsed.isOrderable ?? true);
+          setImageUrl(parsed.imageUrl || null);
+        } else {
+          resetForm();
+        }
+      } catch {
+        resetForm();
+      }
     }
     setIsDialogOpen(true);
   };
@@ -127,8 +160,9 @@ export default function BusinessProducts() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!business?.id) {
-        throw new Error("Business profile not found. Please set up your business settings.");
+      const activeBusinessId = business?.id || user?.id;
+      if (!activeBusinessId) {
+        throw new Error("Please log in to continue.");
       }
 
       let finalImageUrl = imageUrl;
@@ -142,17 +176,26 @@ export default function BusinessProducts() {
         }
       }
 
+      const cleanPrice = price ? parseFloat(price.toString().replace(/,/g, '').trim()) : null;
+      const validPrice = cleanPrice !== null && !isNaN(cleanPrice) ? Math.min(Math.max(0, cleanPrice), 999999999) : null;
+
+      const cleanCompare = compareAtPrice ? parseFloat(compareAtPrice.toString().replace(/,/g, '').trim()) : null;
+      const validCompare = cleanCompare !== null && !isNaN(cleanCompare) ? Math.min(Math.max(0, cleanCompare), 999999999) : null;
+
+      const cleanComm = commissionPercent ? parseFloat(commissionPercent.toString().replace(/,/g, '').trim()) : 10.0;
+      const validComm = !isNaN(cleanComm) ? Math.min(Math.max(1, cleanComm), 99.99) : 10.0;
+
       const productData = {
         name: name.trim(),
         description: description.trim() || null,
-        price: price ? parseFloat(price) : null,
-        compare_at_price: compareAtPrice ? parseFloat(compareAtPrice) : null,
-        commission_percent: commissionPercent ? parseFloat(commissionPercent) : 10.0,
+        price: validPrice,
+        compare_at_price: validCompare,
+        commission_percent: validComm,
         is_rare: isRare,
         tags: tags.length > 0 ? tags : null,
         in_stock: inStock,
         image_url: finalImageUrl,
-        business_id: business.id,
+        business_id: activeBusinessId,
       };
 
       if (editingProduct) {
@@ -213,13 +256,18 @@ export default function BusinessProducts() {
             <h1 className="text-2xl font-bold">Products</h1>
             <p className="text-muted-foreground">Manage what you offer to customers</p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => openDialog()} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add Product
+          <div className="flex items-center gap-2">
+            <Link to="/business/upload">
+              <Button variant="outline" className="gap-2 rounded-2xl text-xs font-bold">
+                <Plus className="h-4 w-4" /> Full Catalog Upload (3–7 Photos)
               </Button>
-            </DialogTrigger>
+            </Link>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={() => openDialog()} className="gap-2 rounded-2xl text-xs font-bold">
+                  <Plus className="h-4 w-4" /> Quick Add
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
@@ -378,6 +426,7 @@ export default function BusinessProducts() {
             </DialogContent>
           </Dialog>
         </div>
+      </div>
 
         {/* Products Grid */}
         {isLoading ? (

@@ -21,12 +21,33 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 import { applyPalette } from "@/lib/theme";
+import { GlobalMessageNotifier } from "@/components/common/GlobalMessageNotifier";
 
-// Scroll Restoration helper
+// Scroll Restoration helper with Discover position memory
 function ScrollToTop() {
   const { pathname } = useLocation();
 
   useEffect(() => {
+    // If returning to discover, restore preserved scroll position
+    if (pathname === "/customer/discover" || pathname === "/business/discover") {
+      const savedPos = sessionStorage.getItem("string_discover_scroll_y");
+      if (savedPos) {
+        const scrollY = parseInt(savedPos, 10);
+        if (!isNaN(scrollY) && scrollY > 0) {
+          requestAnimationFrame(() => {
+            window.scrollTo({ top: scrollY, behavior: "instant" as ScrollBehavior });
+            document.documentElement.scrollTo({ top: scrollY, behavior: "instant" as ScrollBehavior });
+            const mainContent = document.querySelector("main") || document.querySelector(".overflow-y-auto") || document.getElementById("main-scrollbar");
+            if (mainContent) {
+              mainContent.scrollTo({ top: scrollY, behavior: "instant" as ScrollBehavior });
+            }
+          });
+          return;
+        }
+      }
+    }
+
+    // Default scroll to top on other pages
     window.scrollTo(0, 0);
     document.documentElement.scrollTo(0, 0);
     const mainContent = document.querySelector("main") || document.querySelector(".overflow-y-auto") || document.getElementById("main-scrollbar");
@@ -72,20 +93,25 @@ import BusinessDiscover from "./pages/business/BusinessDiscover";
 import BusinessProfile from "./pages/business/BusinessProfile";
 import BusinessSettings from "./pages/business/BusinessSettings";
 import BusinessMessages from "./pages/business/BusinessMessages";
+import BusinessJobs from "./pages/business/BusinessJobs";
+import BusinessPayments from "./pages/business/BusinessPayments";
+import BusinessGrowth from "./pages/business/BusinessGrowth";
 
 const BusinessInsights = lazy(() => import("./pages/business/BusinessInsights"));
 const BusinessLeads = lazy(() => import("./pages/business/BusinessLeads"));
 const BusinessProducts = lazy(() => import("./pages/business/BusinessProducts"));
 const BusinessServices = lazy(() => import("./pages/business/BusinessServices"));
 const BusinessOrders = lazy(() => import("./pages/business/BusinessOrders"));
-const BusinessJobs = lazy(() => import("./pages/business/BusinessJobs"));
-const BusinessGrowth = lazy(() => import("./pages/business/BusinessGrowth"));
 const BusinessPublicProfile = lazy(() => import("./pages/business/BusinessPublicProfile"));
 const BusinessAnalytics = lazy(() => import("./pages/business/BusinessAnalytics"));
 const BusinessReviews = lazy(() => import("./pages/business/BusinessReviews"));
 const BusinessUpload = lazy(() => import("./pages/business/BusinessUpload"));
 const BusinessVerify = lazy(() => import("./pages/business/BusinessVerify"));
 const BusinessBoost = lazy(() => import("./pages/business/BusinessBoost"));
+
+// Discover product & service detail pages
+const ProductDetailPage = lazy(() => import("./pages/discover/ProductDetailPage"));
+const ServiceDetailPage = lazy(() => import("./pages/discover/ServiceDetailPage"));
 
 // Admin pages
 const StringAdmin = lazy(() => import("./pages/admin/StringAdmin"));
@@ -151,6 +177,7 @@ const App = () => (
 
                   {/* Customer Routes */}
                   <Route path="/customer" element={<ProtectedRoute requiredUserType="customer"><CustomerOverview /></ProtectedRoute>} />
+                  <Route path="/customer/overview" element={<Navigate to="/customer" replace />} />
                   <Route path="/customer/discover" element={<ProtectedRoute requiredUserType="customer"><CustomerDiscover /></ProtectedRoute>} />
                   <Route path="/customer/orders" element={<ProtectedRoute requiredUserType="customer"><CustomerOrders /></ProtectedRoute>} />
                   <Route path="/customer/checkout" element={<ProtectedRoute requiredUserType="customer"><Checkout /></ProtectedRoute>} />
@@ -165,10 +192,9 @@ const App = () => (
                   <Route path="/payment-callback" element={<ProtectedRoute><PaymentCallback /></ProtectedRoute>} />
                   <Route path="/idic" element={<ProtectedRoute><IDICDashboard /></ProtectedRoute>} />
 
-
-
                   {/* Business Routes */}
                   <Route path="/business" element={<ProtectedRoute requiredUserType="business"><BusinessOverview /></ProtectedRoute>} />
+                  <Route path="/business/overview" element={<Navigate to="/business" replace />} />
                   <Route path="/business/insights" element={<ProtectedRoute requiredUserType="business"><BusinessInsights /></ProtectedRoute>} />
                   <Route path="/business/leads" element={<ProtectedRoute requiredUserType="business"><BusinessLeads /></ProtectedRoute>} />
                   <Route path="/business/products" element={<ProtectedRoute requiredUserType="business"><BusinessProducts /></ProtectedRoute>} />
@@ -176,6 +202,7 @@ const App = () => (
                   <Route path="/business/orders" element={<ProtectedRoute requiredUserType="business"><BusinessOrders /></ProtectedRoute>} />
                   <Route path="/business/jobs" element={<ProtectedRoute requiredUserType="business"><BusinessJobs /></ProtectedRoute>} />
                   <Route path="/business/profile" element={<ProtectedRoute requiredUserType="business"><BusinessProfile /></ProtectedRoute>} />
+                  <Route path="/business/payments" element={<ProtectedRoute requiredUserType="business"><BusinessPayments /></ProtectedRoute>} />
                   <Route path="/business/growth" element={<ProtectedRoute requiredUserType="business"><BusinessGrowth /></ProtectedRoute>} />
                   <Route path="/business/settings" element={<ProtectedRoute requiredUserType="business"><BusinessSettings /></ProtectedRoute>} />
                   <Route path="/business/messages" element={<ProtectedRoute requiredUserType="business"><BusinessMessages /></ProtectedRoute>} />
@@ -188,6 +215,12 @@ const App = () => (
 
                   {/* Public business profile - accessible to all logged-in users */}
                   <Route path="/business/:id" element={<ProtectedRoute><BusinessPublicProfile /></ProtectedRoute>} />
+
+                  {/* Dedicated Product & Service Details Pages */}
+                  <Route path="/product/:id" element={<ProtectedRoute><ProductDetailPage /></ProtectedRoute>} />
+                  <Route path="/service/:id" element={<ProtectedRoute><ServiceDetailPage /></ProtectedRoute>} />
+                  <Route path="/customer/discover/product/:id" element={<ProtectedRoute><ProductDetailPage /></ProtectedRoute>} />
+                  <Route path="/business/discover/product/:id" element={<ProtectedRoute><ProductDetailPage /></ProtectedRoute>} />
 
                   {/* Admin Routes */}
                   <Route
@@ -212,6 +245,7 @@ const App = () => (
 
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+                <GlobalMessageNotifier />
               </TermsGuard>
             </Suspense>
             </ErrorBoundary>

@@ -387,7 +387,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const channel = supabase
-      .channel(`profile-realtime-${user.id}-${Math.random().toString(36).substring(7)}`)
+      .channel(`user-sync-${user.id}-${Math.random().toString(36).substring(7)}`)
       .on(
         "postgres_changes",
         {
@@ -418,12 +418,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "businesses",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            queryClient.setQueryData(["business", user.id], null);
+          } else if (payload.new) {
+            queryClient.setQueryData(["business", user.id], payload.new);
+          }
+          queryClient.invalidateQueries({ queryKey: ["business"] });
+        }
+      )
       .subscribe();
 
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [user?.id, profile?.banned]);
+  }, [user?.id, profile?.banned, queryClient]);
 
   const signUp = async (email: string, password: string, metadata?: { full_name?: string; account_type?: string; referral_code?: string }) => {
     const redirectUrl = `${window.location.origin}/`;

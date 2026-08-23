@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { optimizeImage } from "@/lib/imageOptimizer";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useBusiness, useBusinessServices } from "@/hooks/useBusiness";
@@ -120,8 +120,9 @@ export default function BusinessServices() {
       return;
     }
     
-    if (!business?.id) {
-      toast.error("Business profile not found. Please set up your business settings.");
+    const activeBusinessId = business?.id || user?.id;
+    if (!activeBusinessId) {
+      toast.error("Please log in to continue.");
       return;
     }
 
@@ -143,9 +144,27 @@ export default function BusinessServices() {
     setFormData({ ...formData, images: formData.images.filter((_, i) => i !== idx) });
   };
 
+  useEffect(() => {
+    if (!editingService && isDialogOpen) {
+      const hasContent = formData.name || formData.description || formData.category || formData.images.length > 0;
+      if (hasContent) {
+        localStorage.setItem("string_services_manager_draft", JSON.stringify(formData));
+      }
+    }
+  }, [editingService, isDialogOpen, formData]);
+
   const openCreateDialog = () => {
     setEditingService(null);
-    setFormData(defaultFormData);
+    try {
+      const saved = localStorage.getItem("string_services_manager_draft");
+      if (saved) {
+        setFormData({ ...defaultFormData, ...JSON.parse(saved) });
+      } else {
+        setFormData(defaultFormData);
+      }
+    } catch {
+      setFormData(defaultFormData);
+    }
     setIsDialogOpen(true);
   };
 
@@ -169,15 +188,16 @@ export default function BusinessServices() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!business?.id) {
-      toast.error("Business profile not found. Please set up your business settings.");
+    const activeBusinessId = business?.id || user?.id;
+    if (!activeBusinessId) {
+      toast.error("Please log in to continue.");
       return;
     }
 
     setSaving(true);
     try {
       const serviceData = {
-        business_id: business.id,
+        business_id: activeBusinessId,
         name: formData.name,
         description: formData.description || null,
         category: formData.category || null,
@@ -202,6 +222,7 @@ export default function BusinessServices() {
           .insert(serviceData);
         if (error) throw error;
         toast.success("Service added successfully");
+        localStorage.removeItem("string_services_manager_draft");
       }
 
       queryClient.invalidateQueries({ queryKey: ["business-services"] });

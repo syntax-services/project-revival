@@ -10,9 +10,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { VerificationBadge } from "@/components/business/VerificationBadge";
 import { BusinessEarningsCard } from "@/components/business/BusinessEarningsCard";
+import { AdminModeIcon } from "@/components/layout/UserRoleSwitcher";
 import {
   PremiumClipboard,
   PremiumPackage,
@@ -44,7 +44,7 @@ export default function BusinessProfile() {
       localStorage.setItem(`string_active_admin_mode_${profile.user_id}`, "true");
     }
     await refreshProfile();
-    toast.success("Switched to Admin Mode! 🛡️");
+    toast.success("Switched to Admin Mode! ");
     navigate("/admin");
   };
   const { data: products = [] } = useBusinessProducts(business?.id);
@@ -59,7 +59,12 @@ export default function BusinessProfile() {
       if (!business?.id) return null;
 
       const [ordersRes, jobsRes, reviewsRes] = await Promise.all([
-        supabase.from("orders").select("id", { count: "exact", head: true }).eq("business_id", business.id),
+        supabase
+          .from("orders")
+          .select("id", { count: "exact", head: true })
+          .eq("business_id", business.id)
+          .neq("status", "cancelled")
+          .neq("status", "refunded"),
         supabase.from("jobs").select("id", { count: "exact", head: true }).eq("business_id", business.id),
         supabase.from("reviews").select("id", { count: "exact", head: true }).eq("business_id", business.id),
       ]);
@@ -134,13 +139,13 @@ export default function BusinessProfile() {
     { icon: ArrowUpRight, label: "Leads & Requests", href: "/business/leads" },
     { 
       icon: ShieldCheck, 
-      label: business?.location_verified ? "Verified Merchant ✓" : "Get Verified (Free)", 
+      label: business?.location_verified ? "Verified Merchant" : "Get Verified (Free)", 
       href: "/business/verify",
       badge: business?.location_verified ? "active" : "verify"
     },
     { 
       icon: Crown, 
-      label: business?.verification_tier === 'premium' ? "Booster Active 🚀" : "Boost Visibility (Paid)", 
+      label: business?.verification_tier === 'premium' ? "Booster Active" : "Boost Visibility (Paid)", 
       href: "/business/boost",
       badge: business?.verification_tier === 'premium' ? "boosted" : "boost"
     },
@@ -245,9 +250,9 @@ export default function BusinessProfile() {
               >
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <ShieldCheck className="h-4.5 w-4.5" />
+                    <AdminModeIcon className="h-4.5 w-4.5" />
                   </div>
-                  <span className="font-semibold text-red-500 text-[13px] tracking-wide">Admin Panel 🛡️</span>
+                  <span className="font-semibold text-red-500 text-[13px] tracking-wide">Admin Panel</span>
                 </div>
                 <ChevronRight className="h-3.5 w-3.5 text-red-500/70 group-hover:translate-x-0.5 transition-transform duration-300" />
               </button>
@@ -295,21 +300,6 @@ export default function BusinessProfile() {
                 </div>
               </Link>
             ))}
-          </div>
-        </div>
-
-        {/* Theme Settings Container */}
-        <div className="bg-card rounded-2xl border border-border/40 shadow-xl shadow-black/5 overflow-hidden">
-          <div className="divide-y divide-border/30">
-            <div className="flex items-center justify-between px-4 py-2.5 hover:bg-primary/[0.02] transition-all duration-300">
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-xl bg-muted/50 flex items-center justify-center">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <span className="font-medium text-foreground/80 text-[13px] tracking-wide">Dark Theme</span>
-              </div>
-              <ThemeToggle />
-            </div>
           </div>
         </div>
 

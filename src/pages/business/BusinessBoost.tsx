@@ -25,21 +25,44 @@ export default function BusinessBoost() {
       toast.error("Please log in to continue");
       return;
     }
-    if (!business?.id) {
-      toast.error("No business profile loaded");
+    const activeBusinessId = business?.id || user?.id;
+    if (!activeBusinessId) {
+      toast.error("Please log in to continue");
       return;
     }
 
     setLoadingPayment(true);
     try {
+      // Ensure customer profile exists for checkout compatibility
+      try {
+        await supabase.from("customers").upsert({
+          user_id: user.id,
+          location: "Store Pickup",
+          street_address: "Campus Store",
+          area_name: "Main Campus",
+        }, { onConflict: "user_id" });
+      } catch {
+        // Fallback for customer provisioning
+      }
+
       const { data, error } = await supabase.functions.invoke("initialize-payment", {
         body: {
           email: user.email,
           total: boosterPrice,
-          businessId: business.id,
+          amount: boosterPrice,
+          businessId: activeBusinessId,
+          deliveryType: "pickup",
+          items: [
+            {
+              productId: "booster-30d",
+              name: "Visibility Booster (30 Days)",
+              price: boosterPrice,
+              quantity: 1,
+            }
+          ],
           metadata: {
             type: "booster",
-            business_id: business.id,
+            business_id: activeBusinessId,
           }
         }
       });
@@ -83,7 +106,8 @@ export default function BusinessBoost() {
 
   const activateBoost = useMutation({
     mutationFn: async () => {
-      if (!business?.id) throw new Error("No business profile loaded.");
+      const activeBusinessId = business?.id || user?.id;
+      if (!activeBusinessId) throw new Error("Please log in to continue.");
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30);
 
@@ -93,14 +117,14 @@ export default function BusinessBoost() {
           verification_tier: "premium",
           verified: true
         })
-        .eq("id", business.id);
+        .eq("user_id", user?.id || activeBusinessId);
 
       if (error) throw error;
 
       const { error: subscriptionError } = await (supabase as any)
         .from("premium_subscriptions")
         .upsert({
-          business_id: business.id,
+          business_id: activeBusinessId,
           status: "active",
           started_at: new Date().toISOString(),
           expires_at: expiresAt.toISOString(),
@@ -116,7 +140,7 @@ export default function BusinessBoost() {
         message: "Your paid Visibility Booster has been activated! premium badge awarded.",
         data: {
           email_type: "booster_active",
-          subject: "Visibility Booster Activated! 🚀",
+          subject: "Visibility Booster Activated! ",
           body: `Hi ${business.company_name || 'Partner'}, your payment has been processed successfully. Your Gold Elite Premium badge has been awarded, and search prioritization weights are engaged.`
         }
       });

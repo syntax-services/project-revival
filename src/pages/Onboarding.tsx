@@ -113,7 +113,7 @@ export default function Onboarding() {
           
           if (!refError && refData && (refData as any).success) {
              toast({
-               title: "Bonus Claimed! 🎉",
+               title: "Bonus Claimed! ",
                description: (refData as any).message || "Your sign-up bonus was successfully applied.",
              });
           } else if (refError || (refData && !(refData as any).success)) {

@@ -146,7 +146,7 @@ export default function BusinessVerify() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-location-request"] });
       playVerificationChime().catch(console.error);
-      toast.success("Location verification request submitted successfully! 📍");
+      toast.success("Location verification request submitted successfully! ");
     },
     onError: (err: any) => {
       toast.error(err.message || "Failed to submit request.");
@@ -245,7 +245,7 @@ export default function BusinessVerify() {
                     {verifyingDidit ? (
                       <><Loader2 className="h-4 w-4 animate-spin" /> Starting Didit...</>
                     ) : (
-                      <>Verify Identity with Didit 🛡️</>
+                      <>Verify Identity with Didit </>
                     )}
                   </Button>
                 </div>
@@ -339,7 +339,7 @@ export default function BusinessVerify() {
                     {/* Video Proof Uploader */}
                     <div className="space-y-1.5">
                       <Label htmlFor="videoProof" className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
-                        🎥 Physical Setup Video Proof
+                         Physical Setup Video Proof
                       </Label>
                       <div className="border border-dashed border-border/40 rounded-2xl p-4 text-center space-y-2 hover:bg-muted/10 transition-all duration-200 relative">
                         {videoUrl ? (

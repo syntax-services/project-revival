@@ -13,6 +13,7 @@ import { TagInput } from "@/components/ui/tag-input";
 import { useReferral } from "@/hooks/useReferral";
 import { StructuredLocationPicker } from "@/components/location/StructuredLocationPicker";
 import { StructuredLocationSelection, formatStructuredLocation, getLocationCoords } from "@/hooks/useStructuredLocations";
+import { AccountDeletionDialog } from "@/components/auth/AccountDeletionDialog";
 import { cn } from "@/lib/utils";
 import { getEdgeFunctionErrorMessage } from "@/lib/edgeFunctionErrors";
 import {
@@ -123,9 +124,8 @@ export default function CustomerSettings() {
     budget_alert_max: 10000000,
   });
   const [saving, setSaving] = useState(false);
-  const [ninInput, setNinInput] = useState("");
-  const [bvnInput, setBvnInput] = useState("");
   const [verifyingIdentity, setVerifyingIdentity] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const handleVerifyIdentity = async () => {
     if (!user) return;
@@ -161,40 +161,67 @@ export default function CustomerSettings() {
 
   useEffect(() => {
     if (profile) {
-      setFullName(profile.full_name);
+      setFullName(profile.full_name || "");
       setPhone(profile.phone || "");
     }
   }, [profile]);
 
-  // Realtime settings sync
+  // Realtime settings & customer sync
   useEffect(() => {
-    if (!user || !customerData.id) return;
+    if (!user) return;
     
     const channel = supabase
-      .channel(`settings-realtime-${user.id}-${Math.random().toString(36).substring(7)}`)
+      .channel(`cust-settings-realtime-${user.id}-${Math.random().toString(36).substring(7)}`)
       .on(
         "postgres_changes",
         {
           event: "UPDATE",
           schema: "public",
           table: "customer_marketplace_settings",
-          filter: `customer_id=eq.${customerData.id}`,
+          filter: customerData.id ? `customer_id=eq.${customerData.id}` : undefined,
         },
         (payload) => {
           const settings = payload.new;
-          setMarketSettings({
-            profile_visibility: settings.profile_visibility,
-            activity_status: settings.activity_status,
-            local_search_radius_km: Number(settings.local_search_radius_km || 15),
-            notify_new_chats: settings.notify_new_chats,
-            notify_new_bids: settings.notify_new_bids,
-            notify_order_updates: settings.notify_order_updates,
-            notify_email_newsletters: settings.notify_email_newsletters,
-            two_factor_auth_enabled: settings.two_factor_auth_enabled,
-            biometrics_enabled: settings.biometrics_enabled,
-            budget_alert_min: Number(settings.budget_alert_min || 0),
-            budget_alert_max: Number(settings.budget_alert_max || 10000000),
-          });
+          if (settings) {
+            setMarketSettings({
+              profile_visibility: settings.profile_visibility,
+              activity_status: settings.activity_status,
+              local_search_radius_km: Number(settings.local_search_radius_km || 15),
+              notify_new_chats: settings.notify_new_chats,
+              notify_new_bids: settings.notify_new_bids,
+              notify_order_updates: settings.notify_order_updates,
+              notify_email_newsletters: settings.notify_email_newsletters,
+              two_factor_auth_enabled: settings.two_factor_auth_enabled,
+              biometrics_enabled: settings.biometrics_enabled,
+              budget_alert_min: Number(settings.budget_alert_min || 0),
+              budget_alert_max: Number(settings.budget_alert_max || 10000000),
+            });
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "customers",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const customer = payload.new as any;
+          if (customer) {
+            setCustomerData((prev) => ({
+              ...prev,
+              interests: customer.interests || [],
+              preferred_categories: customer.preferred_categories || [],
+              location: customer.location,
+              latitude: customer.latitude,
+              longitude: customer.longitude,
+              location_area_id: customer.location_area_id,
+              location_street_id: customer.location_street_id,
+              location_landmark_id: customer.location_landmark_id,
+            }));
+          }
         }
       )
       .subscribe();
@@ -203,6 +230,7 @@ export default function CustomerSettings() {
       void supabase.removeChannel(channel);
     };
   }, [user, customerData.id]);
+
   useEffect(() => {
     const fetchCustomerAndSettings = async () => {
       if (!user) return;
@@ -331,7 +359,7 @@ export default function CustomerSettings() {
       
       toast({
         title: "Settings saved",
-        description: "Your profile has been updated.",
+        description: "Your profile has been updated in real-time.",
       });
     } catch (error) {
       console.error("Error saving settings:", error);
@@ -347,7 +375,7 @@ export default function CustomerSettings() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 pb-20 lg:pb-6 max-w-lg mx-auto">
+      <div className="space-y-6 pb-20 lg:pb-6 max-w-lg mx-auto text-left">
         <div>
           <h1 className="text-xl font-medium tracking-tight text-foreground">Settings</h1>
           <p className="mt-1 text-xs text-muted-foreground uppercase tracking-widest">
@@ -436,12 +464,12 @@ export default function CustomerSettings() {
                 <Button
                   onClick={handleVerifyIdentity}
                   disabled={verifyingIdentity}
-                  className="w-full h-10 text-xs font-bold rounded-2xl bg-primary text-primary-foreground hover:bg-primary/95 flex items-center justify-center gap-2"
+                  className="w-full h-10 text-xs font-bold rounded-2xl bg-primary text-primary-foreground hover:bg-primary/95 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {verifyingIdentity ? (
                     <><Loader2 className="h-4 w-4 animate-spin" /> Starting Didit...</>
                   ) : (
-                    <>Verify Identity with Didit 🛡️</>
+                    <>Verify Identity with Didit</>
                   )}
                 </Button>
               </div>
@@ -655,12 +683,19 @@ export default function CustomerSettings() {
         </div>
 
         {/* Theme customization */}
-        <div className="dashboard-card space-y-4">
+        <div className="dashboard-card space-y-4 text-left">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent">
               <Palette className="h-4.5 w-4.5 text-accent-foreground" />
             </div>
             <h2 className="font-medium text-sm text-foreground uppercase tracking-wider">Appearance</h2>
+          </div>
+          <div className="flex items-center justify-between py-2 border-b border-border/10">
+            <div>
+              <p className="text-xs font-semibold text-foreground">Dark Theme</p>
+              <p className="text-[11px] text-muted-foreground">Toggle between dark and light interface modes.</p>
+            </div>
+            <ThemeToggle />
           </div>
           <div className="pt-2">
             <p className="text-xs font-medium text-muted-foreground mb-3">Color Palette</p>
@@ -687,9 +722,35 @@ export default function CustomerSettings() {
             Sign Out
           </Button>
         </div>
+
+        {/* Danger Zone: Account Deletion */}
+        <div className="dashboard-card border border-destructive/20 bg-destructive/5 space-y-3 pt-4 text-left">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-destructive uppercase tracking-wider">Danger Zone</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Permanently delete your String account and all associated profile, order, and chat history.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={() => setShowDeleteModal(true)}
+              className="rounded-2xl text-xs font-black shrink-0 active:scale-95 transition-transform shadow-xs"
+            >
+              Delete Account
+            </Button>
+          </div>
+        </div>
+
+        {/* Account Deletion Confirmation Modal */}
+        <AccountDeletionDialog
+          open={showDeleteModal}
+          onOpenChange={setShowDeleteModal}
+          userType="customer"
+        />
       </div>
     </DashboardLayout>
   );
 }
-
-

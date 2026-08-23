@@ -88,12 +88,21 @@ serve(async (req) => {
     if (txRef) {
       const { data: existingTx, error: existingTxError } = await supabase
         .from("payment_transactions")
-        .select("metadata")
+        .select("metadata, status")
         .eq("paystack_reference", txRef)
         .maybeSingle();
 
       if (existingTxError) {
         console.error("Error loading existing transaction metadata:", existingTxError);
+      }
+
+      // Idempotency check: If this transaction is already marked success, skip fulfillment!
+      if (existingTx?.status === "success") {
+        console.log(`Transaction ${txRef} is already processed. Skipping duplicate webhook.`);
+        return new Response(JSON.stringify({ success: true, message: "Already processed" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
       }
 
       const savedMeta = existingTx?.metadata && typeof existingTx.metadata === "object"
@@ -119,26 +128,18 @@ serve(async (req) => {
         console.error("Error updating transaction log:", txError);
       }
 
-      // 2. Handle Wallet Funding
+      // 2. Handle Wallet Funding (Now protected by idempotency above)
       if (meta.type === "funding" && meta.user_id) {
-        const { data: profile, error: profErr } = await supabase
-          .from("profiles")
-          .select("wallet_balance, total_funded")
-          .eq("user_id", meta.user_id)
-          .single();
+        // Calling postgres RPC for atomic increment to prevent race conditions
+        const { error: rpcErr } = await supabase.rpc("increment_wallet_balance", {
+          p_user_id: meta.user_id,
+          p_amount: amount,
+        });
 
-        if (!profErr && profile) {
-          const currentBal = Number(profile.wallet_balance || 0);
-          const currentFunded = Number(profile.total_funded || 0);
-          await supabase
-            .from("profiles")
-            .update({
-              wallet_balance: currentBal + amount,
-              total_funded: currentFunded + amount,
-            })
-            .eq("user_id", meta.user_id);
-
-          console.log(`Wallet funded successfully: user_id=${meta.user_id}, amount=₦${amount}`);
+        if (rpcErr) {
+          console.error("Error calling wallet funding RPC:", rpcErr);
+        } else {
+          console.log(`Wallet funded successfully via RPC: user_id=${meta.user_id}, amount=₦${amount}`);
         }
       }
 
@@ -236,6 +237,43 @@ serve(async (req) => {
               console.error(`Settle error for order ${order.id}:`, settleErr);
             }
           }
+        }
+      }
+      if (meta.type === "booster" && (meta.business_id || meta.businessId)) {
+        const targetBizId = (meta.business_id || meta.businessId) as string;
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 30);
+
+        try {
+          await supabase
+            .from("businesses")
+            .update({
+              verification_tier: "premium",
+              verified: true,
+            })
+            .eq("id", targetBizId);
+
+          await supabase
+            .from("premium_subscriptions")
+            .upsert({
+              business_id: targetBizId,
+              status: "active",
+              started_at: new Date().toISOString(),
+              expires_at: expiresAt.toISOString(),
+              amount_paid: amount,
+            }, { onConflict: "business_id" });
+
+          if (meta.user_id) {
+            await supabase.from("notifications").insert({
+              user_id: meta.user_id as string,
+              title: "Visibility Booster Active",
+              message: "Your paid Visibility Booster has been activated! Premium badge awarded.",
+              type: "system",
+              data: { type: "booster_activated", business_id: targetBizId }
+            });
+          }
+        } catch (boostErr) {
+          console.error("Error activating booster in webhook:", boostErr);
         }
       }
     }

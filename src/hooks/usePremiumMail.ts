@@ -328,7 +328,7 @@ export function generateEmailHtml(type: EmailType, payload: EmailTemplatePayload
 
     case "customer_order":
       contentHtml = `
-        <h1 class="h1">Incoming Purchase Order! 🎉</h1>
+        <h1 class="h1">Incoming Purchase Order! </h1>
         <p class="salutation">Hi ${recipientName},</p>
         <p class="paragraph">Congratulations! A customer has placed a new order for your product. Please review details and initiate shipping fulfillment.</p>
         
@@ -356,7 +356,7 @@ export function generateEmailHtml(type: EmailType, payload: EmailTemplatePayload
 
     case "payment_received":
       contentHtml = `
-        <h1 class="h1">Payment Cleared Successfully! 💰</h1>
+        <h1 class="h1">Payment Cleared Successfully! </h1>
         <p class="salutation">Hi ${recipientName},</p>
         <p class="paragraph">We are happy to confirm that the payment for your order has been received and verified. Settlement funds are registered to your wallet balance.</p>
         
@@ -380,7 +380,7 @@ export function generateEmailHtml(type: EmailType, payload: EmailTemplatePayload
 
     case "order_progress":
       contentHtml = `
-        <h1 class="h1">Your Order has been ${variables.status || "Shipped"}! 🚚</h1>
+        <h1 class="h1">Your Order has been ${variables.status || "Shipped"}! </h1>
         <p class="salutation">Hi ${recipientName},</p>
         <p class="paragraph">Great news! The merchant has updated the tracking coordinates of your order. It is actively in transit to your registered coordinates.</p>
         
@@ -453,7 +453,7 @@ export function generateEmailHtml(type: EmailType, payload: EmailTemplatePayload
 
     case "password_reset":
       contentHtml = `
-        <h1 class="h1">Password Reset Request 🔑</h1>
+        <h1 class="h1">Password Reset Request </h1>
         <p class="salutation">Hi ${recipientName || 'String User'},</p>
         <p class="paragraph">We received a request to reset the password for your String account. Click the button below to establish a secure new password. If you didn't request this change, you can safely ignore this message—your previous password remains securely encrypted and completely private.</p>
         
@@ -507,14 +507,14 @@ export function usePremiumMail() {
 
       // 3. Subject title mappings
       const subjectMapping: Record<EmailType, string> = {
-        new_device_login: "String Security Alert: New Device Login 🛡️",
-        profile_view: "String Business: You got a new Shop Card view! 👀",
-        customer_order: "String Business: New Incoming Purchase Order! 📦",
+        new_device_login: "String Security Alert: New Device Login ",
+        profile_view: "String Business: You got a new Shop Card view! ",
+        customer_order: "String Business: New Incoming Purchase Order! ",
         payment_received: "String Wallet: Settlement Cleared Successfully! ₦",
-        order_progress: `String Order: Your order has been ${variables.status || "Shipped"}! 🚚`,
-        premium_revoked: "String Urgent: Premium Booster Status Revoked ⚠️",
+        order_progress: `String Order: Your order has been ${variables.status || "Shipped"}! `,
+        premium_revoked: "String Urgent: Premium Booster Status Revoked ",
         business_verified: "String Trade: Location Verification Confirmed! ✓",
-        password_reset: "String Security: Password Reset Request 🔑"
+        password_reset: "String Security: Password Reset Request "
       };
 
       // 4. Create row in notifications table

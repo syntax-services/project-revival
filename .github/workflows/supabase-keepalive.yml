@@ -1,0 +1,43 @@
+name: Supabase Keep-Alive Cron
+
+on:
+  schedule:
+    # Runs every 2 days at 04:00 UTC (well within Supabase's 7-day inactivity threshold)
+    - cron: '0 4 */2 * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  keepalive:
+    name: Ping Supabase Database & REST API
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://kxynwcuhgawnhqoexpti.supabase.co' }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4eW53Y3VoZ2F3bmhxb2V4cHRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDAxNDYsImV4cCI6MjA4NTUxNjE0Nn0.W7p6v78dZBMGKIYWlrnFWMeSgzVHXWXSapudY-qgAEI' }}
+        run: |
+          echo "Starting Supabase Keep-Alive Ping at $(date -u)..."
+          echo "Target URL: $SUPABASE_URL"
+          
+          # Ping 1: REST API Root
+          HTTP_STATUS_ROOT=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/rest/v1/")
+          echo "Root REST API HTTP Status: $HTTP_STATUS_ROOT"
+          
+          # Ping 2: Query profiles table (limits to 1 row for minimal compute)
+          HTTP_STATUS_PROFILES=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/rest/v1/profiles?select=id&limit=1")
+          echo "Profiles Table Query HTTP Status: $HTTP_STATUS_PROFILES"
+          
+          if [ "$HTTP_STATUS_ROOT" -eq 200 ] || [ "$HTTP_STATUS_PROFILES" -eq 200 ] || [ "$HTTP_STATUS_ROOT" -eq 204 ] || [ "$HTTP_STATUS_PROFILES" -eq 204 ]; then
+            echo "✅ Supabase project is active and responded successfully."
+            exit 0
+          else
+            echo "⚠️ Unexpected response codes. Root: $HTTP_STATUS_ROOT, Profiles: $HTTP_STATUS_PROFILES"
+            # Return 0 so transient network blips don't fail the workflow, but log status
+            exit 0
+          fi

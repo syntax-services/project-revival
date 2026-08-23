@@ -13,7 +13,7 @@ serve(async (req) => {
   try {
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     
-    const { to, subject, html } = await req.json();
+    const { to, subject, html, attachments } = await req.json();
     if (!to || !subject || !html) {
       throw new Error("Missing recipient (to), subject, or html body");
     }
@@ -39,9 +39,10 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: Deno.env.get("RESEND_FROM_EMAIL") || "String <support@string.com.ng>",
-        to: [to],
+        to: Array.isArray(to) ? to : [to],
         subject: subject,
         html: html,
+        attachments: attachments || undefined,
       }),
     });
 

@@ -283,7 +283,6 @@ export default function Landing() {
           </Link>
           
           <nav className="flex items-center gap-3">
-            <ThemeToggle />
             {user ? (
               <Button asChild className="rounded-full px-5 h-9 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20">
                 <Link to={dashboardPath}>

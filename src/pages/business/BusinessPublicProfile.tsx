@@ -32,8 +32,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-
 import { ReputationBadge } from "@/components/ui/reputation-badge";
+import { usePageMeta } from "@/hooks/usePageMeta";
+import { ShareButton } from "@/components/common/ShareButton";
 
 interface Business {
   id: string;
@@ -47,6 +48,8 @@ interface Business {
   reputation_score: number | null;
   verified: boolean | null;
   verification_tier: VerificationTier | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 interface Product {
@@ -104,6 +107,15 @@ export default function BusinessPublicProfile() {
   const [budgetMin, setBudgetMin] = useState("");
   const [budgetMax, setBudgetMax] = useState("");
   const [submittingJob, setSubmittingJob] = useState(false);
+
+  // Dynamic OpenGraph and Twitter Metadata for Store Link Previews
+  usePageMeta({
+    title: business?.company_name || "Campus Store",
+    description: business?.products_services || business?.industry || "Verified campus merchant on String",
+    image: business?.cover_image_url || null,
+    url: window.location.href,
+    type: "profile",
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -404,6 +416,14 @@ export default function BusinessPublicProfile() {
                     </Button>
                   </>
                 )}
+                <ShareButton
+                  title={business.company_name}
+                  text={`Check out ${business.company_name} on String Campus Marketplace!`}
+                  url={window.location.href}
+                  imageUrl={business.cover_image_url}
+                  variant="button"
+                  label="Share Store"
+                />
               </div>
           </div>
 
@@ -437,7 +457,16 @@ export default function BusinessPublicProfile() {
                           <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
                         </div>
                       )}
-                      <h3 className="font-medium text-foreground">{product.name}</h3>
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-medium text-foreground">{product.name}</h3>
+                        <ShareButton
+                          title={product.name}
+                          text={`Check out ${product.name} from ${business.company_name} on String!`}
+                          url={`${window.location.origin}/business/${business.id}?product=${product.id}`}
+                          imageUrl={product.image_url}
+                          variant="icon"
+                        />
+                      </div>
                       {product.category && (
                         <p className="text-xs text-muted-foreground">{product.category}</p>
                       )}
@@ -482,11 +511,19 @@ export default function BusinessPublicProfile() {
                     <div key={service.id} className="dashboard-card">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-medium text-foreground">{service.name}</h3>
-                            <Badge variant={service.is_available ? "default" : "secondary"}>
-                              {service.is_available ? "Available" : "Unavailable"}
-                            </Badge>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium text-foreground">{service.name}</h3>
+                              <Badge variant={service.is_available ? "default" : "secondary"}>
+                                {service.is_available ? "Available" : "Unavailable"}
+                              </Badge>
+                            </div>
+                            <ShareButton
+                              title={service.name}
+                              text={`Check out ${service.name} from ${business.company_name} on String!`}
+                              url={`${window.location.origin}/business/${business.id}?service=${service.id}`}
+                              variant="icon"
+                            />
                           </div>
                           {service.category && (
                             <p className="text-xs text-muted-foreground">{service.category}</p>

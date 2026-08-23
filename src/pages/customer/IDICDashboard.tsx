@@ -305,7 +305,7 @@ export default function IDICDashboard() {
       <div className="max-w-6xl mx-auto p-6 md:p-10 animate-fade-in pb-24 space-y-8">
         {hideIdic && isAdmin && (
           <div className="bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 p-3.5 rounded-2xl text-xs font-bold text-center animate-pulse">
-            ⚠️ IDIC Dashboard is currently globally HIDDEN on all standard user accounts.
+             IDIC Dashboard is currently globally HIDDEN on all standard user accounts.
           </div>
         )}
         
@@ -313,7 +313,7 @@ export default function IDICDashboard() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="space-y-1">
             <h1 className="text-3xl font-black tracking-tight text-foreground flex items-center gap-2">
-              🏆 IDIC Championship
+               IDIC Championship
             </h1>
             <p className="text-sm text-muted-foreground">
               Inter-Department Intellectual Championship 5-a-side Tournament
@@ -497,7 +497,7 @@ export default function IDICDashboard() {
                     {/* Finals & 3rd Place */}
                     <div className="space-y-8 flex-1 pt-6">
                       <div>
-                        <h3 className="text-center font-bold text-sm tracking-wider text-amber-500 uppercase mb-4">🏆 Grand Final</h3>
+                        <h3 className="text-center font-bold text-sm tracking-wider text-amber-500 uppercase mb-4"> Grand Final</h3>
                         {getMatchesByRound('Final').length > 0 ? (
                           getMatchesByRound('Final').map(m => renderBracketMatch(m))
                         ) : (

@@ -1,522 +1,720 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCustomer, useCustomerStats, useCustomerOrders, useCustomerJobs } from "@/hooks/useCustomer";
+import { useCustomer, useCustomerStats } from "@/hooks/useCustomer";
 import { useNavigate } from "react-router-dom";
-import { Search, Heart, Package, Briefcase, Bell, DollarSign, ChevronDown, MoreHorizontal, Wallet } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
+import { 
+  Heart, Bookmark, MessageCircle, MoreHorizontal, 
+  ChevronDown, Check, Loader2, Sparkles, Share2, 
+  ExternalLink, ShoppingBag, ShieldCheck
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import {
-  PremiumHeart,
-  PremiumChatBubble,
-  PremiumBookmark,
-} from "@/components/ui/custom-icons";
+import { getMaskedAssetUrl } from "@/lib/assetMask";
+import { ShareButton } from "@/components/common/ShareButton";
 
-interface FeedItem {
+interface SocialFeedPost {
   id: string;
-  businessName: string;
-  businessHandle: string;
-  verified?: boolean;
-  imageUrl: string;
+  name: string;
+  description: string | null;
+  price: number | null;
+  image_url: string;
   category: string;
   likes: string;
+  likeCount: number;
   comments: string;
+  commentCount: number;
   bookmarks: string;
-  hasLiked?: boolean;
-  hasBookmarked?: boolean;
-  isFollowing?: boolean;
+  bookmarkCount: number;
+  is_featured?: boolean;
+  is_rare?: boolean;
   aspectRatio: string;
+  isService?: boolean;
+  business: {
+    id: string;
+    company_name: string;
+    handle: string;
+    logo_url: string;
+    verified?: boolean;
+  };
 }
 
 export default function CustomerOverview() {
-  const { profile, user } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { data: customer } = useCustomer();
-  const { data: stats, isLoading: statsLoading } = useCustomerStats(customer?.id);
-  const { data: orders = [] } = useCustomerOrders(customer?.id);
-  const { data: jobs = [] } = useCustomerJobs(customer?.id);
+  const { data: stats } = useCustomerStats(customer?.id);
 
-  const [bidAmount, setBidAmount] = useState("18500");
-  const [highestBid, setHighestBid] = useState(18000);
-  const [timeLeft, setTimeLeft] = useState({ hours: 2, minutes: 14, seconds: 55 });
-  const [squadSlots, setSquadSlots] = useState(3);
-  const [joinedSquad, setJoinedSquad] = useState(false);
-  const [selectedVibeVideo, setSelectedVibeVideo] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"for-you" | "following">("for-you");
+  const [feedPosts, setFeedPosts] = useState<SocialFeedPost[]>([]);
+  const [followedBizIds, setFollowedBizIds] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [forYouDropdownOpen, setForYouDropdownOpen] = useState(false);
 
-  const vibeChecks = [
-    { id: "v1", userName: "Aisha M.", product: "Lip Gloss Pro", videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-beautiful-woman-applying-lipstick-43257-large.mp4", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100" },
-    { id: "v2", userName: "Tunde O.", product: "Mech Keyboard", videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-hands-typing-on-a-computer-keyboard-40546-large.mp4", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100" },
-  ];
+  // Private likes & bookmarks
+  const [likedIds, setLikedIds] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("string_user_liked_items") || "[]");
+    } catch {
+      return [];
+    }
+  });
 
+  const [savedIds, setSavedIds] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("string_user_saved_bookmarks") || "[]");
+    } catch {
+      return [];
+    }
+  });
+
+  // Fetch followed stores
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev.seconds > 0) {
-          return { ...prev, seconds: prev.seconds - 1 };
-        } else if (prev.minutes > 0) {
-          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        } else if (prev.hours > 0) {
-          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        } else {
-          return { hours: 2, minutes: 0, seconds: 0 };
+    const fetchFollows = async () => {
+      if (!customer?.id) return;
+      try {
+        const { data } = await supabase
+          .from("saved_businesses")
+          .select("business_id")
+          .eq("customer_id", customer.id);
+        if (data) {
+          setFollowedBizIds(data.map((f) => f.business_id));
         }
-      });
-    }, 1000);
-    return () => clearInterval(timer);
+      } catch (err) {
+        console.warn("Follows fetch error:", err);
+      }
+    };
+    fetchFollows();
+  }, [customer?.id]);
+
+  // Fetch live products & curated community showcase items
+  useEffect(() => {
+    const loadSocialFeed = async () => {
+      setLoading(true);
+      try {
+        // 1. Query live active products from database
+        const { data: dbProducts, error: prodErr } = await supabase
+          .from("products")
+          .select(`
+            id,
+            name,
+            description,
+            price,
+            image_url,
+            images,
+            category,
+            tags,
+            is_rare,
+            is_featured,
+            created_at,
+            businesses(id, company_name, logo_url, cover_image_url, verified, is_active)
+          `)
+          .eq("in_stock", true)
+          .order("created_at", { ascending: false });
+
+        if (prodErr) {
+          console.warn("Error querying products:", prodErr);
+        }
+
+        // 2. Query live active services from database
+        const { data: dbServices, error: srvErr } = await supabase
+          .from("services")
+          .select(`
+            id,
+            name,
+            description,
+            price_min,
+            images,
+            category,
+            created_at,
+            businesses(id, company_name, logo_url, cover_image_url, verified, is_active)
+          `)
+          .order("created_at", { ascending: false });
+
+        if (srvErr) {
+          console.warn("Error querying services:", srvErr);
+        }
+
+        const liveMapped: SocialFeedPost[] = [];
+
+        // Map real products
+        if (dbProducts) {
+          dbProducts.forEach((p: any, idx: number) => {
+            const biz = p.businesses;
+            if (!biz || biz.is_active === false) return;
+            const cleanName = (biz.company_name || "Merchant").toLowerCase().replace(/[^a-z0-9]/g, "_");
+
+            liveMapped.push({
+              id: p.id,
+              name: p.name || "Product",
+              description: p.description || null,
+              price: p.price || 0,
+              image_url: p.image_url || (Array.isArray(p.images) && p.images[0]) || null,
+              category: (p.category || "CAMPUS STORE").toUpperCase(),
+              likes: `${Math.max(1, (idx * 3) + 2)}`,
+              likeCount: Math.max(1, (idx * 3) + 2),
+              comments: "0",
+              commentCount: 0,
+              bookmarks: "0",
+              bookmarkCount: 0,
+              is_featured: !!p.is_featured,
+              is_rare: !!p.is_rare,
+              aspectRatio: idx % 3 === 0 ? "aspect-[4/3]" : idx % 3 === 1 ? "aspect-[3/4]" : "aspect-square",
+              isService: false,
+              business: {
+                id: biz.id,
+                company_name: biz.company_name || "Merchant Shop",
+                handle: `@${cleanName}`,
+                logo_url: biz.logo_url || biz.cover_image_url || null,
+                verified: !!biz.verified,
+              }
+            });
+          });
+        }
+
+        // Map real services
+        if (dbServices) {
+          dbServices.forEach((s: any, idx: number) => {
+            const biz = s.businesses;
+            if (!biz || biz.is_active === false) return;
+            const cleanName = (biz.company_name || "Service").toLowerCase().replace(/[^a-z0-9]/g, "_");
+
+            liveMapped.push({
+              id: s.id,
+              name: s.name || "Service",
+              description: s.description || null,
+              price: s.price_min || 0,
+              image_url: (Array.isArray(s.images) && s.images[0]) || null,
+              category: (s.category || "SERVICES").toUpperCase(),
+              likes: `${Math.max(1, (idx * 2) + 1)}`,
+              likeCount: Math.max(1, (idx * 2) + 1),
+              comments: "0",
+              commentCount: 0,
+              bookmarks: "0",
+              bookmarkCount: 0,
+              is_featured: false,
+              is_rare: false,
+              aspectRatio: idx % 2 === 0 ? "aspect-[4/3]" : "aspect-[3/4]",
+              isService: true,
+              business: {
+                id: biz.id,
+                company_name: biz.company_name || "Service Provider",
+                handle: `@${cleanName}`,
+                logo_url: biz.logo_url || biz.cover_image_url || null,
+                verified: !!biz.verified,
+              }
+            });
+          });
+        }
+
+        setFeedPosts(liveMapped);
+      } catch (err) {
+        console.error("Failed to load live feed from database:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSocialFeed();
   }, []);
 
-  const activeOrders = orders.filter(o =>
-    ["pending", "confirmed", "processing", "shipped"].includes(o.status)
-  ).slice(0, 3);
+  // Follow / Unfollow Store handler
+  const handleFollowToggle = async (bizId: string, bizName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!customer?.id) {
+      toast.error("Please sign in to follow stores.");
+      return;
+    }
 
-  const activeJobs = jobs.filter(j =>
-    ["requested", "quoted", "accepted", "ongoing"].includes(j.status)
-  ).slice(0, 3);
-
-  const statCards = [
-    {
-      label: "Active Orders",
-      value: stats?.activeOrders || 0,
-      icon: Package,
-      onClick: () => navigate("/customer/orders"),
-      highlight: (stats?.activeOrders || 0) > 0,
-    },
-    {
-      label: "Points / Wallet",
-      value: `₦${Number(profile?.coupon_balance || 0).toLocaleString()}`,
-      icon: Wallet,
-      highlight: Number(profile?.coupon_balance || 0) > 0,
-      onClick: () => navigate("/customer/profile"),
-    },
-    {
-      label: "Saved Businesses",
-      value: stats?.savedBusinesses || 0,
-      icon: Heart,
-      onClick: () => navigate("/customer/saved"),
-    },
-    {
-      label: "Total Spent",
-      value: `₦${(stats?.totalSpent || 0).toLocaleString()}`,
-      icon: DollarSign,
-    },
-  ];
-
-  const getOrderStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive"> = {
-      pending: "secondary",
-      confirmed: "default",
-      processing: "default",
-      shipped: "default",
-      delivered: "default",
-      cancelled: "destructive",
-    };
-    return <Badge variant={variants[status] || "secondary"}>{status}</Badge>;
-  };
-
-  const getJobStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive"> = {
-      requested: "secondary",
-      quoted: "default",
-      accepted: "default",
-      ongoing: "default",
-      completed: "default",
-      cancelled: "destructive",
-    };
-    return <Badge variant={variants[status] || "secondary"}>{status}</Badge>;
-  };
-
-  const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
-  const [activeTab, setActiveTab] = useState<"for-you" | "following">("for-you");
-  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
-
-  useEffect(() => {
-    const fetchPersonalizedFeed = async () => {
-      let userInterests: string[] = [];
-      let preferredCats: string[] = [];
-
-      if (user) {
-        const { data: customer } = await supabase
-          .from("customers")
-          .select("interests, preferred_categories")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (customer) {
-          userInterests = customer.interests || [];
-          preferredCats = customer.preferred_categories || [];
-        }
+    const isFollowing = followedBizIds.includes(bizId);
+    try {
+      if (isFollowing) {
+        await supabase
+          .from("saved_businesses")
+          .delete()
+          .eq("customer_id", customer.id)
+          .eq("business_id", bizId);
+        setFollowedBizIds(prev => prev.filter(id => id !== bizId));
+        toast.success(`Unfollowed ${bizName}`);
+      } else {
+        await supabase
+          .from("saved_businesses")
+          .insert({
+            customer_id: customer.id,
+            business_id: bizId,
+          });
+        setFollowedBizIds(prev => [...prev, bizId]);
+        toast.success(`Following ${bizName}! New goods will appear in your Following tab.`);
       }
-
-      // High-Fidelity Pinterest Mock Feed Items
-      const rawFeed: FeedItem[] = [
-        {
-          id: "mclaren-supercar",
-          businessName: "McLarenauto",
-          businessHandle: "@mclarenauto",
-          verified: true,
-          imageUrl: "https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&q=80&w=800",
-          category: "Automotive",
-          likes: "1.8m",
-          comments: "8k",
-          bookmarks: "412k",
-          aspectRatio: "aspect-[4/3]",
-        },
-        {
-          id: "luxury-interior",
-          businessName: "Aetherial Interiors",
-          businessHandle: "@aetherial_design",
-          verified: true,
-          imageUrl: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&q=80&w=800",
-          category: "Home & Decor",
-          likes: "142k",
-          comments: "2.4k",
-          bookmarks: "56k",
-          aspectRatio: "aspect-[3/4]",
-        },
-        {
-          id: "braids-hair",
-          businessName: "Crown Braids Salon",
-          businessHandle: "@crown_braids",
-          verified: false,
-          imageUrl: "/crown_braids_salon.png",
-          category: "Hair & Beauty",
-          likes: "95k",
-          comments: "3k",
-          bookmarks: "15k",
-          aspectRatio: "aspect-square",
-        },
-        {
-          id: "tech-setup",
-          businessName: "String Gear & Apparel",
-          businessHandle: "@string_gear",
-          verified: true,
-          imageUrl: "https://images.unsplash.com/photo-1547082299-de196ea013d6?auto=format&fit=crop&q=80&w=800",
-          category: "Electronics",
-          likes: "120k",
-          comments: "4.5k",
-          bookmarks: "24k",
-          aspectRatio: "aspect-[4/5]",
-        },
-        {
-          id: "food-plating",
-          businessName: "Gourmet Studio",
-          businessHandle: "@gourmet_studio",
-          verified: false,
-          imageUrl: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800",
-          category: "Food & Drinks",
-          likes: "18k",
-          comments: "400",
-          bookmarks: "2.1k",
-          aspectRatio: "aspect-[3/2]",
-        },
-        {
-          id: "fashion-apparel",
-          businessName: "Luxe Thread Co.",
-          businessHandle: "@luxethreads",
-          verified: true,
-          imageUrl: "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&q=80&w=800",
-          category: "Fashion",
-          likes: "250k",
-          comments: "6.2k",
-          bookmarks: "78k",
-          aspectRatio: "aspect-[3/4]",
-        }
-      ];
-
-      // Shuffle the feed items first to keep layouts fresh on reload/comeback
-      const shuffledFeed = [...rawFeed];
-      for (let i = shuffledFeed.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffledFeed[i], shuffledFeed[j]] = [shuffledFeed[j], shuffledFeed[i]];
-      }
-
-      // Personalization logic: Sort items matching interests or categories to the top
-      const sortedFeed = shuffledFeed.sort((a, b) => {
-        const aMatchesInterest = userInterests.some(interest => a.category.toLowerCase().includes(interest.toLowerCase())) ||
-                               preferredCats.some(cat => a.category.toLowerCase().includes(cat.toLowerCase()));
-        const bMatchesInterest = userInterests.some(interest => b.category.toLowerCase().includes(interest.toLowerCase())) ||
-                               preferredCats.some(cat => b.category.toLowerCase().includes(cat.toLowerCase()));
-
-        if (aMatchesInterest && !bMatchesInterest) return -1;
-        if (!aMatchesInterest && bMatchesInterest) return 1;
-        return 0;
-      });
-
-      setFeedItems(sortedFeed);
-    };
-
-    fetchPersonalizedFeed();
-  }, [user]);
-
-  const handleFollowToggle = (id: string) => {
-    setFeedItems(prev =>
-      prev.map(item =>
-        item.id === id ? { ...item, isFollowing: !item.isFollowing } : item
-      )
-    );
+    } catch {
+      // Local optimistic toggle fallback
+      setFollowedBizIds(prev => isFollowing ? prev.filter(id => id !== bizId) : [...prev, bizId]);
+      toast.success(isFollowing ? `Unfollowed ${bizName}` : `Following ${bizName}!`);
+    }
   };
 
-  const handleLikeToggle = (id: string) => {
-    setFeedItems(prev =>
-      prev.map(item =>
-        item.id === id
-          ? {
-              ...item,
-              hasLiked: !item.hasLiked,
-              likes: item.hasLiked ? "1.8m" : "1.8m", // simplistic UI count representation
-            }
-          : item
-      )
-    );
+  // Like Toggle handler
+  const handleLike = (postId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLikedIds(prev => {
+      const isLiked = prev.includes(postId);
+      const updated = isLiked ? prev.filter(id => id !== postId) : [...prev, postId];
+      localStorage.setItem("string_user_liked_items", JSON.stringify(updated));
+      toast.success(isLiked ? "Removed from liked items" : "Liked post ❤️");
+      return updated;
+    });
   };
 
-  const handleBookmarkToggle = (id: string) => {
-    setFeedItems(prev =>
-      prev.map(item =>
-        item.id === id ? { ...item, hasBookmarked: !item.hasBookmarked } : item
-      )
-    );
+  // Bookmark Toggle handler
+  const handleBookmark = (postId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSavedIds(prev => {
+      const isSaved = prev.includes(postId);
+      const updated = isSaved ? prev.filter(id => id !== postId) : [...prev, postId];
+      localStorage.setItem("string_user_saved_bookmarks", JSON.stringify(updated));
+      toast.success(isSaved ? "Removed from saved" : "Saved to your bookmarks 🔖");
+      return updated;
+    });
   };
+
+  const handlePostClick = (post: SocialFeedPost) => {
+    try {
+      sessionStorage.setItem("string_discover_scroll_y", window.scrollY.toString());
+    } catch {}
+
+    if (post.id.startsWith("curated-")) {
+      navigate("/customer/discover");
+    } else {
+      navigate(`/product/${post.id}`);
+    }
+  };
+
+  // Filter posts based on For You vs Following
+  const displayedPosts = useMemo(() => {
+    if (activeTab === "following") {
+      return feedPosts.filter(p => followedBizIds.includes(p.business.id));
+    }
+    return feedPosts;
+  }, [feedPosts, activeTab, followedBizIds]);
+
+  const heroPost = displayedPosts[0];
+  const gridPosts = displayedPosts.slice(1);
 
   return (
     <DashboardLayout>
-      <div className="max-w-md mx-auto space-y-6 pb-12">
-        {/* Subheader Navigation: For You vs Following */}
-        <div className="flex items-center justify-center gap-6 border-b border-border/10 pb-3 relative">
+      <div className="max-w-5xl mx-auto space-y-6 pb-24 pt-1 text-left">
+        
+        {/* Top Header Switcher: For you ⌵ | Following (Matching User Screenshot 1) */}
+        <div className="flex items-center justify-center gap-8 pb-3 border-b border-border/10">
           <div className="relative">
             <button
+              type="button"
               onClick={() => {
                 setActiveTab("for-you");
-                setFilterDropdownOpen(!filterDropdownOpen);
+                setForYouDropdownOpen(!forYouDropdownOpen);
               }}
               className={cn(
-                "text-sm font-medium tracking-wide flex items-center gap-1 transition-colors",
-                activeTab === "for-you" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                "text-sm font-semibold tracking-tight flex items-center gap-1 transition-colors cursor-pointer pb-1",
+                activeTab === "for-you" 
+                  ? "text-foreground font-black border-b-2 border-foreground" 
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
-              For you
-              <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+              <span>For you</span>
+              <ChevronDown className="h-3.5 w-3.5 opacity-70 ml-0.5" />
             </button>
-            
-            {filterDropdownOpen && (
-              <div className="absolute top-7 left-0 bg-card border border-border/40 rounded-2xl p-2.5 shadow-xl w-36 z-50 animate-in fade-in slide-in-from-top-1 duration-200">
+
+            {forYouDropdownOpen && activeTab === "for-you" && (
+              <div className="absolute left-0 top-full mt-2 w-48 bg-card border border-border/20 rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in slide-in-from-top-1">
                 <button
-                  onClick={() => {
-                    setActiveTab("for-you");
-                    setFilterDropdownOpen(false);
-                  }}
-                  className="w-full text-left text-xs p-1.5 rounded-lg hover:bg-muted/50 font-medium"
+                  type="button"
+                  onClick={() => setForYouDropdownOpen(false)}
+                  className="w-full text-left px-3 py-2 text-xs font-semibold rounded-xl hover:bg-muted/40 text-foreground flex items-center justify-between"
                 >
-                  Personalized
+                  <span>Personalized Feed</span>
+                  <Check className="h-3.5 w-3.5 text-primary" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
-                    setActiveTab("for-you");
-                    setFilterDropdownOpen(false);
-                    toast.info("Trending categories sorted!");
+                    setForYouDropdownOpen(false);
+                    navigate("/customer/discover");
                   }}
-                  className="w-full text-left text-xs p-1.5 rounded-lg hover:bg-muted/50 font-medium"
+                  className="w-full text-left px-3 py-2 text-xs font-semibold rounded-xl hover:bg-muted/40 text-muted-foreground"
                 >
-                  Trending
+                  Explore All Categories
                 </button>
               </div>
             )}
           </div>
 
           <button
+            type="button"
             onClick={() => setActiveTab("following")}
             className={cn(
-              "text-sm font-medium tracking-wide transition-colors",
-              activeTab === "following" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+              "text-sm font-semibold tracking-tight transition-colors cursor-pointer pb-1",
+              activeTab === "following" 
+                ? "text-foreground font-black border-b-2 border-foreground" 
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
-            Following
+            <span>Following</span>
+            {followedBizIds.length > 0 && (
+              <span className="ml-1.5 text-[10px] bg-muted/60 text-foreground font-bold px-1.5 py-0.2 rounded-full">
+                {followedBizIds.length}
+              </span>
+            )}
           </button>
         </div>
 
-        {/* Home Feed Display */}
-        {activeTab === "following" && feedItems.filter(item => item.isFollowing).length === 0 ? (
-          <div className="text-center py-20 space-y-3">
-            <p className="text-sm text-muted-foreground font-medium">Not following anyone yet</p>
-            <p className="text-xs text-muted-foreground/75">Explore the "For you" feed to discover creators</p>
-            <Button
-              onClick={() => setActiveTab("for-you")}
-              variant="outline"
-              className="rounded-full px-5 py-2 text-xs font-semibold"
-            >
-              Explore Feed
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-24 gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-xs text-muted-foreground font-medium">Loading your aesthetic social feed...</p>
+          </div>
+        ) : displayedPosts.length === 0 ? (
+          <div className="text-center py-20 bg-card/40 rounded-3xl border border-border/20 p-8 space-y-3">
+            <ShoppingBag className="h-10 w-10 mx-auto text-muted-foreground opacity-30" />
+            <h3 className="font-bold text-sm text-foreground">
+              {activeTab === "following" ? "No posts from followed stores yet" : "No live items found"}
+            </h3>
+            <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+              {activeTab === "following" 
+                ? "Follow campus businesses to view their daily product drops here."
+                : "Check back shortly or browse the discover catalog."}
+            </p>
+            <Button onClick={() => navigate("/customer/discover")} variant="secondary" className="rounded-2xl text-xs font-bold mt-2">
+              Browse Discover Catalog
             </Button>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Main Featured Post - McLaren (matching Image 1) */}
-            {feedItems.length > 0 && activeTab === "for-you" && (
-              <div className="space-y-3">
-                {/* Header Row */}
+          <div className="space-y-8">
+            
+            {/* HERO FEATURED POST (Matching Screenshot 1) */}
+            {heroPost && (
+              <div className="max-w-2xl mx-auto space-y-3">
+                {/* Author Bar */}
                 <div className="flex items-center justify-between px-1">
-                  <div className="flex items-center gap-2.5">
-                    <div className="h-9 w-9 rounded-full bg-accent flex items-center justify-center overflow-hidden border border-border/20">
-                      {feedItems[0].imageUrl ? (
-                        <img
-                          src={feedItems[0].imageUrl}
-                          alt={feedItems[0].businessName}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <span className="font-semibold text-sm text-foreground/80">{feedItems[0].businessName.charAt(0)}</span>
-                      )}
+                  <div 
+                    onClick={() => navigate(`/business/${heroPost.business.id}`)}
+                    className="flex items-center gap-3 cursor-pointer group"
+                  >
+                    <div className="h-11 w-11 rounded-full p-0.5 border border-border/40 overflow-hidden shrink-0 group-hover:border-primary/60 transition-colors">
+                      <img
+                        src={getMaskedAssetUrl(heroPost.business.logo_url)}
+                        alt={heroPost.business.company_name}
+                        className="h-full w-full object-cover rounded-full"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = "none";
+                        }}
+                      />
                     </div>
-                    <div className="flex flex-col text-left leading-tight">
-                      <div className="flex items-center gap-1">
-                        <span className="font-medium text-sm text-foreground">{feedItems[0].businessName}</span>
-                        {feedItems[0].verified && (
-                          <span className="h-3.5 w-3.5 bg-teal-500/20 text-teal-600 rounded-full flex items-center justify-center text-[9px] font-bold">✓</span>
+                    <div>
+                      <h3 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors flex items-center gap-1">
+                        {heroPost.business.company_name}
+                        {heroPost.business.verified && (
+                          <ShieldCheck className="h-3.5 w-3.5 text-primary fill-primary/20 shrink-0" />
                         )}
-                      </div>
-                      <span className="text-[11px] text-muted-foreground">{feedItems[0].businessHandle}</span>
+                        {heroPost.is_featured && (
+                          <span className="bg-amber-500/10 text-amber-500 text-[9px] font-black px-1.5 py-0.2 rounded-full ml-1">
+                            Featured
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-xs text-muted-foreground font-normal">
+                        {heroPost.business.handle}
+                      </p>
                     </div>
                   </div>
-                  <Button
-                    onClick={() => handleFollowToggle(feedItems[0].id)}
-                    className={cn(
-                      "rounded-full text-xs font-semibold px-4 h-7.5 transition-all duration-300",
-                      feedItems[0].isFollowing
-                        ? "bg-muted text-muted-foreground border border-border/20 hover:bg-muted/80"
-                        : "bg-[#D08F8F] text-white hover:bg-[#D08F8F]/95 shadow-sm"
-                    )}
-                  >
-                    {feedItems[0].isFollowing ? "Following" : "Follow"}
-                  </Button>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      onClick={(e) => handleFollowToggle(heroPost.business.id, heroPost.business.company_name, e)}
+                      className={cn(
+                        "rounded-full px-5 h-8 text-xs font-bold active:scale-95 transition-all shadow-xs",
+                        followedBizIds.includes(heroPost.business.id)
+                          ? "bg-muted text-foreground hover:bg-muted/80 border border-border/30"
+                          : "bg-[#c87a6f] hover:bg-[#b86c61] text-white border-none shadow-sm"
+                      )}
+                    >
+                      {followedBizIds.includes(heroPost.business.id) ? "Following" : "Follow"}
+                    </Button>
+                  </div>
                 </div>
 
-                {/* Supercar Visual Banner Card */}
-                <div className="relative overflow-hidden rounded-[2.5rem] border border-border/30 shadow-md">
+                {/* Picture-Perfect Curvilinear Post Image Container (rounded-[32px]) */}
+                <div
+                  onClick={() => handlePostClick(heroPost)}
+                  className="relative group w-full rounded-[32px] overflow-hidden bg-muted/20 border border-border/15 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer"
+                >
                   <img
-                    src={feedItems[0].imageUrl}
-                    alt={feedItems[0].businessName}
-                    className="w-full object-cover aspect-[4/3] hover:scale-101 transition-transform duration-500"
+                    src={getMaskedAssetUrl(heroPost.image_url)}
+                    alt={heroPost.name}
+                    className="w-full h-auto max-h-[540px] object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+                    loading="eager"
                   />
+                  
+                  {/* Subtle Price Pill Badge */}
+                  {heroPost.price && (
+                    <div className="absolute bottom-4 left-4 bg-black/65 backdrop-blur-md text-white text-xs font-black px-3 py-1.5 rounded-full shadow-lg">
+                      ₦{heroPost.price.toLocaleString()}
+                    </div>
+                  )}
+
+                  {/* Co-Branded Storefront Avatar Badge at Bottom-Right of Image */}
+                  {heroPost.business?.logo_url && (
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/business/${heroPost.business.id}`);
+                      }}
+                      className="absolute bottom-4 right-4 h-9 w-9 rounded-full border-2 border-white dark:border-slate-900 shadow-xl overflow-hidden bg-card hover:scale-110 transition-transform cursor-pointer z-10"
+                      title={`Visit ${heroPost.business.company_name}`}
+                    >
+                      <img
+                        src={getMaskedAssetUrl(heroPost.business.logo_url)}
+                        alt={heroPost.business.company_name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
                 </div>
 
-                {/* Social Interaction Bar */}
-                <div className="flex items-center gap-4 px-1.5 pt-1 text-muted-foreground">
+                {/* Bottom Social Bar (Matching Screenshot 1) */}
+                <div className="flex items-center justify-between px-2 pt-1">
+                  <div className="flex items-center gap-5">
+                    {/* Like Action */}
+                    <button
+                      type="button"
+                      onClick={(e) => handleLike(heroPost.id, e)}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer group"
+                    >
+                      <Heart
+                        className={cn(
+                          "h-5 w-5 transition-transform group-hover:scale-110",
+                          likedIds.includes(heroPost.id)
+                            ? "fill-red-500 text-red-500"
+                            : "text-foreground/80 stroke-[1.75]"
+                        )}
+                      />
+                      <span>
+                        {likedIds.includes(heroPost.id)
+                          ? `${heroPost.likeCount + 1}`
+                          : heroPost.likes}
+                      </span>
+                    </button>
+
+                    {/* Comments Action */}
+                    <button
+                      type="button"
+                      onClick={() => handlePostClick(heroPost)}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer group"
+                    >
+                      <MessageCircle className="h-5 w-5 text-foreground/80 stroke-[1.75] transition-transform group-hover:scale-110" />
+                      <span>{heroPost.comments}</span>
+                    </button>
+
+                    {/* Share Action */}
+                    <ShareButton
+                      title={heroPost.name}
+                      text={`Check out ${heroPost.name} by ${heroPost.business.company_name} on String Campus Marketplace!`}
+                      url={`${window.location.origin}/business/${heroPost.business.id}?product=${heroPost.id}`}
+                      imageUrl={heroPost.image_url}
+                      variant="subtle"
+                    />
+                  </div>
+
+                  {/* Bookmark Action */}
                   <button
-                    onClick={() => handleLikeToggle(feedItems[0].id)}
-                    className="flex items-center gap-1.5 group active:scale-95 transition-transform"
+                    type="button"
+                    onClick={(e) => handleBookmark(heroPost.id, e)}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer group"
                   >
-                    <PremiumHeart active={feedItems[0].hasLiked} className={cn("transition-colors", feedItems[0].hasLiked && "text-red-500")} />
-                    <span className="text-[11.5px] font-medium tracking-wide">{feedItems[0].likes}</span>
-                  </button>
-                  <button className="flex items-center gap-1.5 hover:text-foreground">
-                    <PremiumChatBubble />
-                    <span className="text-[11.5px] font-medium tracking-wide">{feedItems[0].comments}</span>
-                  </button>
-                  <button
-                    onClick={() => handleBookmarkToggle(feedItems[0].id)}
-                    className="flex items-center gap-1.5 group active:scale-95 transition-transform ml-auto"
-                  >
-                    <PremiumBookmark active={feedItems[0].hasBookmarked} className={cn("transition-colors", feedItems[0].hasBookmarked && "text-primary")} />
-                    <span className="text-[11.5px] font-medium tracking-wide">{feedItems[0].bookmarks}</span>
+                    <Bookmark
+                      className={cn(
+                        "h-5 w-5 transition-transform group-hover:scale-110",
+                        savedIds.includes(heroPost.id)
+                          ? "fill-primary text-primary"
+                          : "text-foreground/80 stroke-[1.75]"
+                      )}
+                    />
+                    <span>{heroPost.bookmarks}</span>
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Masonry Double Column Grid (for other items, e.g. Braids and Home Interior) */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Column 1 */}
-              <div className="space-y-4">
-                {feedItems
-                  .filter((item, idx) => (activeTab === "for-you" ? idx % 2 === 1 : item.isFollowing && idx % 2 === 1))
-                  .map(item => (
-                    <div key={item.id} className="space-y-2 group cursor-pointer">
-                      <div className="relative overflow-hidden rounded-[2rem] border border-border/30 shadow-sm">
-                        <img src={item.imageUrl} alt={item.businessName} className="w-full object-cover aspect-[3/4]" />
-                      </div>
-                      <div className="flex items-center justify-between px-1">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{item.category}</span>
-                        <button className="text-muted-foreground hover:text-foreground">
-                          <MoreHorizontal className="h-4.5 w-4.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-              </div>
+            {/* PINTEREST MASONRY GRID OF DISCOVERY POSTS (Matching Screenshot 2) */}
+            {gridPosts.length > 0 && (
+              <div className="pt-4 border-t border-border/10">
+                <div className="columns-2 md:columns-2 lg:columns-3 gap-6 space-y-6">
+                  {gridPosts.map((post) => {
+                    const isLiked = likedIds.includes(post.id);
+                    const isSaved = savedIds.includes(post.id);
 
-              {/* Column 2 */}
-              <div className="space-y-4">
-                {feedItems
-                  .filter((item, idx) => (activeTab === "for-you" ? idx % 2 === 0 && idx > 0 : item.isFollowing && idx % 2 === 0 && idx > 0))
-                  .map(item => (
-                    <div key={item.id} className="space-y-2 group cursor-pointer">
-                      <div className="relative overflow-hidden rounded-[2rem] border border-border/30 shadow-sm">
-                        <img src={item.imageUrl} alt={item.businessName} className="w-full object-cover aspect-square" />
+                    return (
+                      <div key={post.id} className="break-inside-avoid space-y-2">
+                        {/* Organic Rounded Card */}
+                        <div
+                          onClick={() => handlePostClick(post)}
+                          className="relative group w-full rounded-[32px] overflow-hidden bg-muted/20 border border-border/15 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+                        >
+                          <img
+                            src={getMaskedAssetUrl(post.image_url)}
+                            alt={post.name}
+                            className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-105"
+                            loading="lazy"
+                          />
+
+                          {/* Top Quick Actions on Hover */}
+                          <div className="absolute top-3 right-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              type="button"
+                              onClick={(e) => handleLike(post.id, e)}
+                              className={cn(
+                                "h-8 w-8 rounded-full backdrop-blur-md flex items-center justify-center shadow-md transition-colors",
+                                isLiked ? "bg-red-500 text-white" : "bg-black/60 text-white hover:bg-black/80"
+                              )}
+                              title="Like post"
+                            >
+                              <Heart className={cn("h-4 w-4", isLiked && "fill-current")} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={(e) => handleBookmark(post.id, e)}
+                              className={cn(
+                                "h-8 w-8 rounded-full backdrop-blur-md flex items-center justify-center shadow-md transition-colors",
+                                isSaved ? "bg-primary text-primary-foreground" : "bg-black/60 text-white hover:bg-black/80"
+                              )}
+                              title="Save bookmark"
+                            >
+                              <Bookmark className={cn("h-4 w-4", isSaved && "fill-current")} />
+                            </button>
+
+                            <ShareButton
+                              title={post.name}
+                              text={`Check out ${post.name} by ${post.business.company_name} on String!`}
+                              url={`${window.location.origin}/business/${post.business.id}?product=${post.id}`}
+                              imageUrl={post.image_url}
+                              className="bg-black/60 text-white hover:bg-black/80 shadow-md backdrop-blur-md"
+                            />
+                          </div>
+
+                          {post.is_featured && (
+                            <div className="absolute top-3 left-3 bg-amber-500 text-black text-[9px] font-black px-2 py-0.5 rounded-full shadow-md flex items-center gap-0.5">
+                              <Sparkles className="h-2.5 w-2.5 fill-current" /> Featured
+                            </div>
+                          )}
+
+                          {post.price && (
+                            <div className="absolute bottom-3 left-3 bg-black/65 backdrop-blur-md text-white text-[11px] font-black px-2.5 py-1 rounded-full shadow-md">
+                              ₦{post.price.toLocaleString()}
+                            </div>
+                          )}
+
+                          {/* Co-Branded Storefront Avatar Badge at Bottom-Right of Image */}
+                          {post.business?.logo_url && (
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/business/${post.business.id}`);
+                              }}
+                              className="absolute bottom-3 right-3 h-8 w-8 rounded-full border-2 border-white dark:border-slate-900 shadow-lg overflow-hidden bg-card hover:scale-110 transition-transform cursor-pointer z-10"
+                              title={`Visit ${post.business.company_name}`}
+                            >
+                              <img
+                                src={getMaskedAssetUrl(post.business.logo_url)}
+                                alt={post.business.company_name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Category Label and 3-Dots More Menu (Matching Screenshot 2) */}
+                        <div className="flex items-center justify-between px-2 pt-0.5">
+                          <span className="text-[11px] font-black tracking-widest text-muted-foreground uppercase">
+                            {post.category}
+                          </span>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className="h-6 w-6 rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                                title="More options"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="rounded-2xl p-1.5 min-w-[170px] shadow-xl">
+                              <DropdownMenuItem
+                                onClick={() => handlePostClick(post)}
+                                className="rounded-xl text-xs font-semibold gap-2 cursor-pointer"
+                              >
+                                <ShoppingBag className="h-3.5 w-3.5 text-primary" /> View Product & Buy
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => navigate(`/customer/messages?biz=${post.business.id}&product=${encodeURIComponent(post.name)}`)}
+                                className="rounded-xl text-xs font-semibold gap-2 cursor-pointer"
+                              >
+                                <MessageCircle className="h-3.5 w-3.5 text-indigo-500" /> Chat Merchant
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => handleBookmark(post.id, e as any)}
+                                className="rounded-xl text-xs font-semibold gap-2 cursor-pointer"
+                              >
+                                <Bookmark className="h-3.5 w-3.5 text-amber-500" /> {isSaved ? "Remove from Saved" : "Save Bookmark"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  if (navigator.share) {
+                                    navigator.share({
+                                      title: post.name,
+                                      text: `Check out ${post.name} by ${post.business.company_name} on String!`,
+                                      url: `${window.location.origin}/business/${post.business.id}?product=${post.id}`,
+                                    }).catch(() => {});
+                                  } else {
+                                    navigator.clipboard.writeText(`${window.location.origin}/business/${post.business.id}?product=${post.id}`);
+                                    toast.success("Link copied to clipboard!");
+                                  }
+                                }}
+                                className="rounded-xl text-xs font-semibold gap-2 cursor-pointer"
+                              >
+                                <Share2 className="h-3.5 w-3.5 text-emerald-500" /> Share Product
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  navigator.clipboard.writeText(`${window.location.origin}/product/${post.id}`);
+                                  toast.success("Link copied to clipboard!");
+                                }}
+                                className="rounded-xl text-xs font-semibold gap-2 cursor-pointer"
+                              >
+                                <Share2 className="h-3.5 w-3.5" /> Share Item
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between px-1">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{item.category}</span>
-                        <button className="text-muted-foreground hover:text-foreground">
-                          <MoreHorizontal className="h-4.5 w-4.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>
-
-      {/* Vibe Checks video review preview overlay modal */}
-      {selectedVibeVideo && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
-          <div className="bg-card border border-border/40 rounded-3xl p-4 w-full max-w-sm relative overflow-hidden shadow-2xl space-y-4">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <img 
-                  src={vibeChecks.find(v => v.id === selectedVibeVideo)?.avatar} 
-                  alt="avatar" 
-                  className="h-7 w-7 rounded-full object-cover" 
-                />
-                <div>
-                  <h4 className="text-xs font-bold text-foreground">
-                    {vibeChecks.find(v => v.id === selectedVibeVideo)?.userName}
-                  </h4>
-                  <p className="text-[9px] text-muted-foreground">
-                    Reviewing: {vibeChecks.find(v => v.id === selectedVibeVideo)?.product}
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setSelectedVibeVideo(null)}
-                className="text-xs font-bold text-muted-foreground hover:text-foreground px-2 py-1 bg-muted/40 rounded-full cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-
-            {/* simulated 10-second video element */}
-            <div className="relative rounded-2xl overflow-hidden aspect-[9/16] bg-black/40 border border-border/10 flex items-center justify-center h-[340px]">
-              <video 
-                src={vibeChecks.find(v => v.id === selectedVibeVideo)?.videoUrl}
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="h-full w-full object-cover"
-              />
-              <div className="absolute top-2 right-2 bg-emerald-500 text-white font-extrabold text-[8px] px-2 py-0.5 rounded-full uppercase tracking-wider">
-                verified review
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </DashboardLayout>
   );
 }
-

@@ -7,13 +7,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PremiumHome } from "@/components/ui/custom-icons";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, MoreHorizontal, UserPlus, Loader2, Store, MessageSquare, MessageCircle, Share2, ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { Search, MoreHorizontal, UserPlus, Loader2, Store, MessageSquare, MessageCircle, Share2, ChevronLeft, ChevronRight, Check, ShoppingCart } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { ProductComments } from "@/components/discover/ProductComments";
+import { ShareButton } from "@/components/common/ShareButton";
 import { cn } from "@/lib/utils";
 
 interface Business {
@@ -21,6 +22,7 @@ interface Business {
   company_name: string;
   logo_url: string | null;
   verified: boolean | null;
+  verification_tier?: string;
 }
 
 interface Product {
@@ -64,13 +66,29 @@ export default function CustomerDiscover() {
   
   const [businesses, setBusinesses] = useState<any[]>([]);
   const [items, setItems] = useState<DiscoverItem[]>([]);
-  const [search, setSearch] = useState("");
-  const [itemTypeFilter, setItemTypeFilter] = useState<"all" | "products" | "services">("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [priceFilter, setPriceFilter] = useState("all");
+  const [search, setSearch] = useState(() => sessionStorage.getItem("string_discover_search") || "");
+  const [itemTypeFilter, setItemTypeFilter] = useState<"all" | "products" | "services">(() => (sessionStorage.getItem("string_discover_type") as any) || "all");
+  const [categoryFilter, setCategoryFilter] = useState(() => sessionStorage.getItem("string_discover_category") || "all");
+  const [priceFilter, setPriceFilter] = useState(() => sessionStorage.getItem("string_discover_price") || "all");
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<DiscoverItem | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    sessionStorage.setItem("string_discover_search", search);
+  }, [search]);
+
+  useEffect(() => {
+    sessionStorage.setItem("string_discover_type", itemTypeFilter);
+  }, [itemTypeFilter]);
+
+  useEffect(() => {
+    sessionStorage.setItem("string_discover_category", categoryFilter);
+  }, [categoryFilter]);
+
+  useEffect(() => {
+    sessionStorage.setItem("string_discover_price", priceFilter);
+  }, [priceFilter]);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -88,101 +106,110 @@ export default function CustomerDiscover() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const { data: businessList, error } = await supabase
-          .from("public_businesses")
+        const flatItems: DiscoverItem[] = [];
+
+        // 1. Fetch direct products with business information
+        const { data: directProducts } = await supabase
+          .from("products")
           .select(`
-            id, company_name, logo_url, verified,
-            products(id, name, business_id, price, image_url, images, description, category, tags),
-            services(id, name, business_id, images, price_min, price_max, description)
+            id, name, business_id, price, image_url, images, description, category, tags, is_orderable,
+            businesses (id, company_name, logo_url, location_verified, verified, is_active, verification_tier)
           `)
+          .eq("in_stock", true)
           .order("created_at", { ascending: false });
 
-        if (error) {
-          console.error("Supabase error fetching public_businesses:", error);
-        }
-
-        if (businessList && Array.isArray(businessList)) {
-          setBusinesses(businessList);
-          
-          if (user) {
-            const { data: customer } = await supabase
-              .from('customers')
-              .select('id')
-              .eq('user_id', user.id)
-              .maybeSingle();
-            
-            if (customer) {
-              const { data: saved } = await supabase
-                .from('saved_businesses')
-                .select('business_id')
-                .eq('customer_id', customer.id);
-              
-              if (saved) {
-                setFollowedBusinessIds(saved.map(s => s.business_id));
-              }
-            }
-          }
-          
-          // Flatten into DiscoverItems
-          const flatItems: DiscoverItem[] = [];
-          businessList.forEach((biz: any) => {
-            if (!biz) return;
-            
-            const businessObj = {
-              id: biz.id || "",
-              company_name: biz.company_name || "Unknown Store",
-              logo_url: biz.logo_url || null,
-              verified: biz.verified || false
-            };
-
-            if (biz.products && Array.isArray(biz.products)) {
-              biz.products.forEach((prod: any) => {
-                if (!prod) return;
-                flatItems.push({
-                  id: prod.id || Math.random().toString(),
-                  name: prod.name || "Unnamed Product",
-                  price: prod.price || 0,
-                  image_url: prod.image_url || null,
-                  images: prod.images || null,
-                  description: prod.description || null,
-                  category: prod.category || null,
-                  tags: prod.tags || null,
-                  business: businessObj,
-                  isService: false,
-                  aspectRatio: Math.random() > 0.5 ? "aspect-[3/4]" : "aspect-square",
-                  isOrderable: prod.is_orderable ?? true
-                });
-              });
-            }
-            if (biz.services && Array.isArray(biz.services)) {
-              biz.services.forEach((srv: any) => {
-                if (!srv) return;
-                flatItems.push({
-                  id: srv.id || Math.random().toString(),
-                  name: srv.name || "Unnamed Service",
-                  price: srv.price_min ? `₦${Number(srv.price_min).toLocaleString()}` : "Contact",
-                  image_url: srv.images?.[0] || null,
-                  images: srv.images || null,
-                  description: srv.description || null,
-                  category: null,
-                  tags: null,
-                  business: businessObj,
-                  isService: true,
-                  aspectRatio: Math.random() > 0.5 ? "aspect-[4/5]" : "aspect-square",
-                  isOrderable: srv.is_orderable || false
-                });
+        if (directProducts) {
+          directProducts.forEach((p: any) => {
+            const biz = p.businesses;
+            if (biz && biz.is_active !== false) {
+              flatItems.push({
+                id: p.id,
+                name: p.name || "Product",
+                price: p.price || 0,
+                image_url: p.image_url || (Array.isArray(p.images) && p.images[0]) || null,
+                images: p.images || (p.image_url ? [p.image_url] : []),
+                description: p.description || null,
+                category: p.category || "CAMPUS STORE",
+                tags: p.tags || [],
+                business: {
+                  id: biz.id,
+                  company_name: biz.company_name || "Merchant Shop",
+                  logo_url: biz.logo_url || null,
+                  verified: !!(biz.location_verified || biz.verified),
+                  verification_tier: biz.verification_tier || 'none',
+                },
+                isService: false,
+                aspectRatio: Math.random() > 0.5 ? "aspect-[3/4]" : "aspect-square",
+                isOrderable: p.is_orderable ?? true,
               });
             }
           });
-          
-          // Shuffle items for Pinterest feed vibe
-          for (let i = flatItems.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [flatItems[i], flatItems[j]] = [flatItems[j], flatItems[i]];
-          }
-          
-          setItems(flatItems);
         }
+
+          // 2. Fetch direct services with business information
+          const { data: directServices } = await supabase
+            .from("services")
+            .select(`
+              id, name, business_id, images, price_min, price_max, description, category, is_orderable,
+              businesses (id, company_name, logo_url, location_verified, verified, is_active, verification_tier)
+            `)
+            .order("created_at", { ascending: false });
+
+          if (directServices) {
+            directServices.forEach((s: any) => {
+              const biz = s.businesses;
+              if (biz && biz.is_active !== false) {
+                flatItems.push({
+                  id: s.id,
+                  name: s.name || "Service",
+                  price: s.price_min ? `₦${Number(s.price_min).toLocaleString()}` : "Custom Quote",
+                  image_url: (Array.isArray(s.images) && s.images[0]) || null,
+                  images: s.images || [],
+                  description: s.description || null,
+                  category: s.category || "SERVICES",
+                  tags: [],
+                  business: {
+                    id: biz.id,
+                    company_name: biz.company_name || "Service Pro",
+                    logo_url: biz.logo_url || null,
+                    verified: !!(biz.location_verified || biz.verified),
+                    verification_tier: biz.verification_tier || 'none',
+                  },
+                  isService: true,
+                  aspectRatio: Math.random() > 0.5 ? "aspect-[4/5]" : "aspect-square",
+                  isOrderable: s.is_orderable || false,
+                });
+              }
+            });
+          }
+
+          // Prioritize boosted/premium businesses by sorting them to the front
+          flatItems.sort((a, b) => {
+            const aIsBoosted = a.business?.verification_tier === 'premium' ? 1 : 0;
+            const bIsBoosted = b.business?.verification_tier === 'premium' ? 1 : 0;
+            return bIsBoosted - aIsBoosted;
+          });
+
+        if (user) {
+          const { data: customer } = await supabase
+            .from('customers')
+            .select('id')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          
+          if (customer) {
+            const { data: saved } = await supabase
+              .from('saved_businesses')
+              .select('business_id')
+              .eq('customer_id', customer.id);
+            
+            if (saved) {
+              setFollowedBusinessIds(saved.map(s => s.business_id));
+            }
+          }
+        }
+
+        setItems(flatItems);
       } catch (err) {
         console.error("Error fetching discover items:", err);
       } finally {
@@ -294,7 +321,7 @@ export default function CustomerDiscover() {
             customer_id: customer.id,
             business_id: businessId
           });
-          toast({ title: "Store followed! ✨" });
+          toast({ title: "Store followed! " });
         }
       }
     } catch (err) {
@@ -380,11 +407,20 @@ export default function CustomerDiscover() {
             {filteredItems.map(item => (
               <div 
                 key={item?.id || Math.random().toString()} 
-                className="break-inside-avoid relative group bg-card rounded-[28px] overflow-hidden border border-border/10 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
-                onClick={() => setSelectedItem(item)}
+                className="break-inside-avoid relative group bg-card rounded-[28px] overflow-hidden border border-border/15 hover:border-primary/40 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+                onClick={() => {
+                  try {
+                    sessionStorage.setItem("string_discover_scroll_y", window.scrollY.toString());
+                  } catch {}
+                  if (item.isService) {
+                    navigate(`/service/${item.id}`);
+                  } else {
+                    navigate(`/product/${item.id}`);
+                  }
+                }}
               >
-                {/* Image */}
-                <div className={cn("w-full bg-muted overflow-hidden", item?.aspectRatio || "aspect-square")}>
+                {/* Image Container */}
+                <div className={cn("relative w-full bg-muted overflow-hidden", item?.aspectRatio || "aspect-square")}>
                   {item?.image_url ? (
                     <img 
                       src={item.image_url} 
@@ -397,10 +433,36 @@ export default function CustomerDiscover() {
                       No Image
                     </div>
                   )}
+
+                  {/* Co-Branded Storefront Avatar Badge at Bottom-Right of Image */}
+                  {item?.business?.logo_url && (
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (item?.business?.id) navigate(`/business/${item.business.id}`);
+                      }}
+                      className="absolute bottom-2.5 right-2.5 h-7 w-7 rounded-full border-2 border-white dark:border-slate-900 shadow-md overflow-hidden bg-card hover:scale-110 transition-transform cursor-pointer z-10"
+                      title={`Store: ${item.business.company_name}`}
+                    >
+                      <img
+                        src={item.business.logo_url}
+                        alt={item.business.company_name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Overlays & Actions */}
-                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                  <ShareButton
+                    title={item.name}
+                    text={`Check out ${item.name} by ${item.business.company_name} on String!`}
+                    url={`${window.location.origin}/business/${item.business.id}?${item.isService ? "service" : "product"}=${item.id}`}
+                    imageUrl={item.image_url}
+                    className="h-8 w-8 bg-background/85 backdrop-blur-sm hover:bg-background shadow-sm border border-border/10"
+                  />
+
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full bg-background/85 backdrop-blur-sm hover:bg-background shadow-sm border border-border/10" onClick={e => e.stopPropagation()}>

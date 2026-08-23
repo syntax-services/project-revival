@@ -9,7 +9,7 @@ import { useBusiness } from "@/hooks/useBusiness";
 import { PremiumHome } from "@/components/ui/custom-icons";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Search, MoreHorizontal, UserPlus, Loader2, Store, MessageSquare, MessageCircle, Share2, ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { Search, MoreHorizontal, UserPlus, Loader2, Store, MessageSquare, MessageCircle, Share2, ChevronLeft, ChevronRight, Check, ShoppingCart } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -67,14 +67,30 @@ export default function BusinessDiscover() {
   const [businesses, setBusinesses] = useState<any[]>([]);
   const [items, setItems] = useState<DiscoverItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [itemTypeFilter, setItemTypeFilter] = useState<"all" | "products" | "services">("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [priceFilter, setPriceFilter] = useState("all");
+  const [search, setSearch] = useState(() => sessionStorage.getItem("string_biz_discover_search") || "");
+  const [itemTypeFilter, setItemTypeFilter] = useState<"all" | "products" | "services">(() => (sessionStorage.getItem("string_biz_discover_type") as any) || "all");
+  const [categoryFilter, setCategoryFilter] = useState(() => sessionStorage.getItem("string_biz_discover_category") || "all");
+  const [priceFilter, setPriceFilter] = useState(() => sessionStorage.getItem("string_biz_discover_price") || "all");
   const [selectedItem, setSelectedItem] = useState<DiscoverItem | null>(null);
   const [imageIndex, setImageIndex] = useState(0);
   const [followedBusinessIds, setFollowedBusinessIds] = useState<string[]>([]);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    sessionStorage.setItem("string_biz_discover_search", search);
+  }, [search]);
+
+  useEffect(() => {
+    sessionStorage.setItem("string_biz_discover_type", itemTypeFilter);
+  }, [itemTypeFilter]);
+
+  useEffect(() => {
+    sessionStorage.setItem("string_biz_discover_category", categoryFilter);
+  }, [categoryFilter]);
+
+  useEffect(() => {
+    sessionStorage.setItem("string_biz_discover_price", priceFilter);
+  }, [priceFilter]);
 
   useEffect(() => {
     setPortalTarget(document.getElementById("search-bar-portal"));
@@ -294,7 +310,7 @@ export default function BusinessDiscover() {
             customer_id: customer.id,
             business_id: businessId
           });
-          toast({ title: "Store followed! ✨" });
+          toast({ title: "Store followed! " });
         }
       }
     } catch (err) {
@@ -380,8 +396,17 @@ export default function BusinessDiscover() {
             {filteredItems.map(item => (
               <div 
                 key={item?.id || Math.random().toString()} 
-                className="break-inside-avoid relative group bg-card rounded-[28px] overflow-hidden border border-border/10 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
-                onClick={() => setSelectedItem(item)}
+                className="break-inside-avoid relative group bg-card rounded-[28px] overflow-hidden border border-border/15 hover:border-primary/40 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+                onClick={() => {
+                  try {
+                    sessionStorage.setItem("string_discover_scroll_y", window.scrollY.toString());
+                  } catch {}
+                  if (item.isService) {
+                    navigate(`/service/${item.id}`);
+                  } else {
+                    navigate(`/product/${item.id}`);
+                  }
+                }}
               >
                 {/* Image */}
                 <div className={cn("w-full bg-muted overflow-hidden", item?.aspectRatio || "aspect-square")}>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
@@ -9,8 +9,8 @@ import {
 } from "@/hooks/useBusiness";
 import { 
   MessageSquare, Package, Briefcase, Star, DollarSign, 
-  ArrowUpRight, Award, ShieldCheck, CheckCircle2, TrendingUp, Clock, Flame,
-  AlertTriangle, Loader2, Store
+  ArrowUpRight, ShieldCheck, TrendingUp, Clock,
+  AlertTriangle, Store, Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,15 +20,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { StructuredLocationSelection, formatStructuredLocation, getLocationCoords } from "@/hooks/useStructuredLocations";
-import { StructuredLocationPicker } from "@/components/location/StructuredLocationPicker";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function BusinessOverview() {
   const { profile, user, refreshProfile } = useAuth();
-  const { data: business, isFetched, isFetching, isLoading: businessLoading } = useBusiness();
+  const { data: business, isLoading: businessLoading } = useBusiness();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -48,7 +43,7 @@ export default function BusinessOverview() {
         ? setupBizLocation.landmark.id
         : null;
 
-      // 1. Call the secure onboarding RPC which bypasses RLS issues
+      // 1. Call the secure onboarding RPC
       const { error: rpcError } = await supabase.rpc("complete_onboarding_setup", {
         p_full_name: profile.full_name || "Merchant",
         p_phone: profile.phone || "",
@@ -59,8 +54,8 @@ export default function BusinessOverview() {
           streetAddress: formattedLocation,
           businessLocation: formattedLocation,
           areaName: setupBizLocation.area.name,
-          latitude: coords.lat,
-          longitude: coords.lng,
+          latitude: coords.latitude,
+          longitude: coords.longitude,
           locationAreaId: setupBizLocation.area.id,
           locationStreetId: setupBizLocation.street.id,
           locationLandmarkId: dbLandmarkId,
@@ -81,17 +76,18 @@ export default function BusinessOverview() {
           location_area_id: setupBizLocation.area.id,
           location_street_id: setupBizLocation.street.id,
           location_landmark_id: dbLandmarkId,
-          latitude: coords.lat,
-          longitude: coords.lng,
-          location_verified: true, // Auto-verify onboarding location coordinates
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          location_verified: true,
         })
         .eq("user_id", user.id);
 
       if (updateError) throw updateError;
 
       await refreshProfile();
-      toast.success(`Merchant Shop "${setupBizName}" successfully initialized! 🚀`);
+      toast.success(`Merchant Shop "${setupBizName}" successfully initialized!`);
       queryClient.invalidateQueries({ queryKey: ["business"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
     } catch (err: any) {
       console.error("Failed to register business:", err);
       toast.error(`Could not register business: ${err.message || err.toString()}`);
@@ -99,11 +95,10 @@ export default function BusinessOverview() {
       setRegisteringBusiness(false);
     }
   };
+
   const { data: stats, isLoading: statsLoading } = useBusinessStats(business?.id);
   const { data: orders = [], isLoading: ordersLoading } = useBusinessOrders(business?.id);
   const { data: jobs = [], isLoading: jobsLoading } = useBusinessJobs(business?.id);
-
-
 
   // Fetch open leads count in the platform
   const { data: leadsCount = 0 } = useQuery({
@@ -118,32 +113,30 @@ export default function BusinessOverview() {
     }
   });
 
+  const { data: locationRequest } = useQuery({
+    queryKey: ["my-location-request", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from("location_requests")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  const isLocationVerified = !!business?.location_verified || locationRequest?.status === "verified" || (profile?.verification_level && profile.verification_level >= 2);
+  const isStoreInitialized = !!business || !!locationRequest || !!profile?.onboarding_completed || !!user;
+
   const isLoading = businessLoading || statsLoading || ordersLoading || jobsLoading;
 
-  // 1. Calculate Daily Net Revenue for last 7 days
-  const revenueData = Array.from({ length: 7 }).map((_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
-    const dateString = date.toLocaleDateString("en-US", { weekday: "short" });
-    const dateStr = date.toISOString().split("T")[0];
-
-    // Daily Orders Net Revenue
-    const dayOrdersRevenue = orders
-      .filter((o) => o.status === "delivered" && o.created_at.startsWith(dateStr))
-      .reduce((sum, o) => sum + (Number(o.total || 0) - Number(o.commission_amount || 0) - Number(o.platform_fee || 0)), 0);
-
-    // Daily Jobs Net Revenue
-    const dayJobsRevenue = jobs
-      .filter((j) => j.status === "completed" && j.created_at.startsWith(dateStr))
-      .reduce((sum, j) => sum + (Number(j.final_price || 0) * 0.9), 0);
-
-    return {
-      day: dateString,
-      revenue: Math.round(dayOrdersRevenue + dayJobsRevenue),
-    };
-  }).reverse();
-
-  // 2. Build Live Activity Stream
+  // Build Live Activity Stream
   const activityStream = [
     ...orders.map((o) => ({
       id: o.id,
@@ -164,17 +157,9 @@ export default function BusinessOverview() {
   ].sort((a, b) => b.date.getTime() - a.date.getTime())
    .slice(0, 4);
 
-  // 3. Reputation & Growth center metrics
+  // Reputation & Growth metrics
   const reputationScore = business?.reputation_score || 0;
   const verificationTier = business?.verification_tier || "none";
-  const completedTotal = (stats?.completedOrders || 0) + (stats?.completedJobs || 0);
-  const nextTarget = 10;
-  const progressPercent = Math.min((completedTotal / nextTarget) * 100, 100);
-
-  let repTier = "New Partner";
-  if (reputationScore >= 4.5) repTier = "Elite Top Trader 🌟";
-  else if (reputationScore >= 4.0) repTier = "Highly Recommended 👍";
-  else if (reputationScore > 0) repTier = "Rising Star 🚀";
 
   const statCards = [
     { 
@@ -187,32 +172,31 @@ export default function BusinessOverview() {
     { 
       label: "Job Requests", 
       value: stats?.pendingJobs || 0, 
-      icon: Briefcase,
+      icon: Briefcase, 
       onClick: () => navigate("/business/jobs"),
       highlight: (stats?.pendingJobs || 0) > 0,
     },
     { 
       label: "Market Leads", 
       value: leadsCount, 
-      icon: ArrowUpRight,
+      icon: ArrowUpRight, 
       onClick: () => navigate("/business/leads"),
       highlight: leadsCount > 0,
     },
     { 
-      label: "Net Earnings", 
-      value: `₦${(stats?.totalRevenue || 0).toLocaleString()}`, 
-      icon: DollarSign,
+      label: "Profile Views", 
+      value: business?.views_count || 0, 
+      icon: Eye,
+      highlight: (business?.views_count || 0) > 0,
     },
   ];
 
-
-
   return (
     <DashboardLayout>
-      <div className="space-y-6 pb-24 lg:pb-8 animate-fade-in">
+      <div className="space-y-6 pb-24 lg:pb-8 animate-fade-in text-left">
 
         {/* Uninitialized Store Alert Banner */}
-        {!isLoading && !business && (
+        {!isLoading && !isStoreInitialized && (
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
             <div className="space-y-1">
               <h3 className="font-bold text-amber-500 text-sm flex items-center gap-1.5">
@@ -233,7 +217,7 @@ export default function BusinessOverview() {
         )}
 
         {/* Unverified Location Alert Banner */}
-        {!isLoading && business && !business.location_verified && (
+        {!isLoading && isStoreInitialized && !isLocationVerified && (
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
             <div className="space-y-1">
               <h3 className="font-bold text-amber-500 text-sm flex items-center gap-1.5">

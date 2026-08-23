@@ -26,7 +26,7 @@ export function useUnreadCount() {
               p_business_id: businessData.id,
             });
             if (isMounted && Array.isArray(convs)) {
-              const totalUnread = convs.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+              const totalUnread = convs.filter(c => (c.unread_count || 0) > 0).length;
               setUnreadCount(totalUnread);
             }
           }
@@ -43,7 +43,7 @@ export function useUnreadCount() {
               p_customer_id: customerData.id,
             });
             if (isMounted && Array.isArray(convs)) {
-              const totalUnread = convs.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+              const totalUnread = convs.filter(c => (c.unread_count || 0) > 0).length;
               setUnreadCount(totalUnread);
             }
           }

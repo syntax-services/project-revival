@@ -25,3 +25,8 @@ dist-ssr
 .env
 *.env
 supabase/functions/.env
+
+# AI & Scratch
+.gemini
+scratch
+build.log
