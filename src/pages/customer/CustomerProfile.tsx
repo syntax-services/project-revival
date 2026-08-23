@@ -24,6 +24,7 @@ import {
   LogOut,
   Sparkles,
   Loader2,
+  Shield,
   ShieldCheck,
   Trophy,
   Wallet,

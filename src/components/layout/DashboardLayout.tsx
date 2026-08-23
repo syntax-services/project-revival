@@ -283,7 +283,15 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
             <div className="flex items-center gap-2">
               <UserRoleSwitcher />
-              {resolvedUserType === "customer" && (
+              {resolvedUserType === "business" ? (
+                <Link
+                  to="/business/upload"
+                  className="h-10 w-10 rounded-full hover:bg-accent flex items-center justify-center transition-all duration-200 active:scale-95 text-foreground hover:text-primary shrink-0"
+                  title="Upload Product or Service"
+                >
+                  <Plus className="h-5.5 w-5.5" strokeWidth={2.2} />
+                </Link>
+              ) : resolvedUserType === "customer" ? (
                 <Link
                   to="/customer/offers"
                   className="h-10 w-10 rounded-full hover:bg-accent flex items-center justify-center transition-all duration-200 active:scale-95 text-foreground hover:text-primary shrink-0"
@@ -291,7 +299,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 >
                   <Plus className="h-5.5 w-5.5" strokeWidth={2.2} />
                 </Link>
-              )}
+              ) : null}
               <NotificationsPopup />
             </div>
           </header>

@@ -22,7 +22,6 @@ export const customerNavItems = [
 export const businessNavItems = [
   { href: "/business", label: "Store", icon: PremiumStore },
   { href: "/business/discover", label: "Discover", icon: Search },
-  { href: "/business/upload", label: "Upload", icon: PremiumPlus, isFab: true },
   { href: "/business/messages", label: "Inbox", icon: PremiumMessage, id: "messages" },
   { href: "/business/profile", label: "Profile", icon: PremiumUser },
 ];
@@ -72,8 +71,6 @@ export function BottomNav({ isVisible = true }: BottomNavProps) {
           const hasAvatar = isProfileTab && profile?.avatar_url;
           const showBadge = item.id === "messages" && unreadCount > 0;
 
-          const isFab = (item as any).isFab;
-
           return (
             <Link
               key={item.href}
@@ -81,8 +78,7 @@ export function BottomNav({ isVisible = true }: BottomNavProps) {
               viewTransition
               className={cn(
                 "flex flex-col items-center justify-center transition-all duration-300 active:scale-95 relative",
-                isVisible ? "flex-1 py-2 px-1 gap-1.5" : "w-11 h-11 rounded-full hover:bg-accent/40",
-                isFab && "relative -top-3"
+                isVisible ? "flex-1 py-2 px-1 gap-1.5" : "w-11 h-11 rounded-full hover:bg-accent/40"
               )}
             >
               {showBadge && (
@@ -90,11 +86,7 @@ export function BottomNav({ isVisible = true }: BottomNavProps) {
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
-              {isFab ? (
-                <div className="bg-primary text-primary-foreground h-12 w-12 rounded-full flex items-center justify-center shadow-lg shadow-primary/30 border-4 border-background">
-                  <Icon className="h-6 w-6" active={true} strokeWidth={2.5} />
-                </div>
-              ) : hasAvatar ? (
+              {hasAvatar ? (
                 <div className={cn(
                   "rounded-full border overflow-hidden transition-all duration-300 bg-muted flex items-center justify-center shrink-0",
                   isActive ? "border-primary scale-105" : "border-border/40 hover:border-foreground",

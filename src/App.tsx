@@ -172,6 +172,7 @@ const App = () => (
                   <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
                   <Route path="/links" element={<AuthLinks />} />
                   <Route path="/contact" element={<Contact />} />
+                  <Route path="/terms" element={<TermsOfService />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/banned" element={<Banned />} />
 

@@ -37,7 +37,7 @@ export function TermsGuard({ children }: { children: React.ReactNode }) {
         .select("value")
         .eq("key", "latest_terms_version")
         .single();
-      if (error) return { value: 1 };
+      if (error) return { value: 2 };
       return data;
     },
   });
@@ -48,15 +48,15 @@ export function TermsGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (config?.value) {
+    if (config?.value !== undefined) {
       const rawValue = config.value;
       const version: number = typeof rawValue === 'string' ? parseInt(rawValue, 10) : Number(rawValue);
-      if (Number.isNaN(version)) return;
-      setLatestVersion(version);
+      const activeVersion = Number.isNaN(version) ? 2 : version;
+      setLatestVersion(activeVersion);
       
       // If user is logged in and hasn't accepted the latest version
       if (user && profile && profile.onboarding_completed) {
-        if (!profile.accepted_terms_version || profile.accepted_terms_version < version) {
+        if (!profile.accepted_terms_version || profile.accepted_terms_version < activeVersion) {
           setShowModal(true);
         }
       }
@@ -93,7 +93,11 @@ export function TermsGuard({ children }: { children: React.ReactNode }) {
       {children}
       
       <Dialog open={showModal} onOpenChange={() => {}}>
-        <DialogContent className="max-h-[100dvh] gap-0 overflow-hidden border-0 bg-background p-0 shadow-2xl sm:max-w-2xl sm:rounded-3xl">
+        <DialogContent 
+          className="max-h-[100dvh] gap-0 overflow-hidden border-0 bg-background p-0 shadow-2xl sm:max-w-2xl sm:rounded-3xl"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           <div className="flex max-h-[100dvh] flex-col overflow-hidden">
             <DialogHeader className="border-b border-border/40 px-4 py-5 sm:px-6 sm:py-6">
               <div className="flex items-start gap-3">
@@ -103,8 +107,8 @@ export function TermsGuard({ children }: { children: React.ReactNode }) {
                 <div className="min-w-0 space-y-2 text-left">
                   <DialogTitle className="text-xl font-semibold tracking-tight sm:text-2xl">Terms of Service Update</DialogTitle>
                   <DialogDescription className="text-sm leading-6 text-muted-foreground sm:text-base">
-                    We updated our Terms of Service (Version {latestVersion}) so the rules are clearer around payments,
-                    platform safety, escrow-style transaction handling, and account enforcement.
+                    We updated our Terms of Service & Privacy Policy (Version {latestVersion}) regarding campus discovery,
+                    merchant verification (IDIC), transparent view tracking, and communication safety.
                   </DialogDescription>
                 </div>
               </div>
@@ -113,35 +117,30 @@ export function TermsGuard({ children }: { children: React.ReactNode }) {
             <ScrollArea className="max-h-[58vh] px-4 py-4 sm:max-h-[50vh] sm:px-6">
               <div className="space-y-5 text-sm leading-7 text-muted-foreground">
                 <div className="space-y-2">
-                  <h3 className="text-base font-semibold text-foreground">1. Platform role</h3>
+                  <h3 className="text-base font-semibold text-foreground">1. Campus Discovery & Direct Communication</h3>
                   <p>
-                    String does more than introduce buyers and sellers. We support discovery, communication, payment flow,
-                    and transaction coordination across the platform.
+                    String connects verified students, creators, and local businesses with campus buyers. You agree to communicate respectfully, inspect goods during delivery, and adhere to community guidelines.
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="text-base font-semibold text-foreground">2. Transactions and escrow support</h3>
+                  <h3 className="text-base font-semibold text-foreground">2. Merchant Obligations & Authentic Metrics</h3>
                   <p>
-                    For eligible transactions, String acts as the marketplace intermediary and may hold or control payment flow
-                    through platform partners until release conditions, review steps, or delivery milestones are satisfied.
+                    Merchants agree to provide accurate descriptions of listings. String enforces transparent view analytics ("1 Account = 1 Viewer") to maintain authentic engagement and zero metric inflation.
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="text-base font-semibold text-foreground">3. Account responsibility</h3>
+                  <h3 className="text-base font-semibold text-foreground">3. Privacy & Data Consent (NDPA / NDPR)</h3>
                   <p>
-                    You remain responsible for your account activity, profile accuracy, order behavior, and any actions taken
-                    through your login or business presence on String.
+                    We collect profile, location coordinates, and interaction data strictly to calculate campus proximity and power search discovery. You retain full rights to export or permanently delete your account data.
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="text-base font-semibold text-foreground">4. Safety and enforcement</h3>
+                  <h3 className="text-base font-semibold text-foreground">4. Safety, Prohibited Items & Enforcement</h3>
                   <p>
-                    We may immediately restrict, suspend, close, or terminate accounts, listings, payouts, or transactions if
-                    we detect suspicious conduct, fraud risk, payment abuse, policy violations, impersonation, or any activity
-                    that may harm users or the platform.
+                    Counterfeit items, contraband, harassment, and fraudulent conduct are strictly prohibited. String reserves the right to immediately terminate accounts violating community integrity.
                   </p>
                 </div>
 
