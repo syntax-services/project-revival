@@ -23,6 +23,20 @@ export class ErrorBoundary extends React.Component<Props, State> {
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('ErrorBoundary caught an error', error, info);
     this.setState({ errorInfo: info });
+
+    const isChunkError =
+      error?.message?.includes("Failed to fetch dynamically imported module") ||
+      error?.message?.includes("Importing a module script failed") ||
+      error?.message?.includes("error loading dynamically imported module") ||
+      error?.message?.includes("Loading chunk");
+
+    if (isChunkError) {
+      const reloadKey = "string_eb_chunk_reload";
+      if (!sessionStorage.getItem(reloadKey)) {
+        sessionStorage.setItem(reloadKey, "true");
+        window.location.reload();
+      }
+    }
   }
 
   render() {

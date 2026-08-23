@@ -102,15 +102,13 @@ export function BottomNav({ isVisible = true }: BottomNavProps) {
                 )} active={isActive} strokeWidth={isVisible ? undefined : 2.6} />
               )}
               
-              {!isFab && (
-                <span className={cn(
-                  "text-[10px] font-bold tracking-wide transition-all duration-300 origin-top leading-none overflow-hidden",
-                  isActive ? "text-primary" : "text-muted-foreground",
-                  isVisible 
-                    ? "opacity-100 max-h-4 scale-100 mt-0" 
-                    : "opacity-0 max-h-0 scale-0 -mt-1 pointer-events-none"
-                )}>{item.label}</span>
-              )}
+              <span className={cn(
+                "text-[10px] font-bold tracking-wide transition-all duration-300 origin-top leading-none overflow-hidden",
+                isActive ? "text-primary" : "text-muted-foreground",
+                isVisible 
+                  ? "opacity-100 max-h-4 scale-100 mt-0" 
+                  : "opacity-0 max-h-0 scale-0 -mt-1 pointer-events-none"
+              )}>{item.label}</span>
             </Link>
           );
         })}

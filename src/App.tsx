@@ -4,7 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, useEffect } from "react";
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { TermsGuard } from "@/components/auth/TermsGuard";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -76,15 +77,15 @@ import CustomerProfile from "./pages/customer/CustomerProfile";
 import CustomerSettings from "./pages/customer/CustomerSettings";
 import CustomerMessages from "./pages/customer/CustomerMessages";
 
-const CustomerOrders = lazy(() => import("./pages/customer/CustomerOrders"));
-const CustomerOffers = lazy(() => import("./pages/customer/CustomerOffers"));
-const CustomerSavedBusinesses = lazy(() => import("./pages/customer/CustomerSavedBusinesses"));
-const CustomerJobs = lazy(() => import("./pages/customer/CustomerJobs"));
-const CustomerEngagement = lazy(() => import("./pages/customer/CustomerEngagement"));
-const CustomerNotifications = lazy(() => import("./pages/customer/CustomerNotifications"));
-const PaymentCallback = lazy(() => import("./pages/customer/PaymentCallback"));
-const Checkout = lazy(() => import("./pages/customer/Checkout"));
-const IDICDashboard = lazy(() => import("./pages/customer/IDICDashboard"));
+const CustomerOrders = lazyWithRetry(() => import("./pages/customer/CustomerOrders"));
+const CustomerOffers = lazyWithRetry(() => import("./pages/customer/CustomerOffers"));
+const CustomerSavedBusinesses = lazyWithRetry(() => import("./pages/customer/CustomerSavedBusinesses"));
+const CustomerJobs = lazyWithRetry(() => import("./pages/customer/CustomerJobs"));
+const CustomerEngagement = lazyWithRetry(() => import("./pages/customer/CustomerEngagement"));
+const CustomerNotifications = lazyWithRetry(() => import("./pages/customer/CustomerNotifications"));
+const PaymentCallback = lazyWithRetry(() => import("./pages/customer/PaymentCallback"));
+const Checkout = lazyWithRetry(() => import("./pages/customer/Checkout"));
+const IDICDashboard = lazyWithRetry(() => import("./pages/customer/IDICDashboard"));
 
 
 // Business core pages (Statically imported for instant, zero-delay tab switching)
@@ -97,24 +98,24 @@ import BusinessJobs from "./pages/business/BusinessJobs";
 import BusinessPayments from "./pages/business/BusinessPayments";
 import BusinessGrowth from "./pages/business/BusinessGrowth";
 
-const BusinessInsights = lazy(() => import("./pages/business/BusinessInsights"));
-const BusinessLeads = lazy(() => import("./pages/business/BusinessLeads"));
-const BusinessProducts = lazy(() => import("./pages/business/BusinessProducts"));
-const BusinessServices = lazy(() => import("./pages/business/BusinessServices"));
-const BusinessOrders = lazy(() => import("./pages/business/BusinessOrders"));
-const BusinessPublicProfile = lazy(() => import("./pages/business/BusinessPublicProfile"));
-const BusinessAnalytics = lazy(() => import("./pages/business/BusinessAnalytics"));
-const BusinessReviews = lazy(() => import("./pages/business/BusinessReviews"));
-const BusinessUpload = lazy(() => import("./pages/business/BusinessUpload"));
-const BusinessVerify = lazy(() => import("./pages/business/BusinessVerify"));
-const BusinessBoost = lazy(() => import("./pages/business/BusinessBoost"));
+const BusinessInsights = lazyWithRetry(() => import("./pages/business/BusinessInsights"));
+const BusinessLeads = lazyWithRetry(() => import("./pages/business/BusinessLeads"));
+const BusinessProducts = lazyWithRetry(() => import("./pages/business/BusinessProducts"));
+const BusinessServices = lazyWithRetry(() => import("./pages/business/BusinessServices"));
+const BusinessOrders = lazyWithRetry(() => import("./pages/business/BusinessOrders"));
+const BusinessPublicProfile = lazyWithRetry(() => import("./pages/business/BusinessPublicProfile"));
+const BusinessAnalytics = lazyWithRetry(() => import("./pages/business/BusinessAnalytics"));
+const BusinessReviews = lazyWithRetry(() => import("./pages/business/BusinessReviews"));
+const BusinessUpload = lazyWithRetry(() => import("./pages/business/BusinessUpload"));
+const BusinessVerify = lazyWithRetry(() => import("./pages/business/BusinessVerify"));
+const BusinessBoost = lazyWithRetry(() => import("./pages/business/BusinessBoost"));
 
 // Discover product & service detail pages
-const ProductDetailPage = lazy(() => import("./pages/discover/ProductDetailPage"));
-const ServiceDetailPage = lazy(() => import("./pages/discover/ServiceDetailPage"));
+const ProductDetailPage = lazyWithRetry(() => import("./pages/discover/ProductDetailPage"));
+const ServiceDetailPage = lazyWithRetry(() => import("./pages/discover/ServiceDetailPage"));
 
 // Admin pages
-const StringAdmin = lazy(() => import("./pages/admin/StringAdmin"));
+const StringAdmin = lazyWithRetry(() => import("./pages/admin/StringAdmin"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
