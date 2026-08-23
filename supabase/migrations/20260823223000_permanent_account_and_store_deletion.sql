@@ -25,82 +25,96 @@ BEGIN
     RAISE EXCEPTION 'Authentication required to delete account';
   END IF;
 
-  -- 1. Retrieve associated customer & business entity records
-  SELECT id INTO v_customer_id FROM public.customers WHERE user_id = v_user_id LIMIT 1;
-  SELECT id INTO v_business_id FROM public.businesses WHERE user_id = v_user_id LIMIT 1;
+  -- 1. Identify customer and business IDs
+  BEGIN
+    SELECT id INTO v_customer_id FROM public.customers WHERE user_id = v_user_id LIMIT 1;
+  EXCEPTION WHEN OTHERS THEN
+    v_customer_id := NULL;
+  END;
 
-  -- 2. Notify all conversation partners before wiping conversations
-  FOR v_conv IN 
-    SELECT c.id 
-    FROM public.conversations c
-    WHERE c.customer_id = v_user_id 
-       OR (v_customer_id IS NOT NULL AND c.customer_id = v_customer_id)
-       OR c.business_id = v_user_id
-       OR (v_business_id IS NOT NULL AND c.business_id = v_business_id)
-  LOOP
-    BEGIN
-      INSERT INTO public.messages (conversation_id, sender_id, sender_type, content, created_at)
-      VALUES (
-        v_conv.id, 
-        v_user_id, 
-        CASE WHEN v_business_id IS NOT NULL THEN 'business' ELSE 'customer' END,
-        '[SYSTEM]: This account has been permanently deleted by the user. Conversation closed.',
-        now()
-      );
+  BEGIN
+    SELECT id INTO v_business_id FROM public.businesses WHERE user_id = v_user_id LIMIT 1;
+  EXCEPTION WHEN OTHERS THEN
+    v_business_id := NULL;
+  END;
 
-      UPDATE public.conversations
-      SET last_message = '[SYSTEM]: Account Deleted',
-          last_message_at = now()
-      WHERE id = v_conv.id;
-      
-      v_notified_count := v_notified_count + 1;
-    EXCEPTION WHEN OTHERS THEN
-      -- Continue gracefully if message table constraints fail
-      NULL;
-    END;
-  END LOOP;
+  -- 2. Notify conversations (best effort)
+  BEGIN
+    FOR v_conv IN 
+      SELECT c.id 
+      FROM public.conversations c
+      WHERE c.customer_id = v_user_id 
+         OR (v_customer_id IS NOT NULL AND c.customer_id = v_customer_id)
+         OR c.business_id = v_user_id
+         OR (v_business_id IS NOT NULL AND c.business_id = v_business_id)
+    LOOP
+      BEGIN
+        INSERT INTO public.messages (conversation_id, sender_id, sender_type, content, created_at)
+        VALUES (
+          v_conv.id, 
+          v_user_id, 
+          CASE WHEN v_business_id IS NOT NULL THEN 'business' ELSE 'customer' END,
+          '[SYSTEM]: This account has been permanently deleted by the user. Conversation closed.',
+          now()
+        );
 
-  -- 3. Cascade clean up customer-specific data
-  IF v_customer_id IS NOT NULL THEN
-    DELETE FROM public.cart_items WHERE customer_id = v_customer_id;
-    DELETE FROM public.saved_businesses WHERE customer_id = v_customer_id;
-    DELETE FROM public.reviews WHERE customer_id = v_customer_id;
-    DELETE FROM public.job_requests WHERE customer_id = v_customer_id;
-  END IF;
+        UPDATE public.conversations
+        SET last_message = '[SYSTEM]: Account Deleted',
+            last_message_at = now()
+        WHERE id = v_conv.id;
+        
+        v_notified_count := v_notified_count + 1;
+      EXCEPTION WHEN OTHERS THEN
+        NULL;
+      END;
+    END LOOP;
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
 
-  -- 4. Cascade clean up business-specific data
+  -- 3. Safely wipe dependent business & catalog data
   IF v_business_id IS NOT NULL THEN
-    DELETE FROM public.products WHERE business_id = v_business_id;
-    DELETE FROM public.services WHERE business_id = v_business_id;
-    DELETE FROM public.business_hours WHERE business_id = v_business_id;
-    DELETE FROM public.offers WHERE business_id = v_business_id;
-    DELETE FROM public.saved_businesses WHERE business_id = v_business_id;
-    DELETE FROM public.reviews WHERE business_id = v_business_id;
-    DELETE FROM public.business_views WHERE business_id = v_business_id;
-    DELETE FROM public.job_requests WHERE business_id = v_business_id;
-    DELETE FROM public.payout_requests WHERE business_id = v_business_id;
-    DELETE FROM public.bank_accounts WHERE business_id = v_business_id;
-    DELETE FROM public.wallets WHERE business_id = v_business_id;
-    DELETE FROM public.businesses WHERE id = v_business_id;
+    BEGIN DELETE FROM public.products WHERE business_id = v_business_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN DELETE FROM public.services WHERE business_id = v_business_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN DELETE FROM public.business_hours WHERE business_id = v_business_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN DELETE FROM public.business_wallets WHERE business_id = v_business_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN DELETE FROM public.business_views WHERE business_id = v_business_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN DELETE FROM public.business_likes WHERE business_id = v_business_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN DELETE FROM public.saved_businesses WHERE business_id = v_business_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN DELETE FROM public.offers WHERE business_id = v_business_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN DELETE FROM public.reviews WHERE business_id = v_business_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN DELETE FROM public.businesses WHERE id = v_business_id; EXCEPTION WHEN OTHERS THEN NULL; END;
   END IF;
 
-  -- 5. Cascade clean up user-level platform tables
-  DELETE FROM public.business_views WHERE viewer_user_id = v_user_id;
-  DELETE FROM public.wallet_transactions WHERE user_id = v_user_id;
-  DELETE FROM public.wallets WHERE user_id = v_user_id;
-  DELETE FROM public.device_tokens WHERE user_id = v_user_id;
-  DELETE FROM public.notifications WHERE user_id = v_user_id;
-  DELETE FROM public.login_history WHERE user_id = v_user_id;
-  DELETE FROM public.audit_logs WHERE user_id = v_user_id;
-  DELETE FROM public.bank_accounts WHERE user_id = v_user_id;
-  DELETE FROM public.customers WHERE user_id = v_user_id;
-  DELETE FROM public.businesses WHERE user_id = v_user_id;
-  DELETE FROM public.user_roles WHERE user_id = v_user_id;
-  DELETE FROM public.profiles WHERE user_id = v_user_id OR id = v_user_id;
+  -- 4. Safely wipe customer specific records
+  IF v_customer_id IS NOT NULL THEN
+    BEGIN DELETE FROM public.cart_items WHERE customer_id = v_customer_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN DELETE FROM public.saved_businesses WHERE customer_id = v_customer_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+    BEGIN DELETE FROM public.customers WHERE id = v_customer_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  END IF;
 
-  -- 6. PERMANENTLY PURGE FROM SUPABASE AUTH SCHEMA
-  -- This prevents the user from EVER logging in with their old credentials
-  DELETE FROM auth.users WHERE id = v_user_id;
+  -- 5. Safely wipe user-level records
+  BEGIN DELETE FROM public.reviews WHERE reviewer_id = v_user_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.business_views WHERE viewer_user_id = v_user_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.business_likes WHERE user_id = v_user_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.device_tokens WHERE user_id = v_user_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.notifications WHERE user_id = v_user_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.wallet_transactions WHERE user_id = v_user_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.wallets WHERE user_id = v_user_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.login_history WHERE user_id = v_user_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.audit_logs WHERE user_id = v_user_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.offers WHERE user_id = v_user_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.customers WHERE user_id = v_user_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.businesses WHERE user_id = v_user_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.user_roles WHERE user_id = v_user_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.profiles WHERE user_id = v_user_id OR id = v_user_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+
+  -- 6. PERMANENTLY PURGE USER FROM SUPABASE AUTH SCHEMA
+  BEGIN
+    DELETE FROM auth.users WHERE id = v_user_id;
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
 
   RETURN jsonb_build_object(
     'success', true,
@@ -132,10 +146,14 @@ BEGIN
   END IF;
 
   -- 1. Locate the business record for this user
-  SELECT id INTO v_business_id 
-  FROM public.businesses 
-  WHERE user_id = v_user_id 
-  LIMIT 1;
+  BEGIN
+    SELECT id INTO v_business_id 
+    FROM public.businesses 
+    WHERE user_id = v_user_id 
+    LIMIT 1;
+  EXCEPTION WHEN OTHERS THEN
+    v_business_id := NULL;
+  END;
 
   IF v_business_id IS NULL THEN
     RETURN jsonb_build_object(
@@ -145,61 +163,75 @@ BEGIN
   END IF;
 
   -- 2. Notify all conversation partners that this store has been closed
-  FOR v_conv IN 
-    SELECT c.id 
-    FROM public.conversations c
-    WHERE c.business_id = v_business_id OR c.business_id = v_user_id
-  LOOP
-    BEGIN
-      INSERT INTO public.messages (conversation_id, sender_id, sender_type, content, created_at)
-      VALUES (
-        v_conv.id, 
-        v_user_id, 
-        'business',
-        '[SYSTEM]: This merchant store has been permanently closed. Conversation archived.',
-        now()
-      );
+  BEGIN
+    FOR v_conv IN 
+      SELECT c.id 
+      FROM public.conversations c
+      WHERE c.business_id = v_business_id OR c.business_id = v_user_id
+    LOOP
+      BEGIN
+        INSERT INTO public.messages (conversation_id, sender_id, sender_type, content, created_at)
+        VALUES (
+          v_conv.id, 
+          v_user_id, 
+          'business',
+          '[SYSTEM]: This merchant store has been permanently closed. Conversation archived.',
+          now()
+        );
 
-      UPDATE public.conversations
-      SET last_message = '[SYSTEM]: Store Closed',
-          last_message_at = now()
-      WHERE id = v_conv.id;
-      
-      v_notified_count := v_notified_count + 1;
-    EXCEPTION WHEN OTHERS THEN
-      NULL;
-    END;
-  END LOOP;
+        UPDATE public.conversations
+        SET last_message = '[SYSTEM]: Store Closed',
+            last_message_at = now()
+        WHERE id = v_conv.id;
+        
+        v_notified_count := v_notified_count + 1;
+      EXCEPTION WHEN OTHERS THEN
+        NULL;
+      END;
+    END LOOP;
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
 
   -- 3. Clean up business-specific catalogue & configuration records
-  DELETE FROM public.products WHERE business_id = v_business_id;
-  DELETE FROM public.services WHERE business_id = v_business_id;
-  DELETE FROM public.business_hours WHERE business_id = v_business_id;
-  DELETE FROM public.offers WHERE business_id = v_business_id;
-  DELETE FROM public.saved_businesses WHERE business_id = v_business_id;
-  DELETE FROM public.reviews WHERE business_id = v_business_id;
-  DELETE FROM public.business_views WHERE business_id = v_business_id;
-  DELETE FROM public.job_requests WHERE business_id = v_business_id;
-  DELETE FROM public.payout_requests WHERE business_id = v_business_id;
-  DELETE FROM public.bank_accounts WHERE business_id = v_business_id;
-  DELETE FROM public.wallets WHERE business_id = v_business_id;
-  DELETE FROM public.businesses WHERE id = v_business_id OR user_id = v_user_id;
+  BEGIN DELETE FROM public.products WHERE business_id = v_business_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.services WHERE business_id = v_business_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.business_hours WHERE business_id = v_business_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.offers WHERE business_id = v_business_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.saved_businesses WHERE business_id = v_business_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.reviews WHERE business_id = v_business_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.business_views WHERE business_id = v_business_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.business_likes WHERE business_id = v_business_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.business_wallets WHERE business_id = v_business_id; EXCEPTION WHEN OTHERS THEN NULL; END;
+  BEGIN DELETE FROM public.businesses WHERE id = v_business_id OR user_id = v_user_id; EXCEPTION WHEN OTHERS THEN NULL; END;
 
   -- 4. Revoke business merchant role while preserving admin & customer roles
-  DELETE FROM public.user_roles 
-  WHERE user_id = v_user_id AND role = 'business';
+  BEGIN
+    DELETE FROM public.user_roles 
+    WHERE user_id = v_user_id AND role = 'business';
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
 
   -- 5. Revert user profile to customer shopper mode
-  UPDATE public.profiles
-  SET user_type = 'customer',
-      company_name = NULL,
-      updated_at = now()
-  WHERE user_id = v_user_id OR id = v_user_id;
+  BEGIN
+    UPDATE public.profiles
+    SET user_type = 'customer',
+        company_name = NULL,
+        updated_at = now()
+    WHERE user_id = v_user_id OR id = v_user_id;
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
 
   -- 6. Ensure customer record exists so user seamlessly remains a shopper
-  INSERT INTO public.customers (user_id) 
-  VALUES (v_user_id)
-  ON CONFLICT DO NOTHING;
+  BEGIN
+    INSERT INTO public.customers (user_id) 
+    VALUES (v_user_id)
+    ON CONFLICT DO NOTHING;
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
 
   RETURN jsonb_build_object(
     'success', true,
