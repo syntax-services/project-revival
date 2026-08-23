@@ -27,6 +27,7 @@ import {
   Shield,
   ShieldCheck,
   Trophy,
+  Swords,
   Wallet,
   Store,
 } from "lucide-react";
