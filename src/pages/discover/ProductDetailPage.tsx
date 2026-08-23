@@ -54,13 +54,54 @@ export default function ProductDetailPage() {
 
   const { liked, saved, toggleLike, toggleSave } = useProductSocial(id);
 
-  // Dynamic OpenGraph and Twitter Metadata for Product Sharing
+  // Dynamic OpenGraph, Twitter, and Schema.org Product Structured Data
   usePageMeta({
-    title: product?.name ? `${product.name} | ${product.business?.company_name || "Campus Store"}` : "Product",
-    description: product?.description || `Buy ${product?.name || "this item"} from ${product?.business?.company_name || "a verified merchant"} on String.`,
+    title: product?.name ? `${product.name} | ₦${(product.price || 0).toLocaleString()} | ${product.business?.company_name || "Campus Store"}` : "Product Details",
+    description: product?.description 
+      ? `${product.description.slice(0, 155)}... Available from ${product.business?.company_name || "verified merchant"} on String.`
+      : `Buy ${product?.name || "this item"} for ₦${(product?.price || 0).toLocaleString()} from ${product?.business?.company_name || "a verified merchant"} on String.`,
     image: product?.image_url || product?.business?.logo_url || null,
-    url: window.location.href,
+    url: `https://www.string.com.ng/product/${id}`,
     type: "product",
+    keywords: [
+      product?.name || "product",
+      product?.category || "campus marketplace",
+      product?.business?.company_name || "merchant",
+      ...(product?.tags || []),
+      "String Nigeria",
+      "buy on campus"
+    ],
+    breadcrumbs: [
+      { name: "Home", url: "https://www.string.com.ng/" },
+      { name: "Discover", url: "https://www.string.com.ng/customer/discover" },
+      { name: product?.category || "Products", url: `https://www.string.com.ng/customer/discover?cat=${encodeURIComponent(product?.category || "all")}` },
+      { name: product?.name || "Product", url: `https://www.string.com.ng/product/${id}` }
+    ],
+    structuredData: product ? {
+      "@context": "https://schema.org/",
+      "@type": "Product",
+      "name": product.name,
+      "image": product.image_url ? [product.image_url, ...(product.images || [])] : ["https://www.string.com.ng/String-logo-dark.png"],
+      "description": product.description || `Buy ${product.name} from ${product.business?.company_name || "verified merchant"} on String.`,
+      "sku": product.id,
+      "brand": {
+        "@type": "Brand",
+        "name": product.business?.company_name || "String Merchant"
+      },
+      "offers": {
+        "@type": "Offer",
+        "url": `https://www.string.com.ng/product/${product.id}`,
+        "priceCurrency": "NGN",
+        "price": product.price || 0,
+        "priceValidUntil": "2027-12-31",
+        "itemCondition": "https://schema.org/NewCondition",
+        "availability": product.in_stock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+        "seller": {
+          "@type": "Organization",
+          "name": product.business?.company_name || "String Merchant"
+        }
+      }
+    } : undefined,
   });
 
   useEffect(() => {
@@ -114,6 +155,11 @@ export default function ProductDetailPage() {
 
   const handleStartChat = () => {
     if (!product?.business?.id) return;
+    if (!user) {
+      toast.info("Please sign in to chat with the seller and place orders.");
+      navigate(`/auth?redirect=${encodeURIComponent(`/product/${product.id}`)}`);
+      return;
+    }
     navigate(`/customer/messages?biz=${product.business.id}&product=${encodeURIComponent(product.name)}`);
   };
 

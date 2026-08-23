@@ -215,14 +215,14 @@ const App = () => (
                   <Route path="/business/verify" element={<ProtectedRoute requiredUserType="business"><BusinessVerify /></ProtectedRoute>} />
                   <Route path="/business/boost" element={<ProtectedRoute requiredUserType="business"><BusinessBoost /></ProtectedRoute>} />
 
-                  {/* Public business profile - accessible to all logged-in users */}
-                  <Route path="/business/:id" element={<ProtectedRoute><BusinessPublicProfile /></ProtectedRoute>} />
+                  {/* Public business profile - accessible for search indexing & guest previews */}
+                  <Route path="/business/:id" element={<BusinessPublicProfile />} />
 
-                  {/* Dedicated Product & Service Details Pages */}
-                  <Route path="/product/:id" element={<ProtectedRoute><ProductDetailPage /></ProtectedRoute>} />
-                  <Route path="/service/:id" element={<ProtectedRoute><ServiceDetailPage /></ProtectedRoute>} />
-                  <Route path="/customer/discover/product/:id" element={<ProtectedRoute><ProductDetailPage /></ProtectedRoute>} />
-                  <Route path="/business/discover/product/:id" element={<ProtectedRoute><ProductDetailPage /></ProtectedRoute>} />
+                  {/* Dedicated Product & Service Details Pages - Public for Google Indexing */}
+                  <Route path="/product/:id" element={<ProductDetailPage />} />
+                  <Route path="/service/:id" element={<ServiceDetailPage />} />
+                  <Route path="/customer/discover/product/:id" element={<ProductDetailPage />} />
+                  <Route path="/business/discover/product/:id" element={<ProductDetailPage />} />
 
                   {/* Admin Routes */}
                   <Route

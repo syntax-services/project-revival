@@ -1,8 +1,7 @@
 /**
- * SUPERCHARGED SEO & AI CRAWLER ENGINE FOR STRING PLATFORM
- * Automatically generates high-fidelity JSON-LD Structured Data,
- * Meta tags, Open Graph, and Twitter Cards to maximize Search Engine
- * and AI Web Crawler visibility (Google, Bing, GPTBot, ClaudeBot, Perplexity).
+ * INSTITUTIONAL GRADE SEO & AI SEARCH OPTIMIZATION ENGINE FOR STRING PLATFORM
+ * Generates Schema.org JSON-LD Structured Data, Open Graph, Twitter Cards,
+ * and canonical tags to maximize Google, Bing, and AI Engine (ChatGPT, Gemini, Perplexity) ranking.
  */
 
 interface SEOProductPayload {
@@ -25,14 +24,16 @@ interface SEOMarketplacePayload {
   category?: string;
 }
 
+const PRIMARY_DOMAIN = "https://www.string.com.ng";
+const DEFAULT_BRAND_IMAGE = "https://www.string.com.ng/String-logo-dark.png";
+
 /**
  * Injects a highly structured Product JSON-LD block into document head.
- * Feeds search engines with precise catalog details to trigger "Google Merchant" rich snippets.
+ * Feeds search engines with precise catalog details to trigger Google Merchant rich snippets.
  */
 export function injectProductSchema(product: SEOProductPayload) {
   if (typeof window === "undefined") return;
 
-  // Remove any pre-existing product schema script
   const existingScript = document.getElementById("string-seo-product-schema");
   if (existingScript) {
     existingScript.remove();
@@ -42,24 +43,24 @@ export function injectProductSchema(product: SEOProductPayload) {
     "@context": "https://schema.org/",
     "@type": "Product",
     "name": product.name,
-    "image": product.imageUrl || "https://string-marketplace.vercel.app/string-logo.png",
-    "description": product.description || `Buy ${product.name} on String - The premium local marketplace.`,
-    "sku": product.id.slice(0, 8).toUpperCase(),
+    "image": product.imageUrl || DEFAULT_BRAND_IMAGE,
+    "description": product.description || `Buy ${product.name} on String - Nigeria's #1 verified campus marketplace.`,
+    "sku": product.id,
     "mpn": product.id,
     "brand": {
       "@type": "Brand",
-      "name": product.businessName || "String Platform"
+      "name": product.businessName || "String Merchant"
     },
     "offers": {
       "@type": "Offer",
-      "url": window.location.href,
+      "url": `${PRIMARY_DOMAIN}/product/${product.id}`,
       "priceCurrency": "NGN",
       "price": product.price || 0,
-      "priceValidUntil": new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      "priceValidUntil": "2027-12-31",
       "itemCondition": "https://schema.org/NewCondition",
       "availability": product.inStock !== false ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       "seller": {
-        "@type": "LocalBusiness",
+        "@type": "Organization",
         "name": product.businessName || "String Merchant"
       }
     }
@@ -68,7 +69,7 @@ export function injectProductSchema(product: SEOProductPayload) {
   const script = document.createElement("script");
   script.id = "string-seo-product-schema";
   script.type = "application/ld+json";
-  script.innerHTML = JSON.stringify(schema);
+  script.textContent = JSON.stringify(schema);
   document.head.appendChild(script);
 }
 
@@ -86,19 +87,20 @@ export function injectMarketplaceDirectorySchema(businesses: SEOMarketplacePaylo
   const schema = {
     "@context": "https://schema.org",
     "@type": "ItemList",
+    "name": "Verified Campus Businesses on String",
     "numberOfItems": businesses.length,
     "itemListElement": businesses.map((biz, idx) => ({
       "@type": "ListItem",
       "position": idx + 1,
       "item": {
-        "@type": "LocalBusiness",
+        "@type": "Store",
         "name": biz.companyName,
-        "image": biz.imageUrl || "https://string-marketplace.vercel.app/string-logo.png",
+        "image": biz.imageUrl || DEFAULT_BRAND_IMAGE,
         "telephone": biz.phone || "+2340000000",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": biz.address || "Lagos, Nigeria",
-          "addressLocality": "Lagos",
+          "streetAddress": biz.address || "Nigeria",
+          "addressLocality": biz.address || "Nigeria",
           "addressCountry": "NG"
         },
         "aggregateRating": biz.rating ? {
@@ -106,7 +108,7 @@ export function injectMarketplaceDirectorySchema(businesses: SEOMarketplacePaylo
           "ratingValue": biz.rating,
           "bestRating": "5",
           "worstRating": "1",
-          "ratingCount": "12"
+          "ratingCount": "10"
         } : undefined
       }
     }))
@@ -115,7 +117,7 @@ export function injectMarketplaceDirectorySchema(businesses: SEOMarketplacePaylo
   const script = document.createElement("script");
   script.id = "string-seo-directory-schema";
   script.type = "application/ld+json";
-  script.innerHTML = JSON.stringify(schema);
+  script.textContent = JSON.stringify(schema);
   document.head.appendChild(script);
 }
 
@@ -125,13 +127,13 @@ export function injectMarketplaceDirectorySchema(businesses: SEOMarketplacePaylo
 export function updateMetaTags(
   title: string, 
   description: string, 
-  keywords: string = "marketplace, string, ecommerce, lagos, buy local, custom goods, services, escrow, nigeria", 
-  imageUrl: string = "https://string-marketplace.vercel.app/string-logo.png"
+  keywords: string = "String, String Nigeria, campus marketplace, student commerce, buy and sell on campus, gadgets, textbooks, fashion, local services, verified merchants", 
+  imageUrl: string = DEFAULT_BRAND_IMAGE
 ) {
   if (typeof window === "undefined") return;
 
   // 1. Update Title
-  document.title = `${title} | String - High-Trust Escrow Marketplace`;
+  document.title = `${title} | String - Nigeria's #1 Campus Marketplace`;
 
   // Helper to upsert meta tags
   const setMeta = (nameOrProperty: string, value: string, isProperty = false) => {
@@ -155,21 +157,26 @@ export function updateMetaTags(
   setMeta("description", description);
   setMeta("keywords", keywords);
   setMeta("robots", "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1");
-  setMeta("author", "String Platform");
+  setMeta("author", "String Inc.");
+  setMeta("geo.region", "NG");
+  setMeta("geo.placename", "Nigeria");
 
   // 3. Open Graph (Facebook / LinkedIn / AI crawlers previews)
-  setMeta("og:title", `${title} | String Marketplace`, true);
+  setMeta("og:title", `${title} | String Campus Marketplace`, true);
   setMeta("og:description", description, true);
   setMeta("og:image", imageUrl, true);
   setMeta("og:url", window.location.href, true);
   setMeta("og:type", "website", true);
   setMeta("og:site_name", "String", true);
+  setMeta("og:locale", "en_NG", true);
 
   // 4. Twitter Cards
-  setMeta("twitter:card", "summary_large_image");
-  setMeta("twitter:title", `${title} | String Marketplace`);
-  setMeta("twitter:description", description);
-  setMeta("twitter:image", imageUrl);
+  setMeta("name", "twitter:card", "summary_large_image");
+  setMeta("name", "twitter:site", "@StringPlatform");
+  setMeta("name", "twitter:creator", "@StringPlatform");
+  setMeta("name", "twitter:title", `${title} | String`);
+  setMeta("name", "twitter:description", description);
+  setMeta("name", "twitter:image", imageUrl);
 
   // 5. Canonical Link
   let canonical = document.querySelector("link[rel='canonical']");

@@ -108,13 +108,65 @@ export default function BusinessPublicProfile() {
   const [budgetMax, setBudgetMax] = useState("");
   const [submittingJob, setSubmittingJob] = useState(false);
 
-  // Dynamic OpenGraph and Twitter Metadata for Store Link Previews
+  // Dynamic OpenGraph, Twitter, and Schema.org LocalBusiness Structured Data
   usePageMeta({
-    title: business?.company_name || "Campus Store",
-    description: business?.products_services || business?.industry || "Verified campus merchant on String",
-    image: business?.cover_image_url || null,
-    url: window.location.href,
-    type: "profile",
+    title: business?.company_name ? `${business.company_name} | Verified Campus Store` : "Campus Store",
+    description: business?.products_services 
+      ? `${business.company_name} on String: ${business.products_services}. Located in ${business.business_location || "Nigeria"}.`
+      : `Explore products and services from ${business?.company_name || "verified merchant"} on String.`,
+    image: business?.cover_image_url || "https://www.string.com.ng/String-logo-dark.png",
+    url: `https://www.string.com.ng/business/${id}`,
+    type: "business.business",
+    keywords: [
+      business?.company_name || "business",
+      business?.industry || "campus merchant",
+      business?.business_location || "Nigeria",
+      "String store",
+      "campus market"
+    ],
+    breadcrumbs: [
+      { name: "Home", url: "https://www.string.com.ng/" },
+      { name: "Discover", url: "https://www.string.com.ng/customer/discover" },
+      { name: business?.company_name || "Store", url: `https://www.string.com.ng/business/${id}` }
+    ],
+    structuredData: business ? {
+      "@context": "https://schema.org/",
+      "@type": "Store",
+      "name": business.company_name,
+      "image": business.cover_image_url || "https://www.string.com.ng/String-logo-dark.png",
+      "description": business.products_services || `${business.company_name} on String`,
+      "url": `https://www.string.com.ng/business/${business.id}`,
+      "address": {
+        "@type": "PostalAddress",
+        "addressCountry": "NG",
+        "addressLocality": business.business_location || "Nigeria"
+      },
+      ...(business.latitude && business.longitude ? {
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": business.latitude,
+          "longitude": business.longitude
+        }
+      } : {}),
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": `${business.company_name} Catalog`,
+        "itemListElement": products.slice(0, 10).map((p, idx) => ({
+          "@type": "Offer",
+          "itemOffered": {
+            "@type": "Product",
+            "name": p.name,
+            "description": p.description || p.name,
+            "url": `https://www.string.com.ng/product/${p.id}`,
+            "offers": {
+              "@type": "Offer",
+              "price": p.price || 0,
+              "priceCurrency": "NGN"
+            }
+          }
+        }))
+      }
+    } : undefined,
   });
 
   useEffect(() => {

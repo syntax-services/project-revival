@@ -50,13 +50,53 @@ export default function ServiceDetailPage() {
 
   const { liked, saved, toggleLike, toggleSave } = useProductSocial(id);
 
-  // Dynamic OpenGraph and Twitter Metadata for Service Link Previews
+  // Dynamic OpenGraph, Twitter, and Schema.org Service Structured Data
   usePageMeta({
-    title: service?.name ? `${service.name} | ${service.business?.company_name || "Campus Service"}` : "Service",
-    description: service?.description || `Book ${service?.name || "this service"} from ${service?.business?.company_name || "a verified campus provider"} on String.`,
+    title: service?.name ? `${service.name} | ${service.business?.company_name || "Campus Service Provider"}` : "Campus Service",
+    description: service?.description 
+      ? `${service.description.slice(0, 155)}... Provided by ${service.business?.company_name || "verified campus professional"} on String.`
+      : `Book ${service?.name || "this service"} from ${service?.business?.company_name || "a verified campus provider"} on String.`,
     image: (service?.images && service.images[0]) || service?.business?.logo_url || null,
-    url: window.location.href,
+    url: `https://www.string.com.ng/service/${id}`,
     type: "product",
+    keywords: [
+      service?.name || "service",
+      service?.category || "campus service",
+      service?.business?.company_name || "provider",
+      ...(service?.tags || []),
+      "String Nigeria",
+      "campus freelancers"
+    ],
+    breadcrumbs: [
+      { name: "Home", url: "https://www.string.com.ng/" },
+      { name: "Discover", url: "https://www.string.com.ng/customer/discover?type=services" },
+      { name: service?.category || "Services", url: `https://www.string.com.ng/customer/discover?type=services&cat=${encodeURIComponent(service?.category || "all")}` },
+      { name: service?.name || "Service", url: `https://www.string.com.ng/service/${id}` }
+    ],
+    structuredData: service ? {
+      "@context": "https://schema.org/",
+      "@type": "Service",
+      "name": service.name,
+      "image": (service.images && service.images[0]) || service.business?.logo_url || "https://www.string.com.ng/String-logo-dark.png",
+      "description": service.description || `Book ${service.name} on String.`,
+      "serviceType": service.category || "Professional & Campus Service",
+      "provider": {
+        "@type": "LocalBusiness",
+        "name": service.business?.company_name || "String Service Provider",
+        "image": service.business?.logo_url || undefined,
+        "address": {
+          "@type": "PostalAddress",
+          "addressCountry": "NG",
+          "addressLocality": service.business?.business_location || "Nigeria"
+        }
+      },
+      "offers": {
+        "@type": "Offer",
+        "priceCurrency": "NGN",
+        "price": service.price_min || 0,
+        "availability": service.is_available ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+      }
+    } : undefined,
   });
 
   useEffect(() => {
@@ -105,6 +145,11 @@ export default function ServiceDetailPage() {
 
   const handleStartChat = () => {
     if (!service?.business?.id) return;
+    if (!user) {
+      toast.info("Please sign in to message this provider and request quotes.");
+      navigate(`/auth?redirect=${encodeURIComponent(`/service/${service.id}`)}`);
+      return;
+    }
     navigate(`/customer/messages?biz=${service.business.id}&service=${encodeURIComponent(service.name)}`);
   };
 
