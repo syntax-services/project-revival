@@ -123,7 +123,7 @@ export default function CustomerOverview() {
  is_rare,
  is_featured,
  created_at,
- businesses(id, company_name, logo_url, cover_image_url, verified, is_active), product_comments(count)
+ businesses(id, company_name, logo_url, cover_image_url, verified, is_active), reviews(count)
  `)
  .eq("in_stock", true)
  .order("created_at", { ascending: false });
@@ -143,7 +143,7 @@ export default function CustomerOverview() {
  images,
  category,
  created_at,
- businesses(id, company_name, logo_url, cover_image_url, verified, is_active), product_comments(count)
+ businesses(id, company_name, logo_url, cover_image_url, verified, is_active), reviews(count)
  `)
  .order("created_at", { ascending: false });
 
@@ -175,8 +175,8 @@ export default function CustomerOverview() {
               category: (p.category || "CAMPUS STORE").toUpperCase(),
               likes: `${totalLikes}`,
               likeCount: totalLikes,
-              comments: `${p.product_comments?.[0]?.count || 0}`,
-              commentCount: p.product_comments?.[0]?.count || 0,
+              comments: `${p.reviews?.[0]?.count || 0}`,
+              commentCount: p.reviews?.[0]?.count || 0,
               bookmarks: `${totalBookmarks}`,
               bookmarkCount: totalBookmarks,
               is_featured: !!p.is_featured,
@@ -216,8 +216,8 @@ export default function CustomerOverview() {
               category: (s.category || "SERVICES").toUpperCase(),
               likes: `${totalLikes}`,
               likeCount: totalLikes,
-              comments: `${p.product_comments?.[0]?.count || 0}`,
-              commentCount: p.product_comments?.[0]?.count || 0,
+              comments: `${p.reviews?.[0]?.count || 0}`,
+              commentCount: p.reviews?.[0]?.count || 0,
               bookmarks: `${totalBookmarks}`,
               bookmarkCount: totalBookmarks,
               is_featured: false,
@@ -763,4 +763,5 @@ export default function CustomerOverview() {
  </DashboardLayout>
  );
 }
+
 
