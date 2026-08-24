@@ -529,7 +529,7 @@ export default function BusinessMessages() {
     const markRead = async () => {
       const { error } = await supabase
         .from("messages")
-        .update({ read: true, read_at: new Date().toISOString() })
+        .update({ read_at: new Date().toISOString() })
         .eq("conversation_id", selectedConversation.id)
         .eq("sender_type", "customer")
         .is("read_at", null);
@@ -562,7 +562,7 @@ export default function BusinessMessages() {
             playChatAlert();
             supabase
               .from("messages")
-              .update({ read: true, read_at: new Date().toISOString() })
+              .update({ read_at: new Date().toISOString() })
               .eq("id", newMsg.id);
           }
         }

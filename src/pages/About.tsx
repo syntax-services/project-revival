@@ -255,12 +255,27 @@ export default function About() {
 
         {/* ROADMAP SECTION (MOBILE FOCUSED) */}
         <section className="py-12 border-t border-border/20 relative">
-          <div className="text-center space-y-4 mb-16">
+          <div className="text-center space-y-4 mb-8">
             <h2 className="text-2xl md:text-3xl font-black tracking-tight">The Master Roadmap</h2>
             <p className="text-muted-foreground font-medium text-sm">
               String isn't just a project. It's a continent-wide mission.
             </p>
           </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8 }}
+            className="relative max-w-2xl mx-auto mb-16 rounded-[2rem] overflow-hidden border border-primary/20 shadow-2xl"
+          >
+            <div className="absolute inset-0 bg-primary/10 mix-blend-overlay" />
+            <img 
+              src={networkMap} 
+              alt="String Africa Network Map" 
+              className="w-full h-auto brightness-110 contrast-125 hover:scale-105 transition-transform duration-700 ease-out"
+            />
+          </motion.div>
 
           {/* Vertical Timeline */}
           <div className="relative max-w-lg mx-auto">
