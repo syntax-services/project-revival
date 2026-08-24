@@ -21,6 +21,7 @@ export function TermsGuard({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const location = useLocation();
   const [showModal, setShowModal] = useState(false);
+  const [safetyChecked, setSafetyChecked] = useState(false);
   const [latestVersion, setLatestVersion] = useState<number | null>(null);
   const publicRoutes = ["/", "/auth", "/privacy", "/terms", "/contact"];
   const isPublicRoute = publicRoutes.includes(location.pathname);
@@ -48,10 +49,10 @@ export function TermsGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (config?.value !== undefined) {
-      const rawValue = config.value;
+    if (config?.value !== undefined || config === null) {
+      const rawValue = config?.value || 3;
       const version: number = typeof rawValue === 'string' ? parseInt(rawValue, 10) : Number(rawValue);
-      const activeVersion = Number.isNaN(version) ? 2 : version;
+      const activeVersion = Number.isNaN(version) ? 3 : Math.max(version, 3);
       setLatestVersion(activeVersion);
       
       // If user is logged in and hasn't accepted the latest version
@@ -144,6 +145,15 @@ export function TermsGuard({ children }: { children: React.ReactNode }) {
                   </p>
                 </div>
 
+                <div className="space-y-2 rounded-xl bg-red-500/10 border border-red-500/20 p-4">
+                  <h3 className="text-base font-semibold text-red-500 flex items-center gap-2">
+                    <ShieldAlert className="h-4 w-4" /> 5. Mandatory Physical Safety
+                  </h3>
+                  <p className="text-red-500/90 text-sm">
+                    String does not escort transactions. To avoid the risk of kidnapping, theft, or physical harm, you strictly agree to only exchange goods and cash in well-lit, highly populated public spaces (e.g., campus squares, busy cafeterias).
+                  </p>
+                </div>
+
                 <p className="border-t border-border/40 pt-4 italic">
                   This is a summary. Please read the full{" "}
                   <a href="/terms" target="_blank" className="font-medium text-primary hover:underline" rel="noreferrer">
@@ -154,30 +164,46 @@ export function TermsGuard({ children }: { children: React.ReactNode }) {
               </div>
             </ScrollArea>
 
-            <DialogFooter className="gap-3 border-t border-border/40 px-4 py-4 sm:flex-row sm:px-6">
-            <Button 
-              variant="outline" 
-              className="h-11 border-0 bg-muted px-6 font-semibold hover:bg-muted/80"
-              onClick={() => {
-                supabase.auth.signOut();
-                setShowModal(false);
-              }}
-            >
-              Sign Out
-            </Button>
-            <Button 
-              className="h-11 bg-primary px-6 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
-              onClick={() => acceptMutation.mutate()}
-              disabled={acceptMutation.isPending}
-            >
-              {acceptMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Check className="mr-2 h-4 w-4" />
-              )}
-              I Accept & Continue
-            </Button>
-          </DialogFooter>
+            <DialogFooter className="gap-3 border-t border-border/40 px-4 py-4 sm:flex-col sm:px-6">
+              {/* Mandatory Checkbox */}
+              <div className="flex items-start gap-3 pb-2 pt-1 mb-2">
+                <input 
+                  type="checkbox" 
+                  id="safety-agreement"
+                  className="mt-1 h-4 w-4 rounded border-primary text-primary focus:ring-primary accent-primary"
+                  checked={safetyChecked}
+                  onChange={(e) => setSafetyChecked(e.target.checked)}
+                />
+                <label htmlFor="safety-agreement" className="text-sm font-medium leading-tight text-foreground cursor-pointer select-none">
+                  I agree to the Terms of Service, Privacy Policy, and I strictly agree to only meet buyers/sellers in public, populated spaces for my safety.
+                </label>
+              </div>
+
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 w-full">
+                <Button 
+                  variant="outline" 
+                  className="h-11 border-0 bg-muted px-6 font-semibold hover:bg-muted/80 w-full sm:w-auto"
+                  onClick={() => {
+                    supabase.auth.signOut();
+                    setShowModal(false);
+                  }}
+                >
+                  Sign Out
+                </Button>
+                <Button 
+                  className="h-11 bg-primary px-6 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 w-full sm:w-auto disabled:opacity-50"
+                  onClick={() => acceptMutation.mutate()}
+                  disabled={acceptMutation.isPending || !safetyChecked}
+                >
+                  {acceptMutation.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Check className="mr-2 h-4 w-4" />
+                  )}
+                  I Accept & Continue
+                </Button>
+              </div>
+            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>

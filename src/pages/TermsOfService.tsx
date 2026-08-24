@@ -1,35 +1,53 @@
 import { useState } from "react";
 import { usePageMeta } from "@/hooks/usePageMeta";
-import { useNavigate, Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { 
-  ArrowLeft, 
-  FileText, 
-  Download, 
-  Printer, 
-  ShieldCheck, 
-  Clock, 
-  ExternalLink, 
-  Scale,
-  Building2,
-  Lock,
-  MessageSquare,
-  ChevronRight,
-  Shield,
-  CheckCircle2
-} from "lucide-react";
+import { Link } from "react-router-dom";
+import { ArrowLeft, ShieldCheck, Download, ExternalLink, Scale, CheckCircle2, AlertTriangle } from "lucide-react";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+
+// ==========================================
+// QUANTUM PARTICLES BACKGROUND
+// ==========================================
+const QuantumParticles = () => {
+  const particles = Array.from({ length: 25 }).map((_, i) => ({
+    id: i,
+    size: Math.random() * 4 + 1,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    duration: Math.random() * 20 + 10,
+    delay: Math.random() * 5,
+  }));
+
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 opacity-30">
+      {particles.map((p) => (
+        <motion.div
+          key={p.id}
+          className="absolute rounded-full bg-primary/30 blur-[1px]"
+          style={{ width: p.size, height: p.size, left: `${p.x}%`, top: `${p.y}%` }}
+          animate={{
+            y: [0, -50, 0],
+            x: [0, Math.random() * 30 - 15, 0],
+            opacity: [0.1, 0.5, 0.1],
+          }}
+          transition={{
+            duration: p.duration,
+            repeat: Infinity,
+            delay: p.delay,
+            ease: "linear"
+          }}
+        />
+      ))}
+    </div>
+  );
+};
 
 export default function TermsOfService() {
   usePageMeta({
     title: "Terms of Service & Community Guidelines",
-    description: "Read String's official terms of service, platform rules, merchant standards, and NDPA compliance policies.",
+    description: "Read String's official terms of service, safety policies, and transaction guidelines.",
     keywords: ["String terms of service", "legal policy", "NDPA compliance", "campus marketplace rules", "OOU terms"],
   });
-
-  const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState<string | null>(null);
 
   const handlePrint = () => {
     window.print();
@@ -42,280 +60,146 @@ export default function TermsOfService() {
       num: "01",
       title: "Acceptance of Terms & Eligibility",
       tag: "Binding Contract",
-      content: `By accessing, registering for, or using the String platform (the "Service," "String," "we," "us," or "our"), including our web application, mobile interfaces, and associated APIs, you ("User," "Customer," or "Merchant") expressly agree to be bound by these Terms and Conditions ("Terms"). 
+      content: `By accessing, registering for, or using the String platform (the "Service," "String," "we," "us," or "our"), you expressly agree to be bound by these Terms and Conditions ("Terms"). 
       
 If you do not agree to these Terms in their entirety, you must immediately discontinue use of the platform.
 
 • Eligibility: You must be at least 18 years of age or possess legal parental/guardian consent, and have legal capacity under Nigerian Law to enter into binding agreements.
-• Dual Account Structure: String provides a unified account experience allowing users to act as Customers (buyers/service seekers) and/or Merchants (businesses/service providers). Switching modes within the interface does not alter your overarching contractual obligations under these Terms.`
+• Dual Account Structure: String provides a unified account experience allowing users to act as Customers (buyers/service seekers) and/or Merchants (businesses/service providers).`
+    },
+    {
+      id: "safety",
+      num: "02",
+      title: "Mandatory Safety & Meetup Guidelines",
+      tag: "Critical Safety Policy",
+      content: `Your safety is our absolute highest priority. Because String facilitates real-world, local transactions, you must adhere to strict safety protocols:
+
+• Public Meetups Only: Physical exchanges of goods, services, or cash MUST only occur in well-lit, highly populated public places (e.g., campus squares, university gates, busy cafeterias).
+• Avoid Isolated Areas: Never agree to meet a buyer or seller in isolated locations, private dorm rooms, off-campus alleys, or unverified residential addresses to strictly avoid the risk of robbery, kidnapping, or physical harm.
+• Daylight Hours: Conduct transactions during daylight hours whenever possible.
+• String is an Intermediary: While we verify student identities, String is not physically present during exchanges. You assume responsibility for your personal safety during physical meetups.`
     },
     {
       id: "description",
-      num: "02",
+      num: "03",
       title: "Platform Description & Marketplace Model",
       tag: "Directory & Escrow",
-      content: `String is a digital directory, campus commerce coordinator, and localized discovery platform designed to connect verified students, creators, freelancers, and merchants with campus buyers and clients.
+      content: `String is a digital directory and campus commerce coordinator designed to connect verified students, creators, freelancers, and merchants with campus buyers.
 
-• Role as Intermediary: String is an online communications and listing directory. Unless explicitly stated otherwise in writing, String does not own, manufacture, store, resell, or physically inspect items or services offered by third-party merchants.
-• Campus Directory & Search: String facilitates discoverability using proximity geolocation, category taxonomy, and verified campus landmarks (such as OOU Ago-Iwoye Main & Mini Campuses).
+• Role as Intermediary: String is an online communications and listing directory. We do not own, manufacture, store, resell, or physically inspect items offered by third-party merchants.
 • Direct Dealings: Customers and Merchants negotiate, inspect goods, and consummate transactions directly via the in-app chat system or upon physical pickup/delivery.`
     },
     {
       id: "accounts",
-      num: "03",
+      num: "04",
       title: "Account Registration & Identity Verification",
       tag: "Trust & Safety",
-      content: `• Accurate Information: You agree to provide true, accurate, current, and complete registration data (including legal name, campus location, phone number, and email address) during onboarding and to maintain its accuracy.
-• Identity Verification (IDIC): Merchants and students may undergo identity verification (IDIC) utilizing verified identity providers (e.g. Didit, government identity verification, or campus institutional credentials). Submitting fraudulent, altered, or stolen credentials constitutes a material breach and will result in immediate termination and referral to university and statutory authorities.
-• Account Security: You are solely responsible for safeguarding your login credentials. Any activity occurring under your account is your legal responsibility. Promptly notify String of any unauthorized account access.`
+      content: `• Accurate Information: You agree to provide true, accurate, current, and complete registration data during onboarding.
+• Identity Verification: Merchants and students may undergo identity verification (IDIC). Submitting fraudulent credentials constitutes a material breach and will result in immediate termination and referral to statutory authorities.
+• Account Security: You are solely responsible for safeguarding your login credentials. Any activity occurring under your account is your legal responsibility.`
     },
     {
-      id: "communication",
-      num: "04",
-      title: "In-App Messaging & Communication Protocol",
-      tag: "Safe Chat",
-      content: `• Direct Realtime Chat: String provides end-to-end in-app messaging, image sharing, and direct quote delivery to facilitate safe campus inquiries.
-• Anti-Scam & Safety Safeguards: For user security, messages and media exchanged on String are monitored by automated heuristic filters to prevent advance-fee fraud, harassment, impersonation, and illegal trade.
-• Off-Platform Defection Warning: Users attempting to maliciously bypass safety protections, distribute phishing links, or harass counterparties will face instant permanent account suspension.`
-    },
-    {
-      id: "monetization",
+      id: "prohibited",
       num: "05",
-      title: "Business Boosts & Paid Subscriptions",
-      tag: "Transparent Metrics",
-      content: `• Visibility Boosting: Merchants may purchase optional monthly "Business Boost" or "Premium Tier" subscriptions to elevate their store's visibility in search and campus feeds.
-• Payment Processing: All subscription fees and platform service fees are processed through authorized payment gateway partners (such as Squad by GTCO). String does not store raw credit/debit card numbers on its servers.
-• Transparent View Tracking: In the interest of authentic metrics, String implements a strictly deduplicated view tracking engine ("1 Account = 1 Viewer"). Profile and listing views reflect distinct authenticated visitors, preventing artificial inflation.
-• Non-Refundable Fees: Monthly visibility subscription fees are fully earned upon activation and are non-refundable, except where required by applicable consumer protection laws.`
-    },
-    {
-      id: "content",
-      num: "06",
-      title: "User-Generated Content & Intellectual Property",
+      title: "Prohibited Content & Intellectual Property",
       tag: "Content Standards",
-      content: `• Ownership: You retain ownership of all product photographs, descriptions, logos, and reviews uploaded to String.
-• License to String: By uploading content, you grant String a worldwide, perpetual, royalty-free, non-exclusive license to host, display, format, distribute, and promote your listings across the platform and its marketing channels.
-• Prohibited Content: You agree not to upload, post, or transmit:
+      content: `• Ownership: You retain ownership of all product photographs, descriptions, and logos uploaded to String.
+• Prohibited Items: You agree not to upload, post, or transmit:
   - Counterfeit, stolen, or infringing items;
   - Narcotics, prescription drugs, weapons, explosives, or illegal substances;
-  - Sexually explicit content, hate speech, defamatory material, or harassment;
-  - Content that infringes on third-party trademarks, copyrights, or privacy rights.`
-    },
-    {
-      id: "conduct",
-      num: "07",
-      title: "Prohibited Platform Activities",
-      tag: "Enforcement",
-      content: `Users agree not to engage in any of the following:
-• Reverse engineering, scraping, data mining, or decompiling the String platform or its APIs;
-• Impersonating any person, business, university administrator, or String official;
-• Manipulating search algorithms, injecting fraudulent reviews, or submitting fake orders;
-• Introducing viruses, worms, malware, or any code designed to disrupt system integrity;
-• Engaging in any fraudulent conduct, money laundering, or illegal campus syndicate activity.`
-    },
-    {
-      id: "liability",
-      num: "08",
-      title: "Disclaimer of Warranties & Limitation of Liability",
-      tag: "FCCPA Compliant",
-      content: `• "As-Is" Provision: The Service is provided on an "AS IS" and "AS AVAILABLE" basis without warranties of any kind, whether express, statutory, or implied.
-• Limitation of Damages: To the maximum extent permitted by Nigerian Law (including the Federal Competition and Consumer Protection Act 2018), String, its directors, employees, and affiliates shall not be liable for any indirect, punitive, incidental, special, or consequential damages arising from:
-  - Any merchant's failure to deliver goods or perform services as advertised;
-  - Physical loss, personal injury, or financial loss incurred during offline transactions or meetups;
-  - Temporary service interruptions, server downtime, or third-party payment gateway delays.`
-    },
-    {
-      id: "governing",
-      num: "09",
-      title: "Dispute Resolution & Governing Law",
-      tag: "Nigerian Law",
-      content: `• Governing Law: These Terms are governed by and construed in accordance with the laws of the Federal Republic of Nigeria.
-• Amicable Resolution: Any dispute, claim, or controversy arising out of or relating to these Terms shall first be submitted to String Customer Support for amicable settlement.
-• Jurisdiction: In the event amicable settlement fails within thirty (30) days, the dispute shall be submitted to the exclusive jurisdiction of the competent courts of the Federal Republic of Nigeria.`
+  - Escort services, pornography, or sexually explicit material;
+  - Academic fraud (e.g., paid assignments, thesis writing for hire).`
     }
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/20 pb-16 sm:pb-24">
-      {/* Print-Only Branded Header */}
-      <div className="hidden print:block mb-8 border-b border-black pb-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-black tracking-tight text-black">STRING PLATFORM</h1>
-            <p className="text-xs text-neutral-600 font-mono">syntax-services/string • Campus Commerce Ecosystem</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs font-bold text-black uppercase">Official Legal Terms of Service</p>
-            <p className="text-[10px] text-neutral-500 font-mono">Document Version: 2026.4.2 • Effective August 2026</p>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-background text-foreground relative selection:bg-primary/20">
+      <QuantumParticles />
 
-      {/* Mobile-First Sticky Header */}
-      <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/90 backdrop-blur-xl print:hidden">
-        <div className="max-w-5xl mx-auto flex items-center justify-between h-14 sm:h-16 px-4 sm:px-6">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => navigate(-1)} 
-              className="rounded-full h-8 sm:h-9 px-2.5 sm:px-3 gap-1 hover:bg-muted font-medium text-xs"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden xs:inline">Back</span>
-            </Button>
-            <div className="h-4 w-[1px] bg-border/60" />
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <Scale className="h-4 w-4 text-primary shrink-0" />
-              <span className="text-xs sm:text-sm font-bold tracking-tight">Terms of Service</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <Link to="/privacy">
-              <Button variant="ghost" size="sm" className="rounded-full text-[11px] sm:text-xs font-medium h-8 sm:h-9 px-2.5 sm:px-3">
-                Privacy Policy
-              </Button>
-            </Link>
-            <Button 
-              onClick={handlePrint}
-              size="sm" 
-              className="rounded-full text-[11px] sm:text-xs font-bold h-8 sm:h-9 px-3 sm:px-4 gap-1.5 bg-primary text-primary-foreground shadow-xs hover:bg-primary/90"
-            >
-              <Download className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Download</span> PDF
-            </Button>
-          </div>
-        </div>
-
-        {/* Horizontal Scrollable Section Bar on Mobile */}
-        <div className="flex sm:hidden overflow-x-auto no-scrollbar border-t border-border/20 px-4 py-2 gap-2 bg-muted/20">
-          {sections.map((s) => (
-            <a
-              key={s.id}
-              href={`#${s.id}`}
-              className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-medium bg-card border border-border/40 text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
-            >
-              § {s.num}
-            </a>
-          ))}
-        </div>
+      {/* HEADER */}
+      <header className="fixed top-0 left-0 right-0 h-16 z-50 bg-background/80 backdrop-blur-xl border-b border-border/10 flex items-center justify-between px-4 md:px-6">
+        <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group">
+          <ArrowLeft className="h-5 w-5 group-hover:-translate-x-1 transition-transform" />
+          <span className="font-semibold text-sm">Back to Home</span>
+        </Link>
+        <button 
+          onClick={handlePrint}
+          className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-semibold"
+        >
+          <Download className="h-4 w-4" />
+          <span className="hidden sm:inline">Download PDF</span>
+        </button>
       </header>
 
-      {/* Main Document Content */}
-      <main className="max-w-4xl mx-auto py-6 sm:py-10 px-4 sm:px-6 lg:px-8 space-y-8 sm:space-y-10">
+      <main className="pt-24 pb-20 px-4 md:px-6 max-w-3xl mx-auto relative z-10">
         
-        {/* Document Hero */}
-        <div className="space-y-3 sm:space-y-4 border-b border-border/40 pb-6 sm:pb-8 text-left">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] sm:text-xs font-bold uppercase tracking-wider print:hidden">
-            <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
-            Official Platform Guidelines
+        {/* TITLE SECTION */}
+        <div className="space-y-4 mb-12">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted/50 border border-border/50 text-xs font-semibold text-muted-foreground mb-4">
+            <Scale className="h-3.5 w-3.5" /> Legal Agreements
           </div>
-
-          <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-foreground print:text-3xl print:text-black">
-            Terms of Service & Rules
+          <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-[1.1]">
+            Terms of Service
           </h1>
-
-          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[11px] sm:text-xs text-muted-foreground font-mono print:text-neutral-600">
-            <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
-              Revised August 2026
-            </span>
-            <span>•</span>
-            <span>Nigerian Jurisdiction</span>
-            <span>•</span>
-            <span>NDPA & FCCPA</span>
-          </div>
-
-          <p className="text-xs sm:text-sm md:text-base text-muted-foreground leading-relaxed">
-            Please review these Terms carefully before using the String campus marketplace, verified student directory, messaging network, or merchant tools.
+          <p className="text-muted-foreground font-medium text-sm md:text-base">
+            Effective Date: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </p>
         </div>
 
-        {/* Quick Table of Contents (Desktop/Tablet Card) */}
-        <div className="hidden sm:block p-5 rounded-2xl bg-card border border-border/40 shadow-xs print:hidden text-left">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
-            <FileText className="h-4 w-4 text-primary" /> Table of Contents
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            {sections.map((section) => (
-              <a
-                key={section.id}
-                href={`#${section.id}`}
-                className="text-muted-foreground hover:text-primary transition-colors py-1 flex items-center gap-2 truncate"
-              >
-                <span className="font-mono text-[10px] text-primary/70">{section.num}.</span>
-                <span className="truncate">{section.title}</span>
-              </a>
-            ))}
+        {/* SAFETY ALERT */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-5 md:p-6 rounded-2xl bg-red-500/10 border border-red-500/20 mb-12"
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-6 w-6 text-red-500 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h3 className="font-bold text-red-500">Critical Safety Requirement</h3>
+              <p className="text-sm text-red-500/80 leading-relaxed">
+                To prevent kidnapping, theft, or physical harm, you agree to only conduct physical transactions in well-lit, highly populated public spaces. Do not meet strangers in isolated or unverified private locations.
+              </p>
+            </div>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Legal Clauses List */}
-        <div className="space-y-6 sm:space-y-8 text-left print:space-y-4">
-          {sections.map((section) => (
-            <article 
-              key={section.id} 
+        {/* CONTENT */}
+        <div className="space-y-12">
+          {sections.map((section, index) => (
+            <motion.section 
+              key={section.id}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ delay: index * 0.1 }}
+              className="space-y-4 scroll-mt-24"
               id={section.id}
-              className="scroll-mt-28 sm:scroll-mt-24 rounded-2xl sm:rounded-3xl border border-border/40 bg-card/60 backdrop-blur-sm p-4 sm:p-6 lg:p-7 shadow-xs space-y-3 transition-all hover:border-border/80 print:border-neutral-200 print:bg-white print:p-2"
             >
-              <div className="flex items-center justify-between gap-2 border-b border-border/20 pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md">
-                    {section.num}
-                  </span>
-                  <h2 className="text-sm sm:text-lg font-bold tracking-tight text-foreground print:text-base print:text-black">
-                    {section.title}
-                  </h2>
-                </div>
-                <span className="text-[10px] font-semibold text-muted-foreground px-2 py-0.5 rounded-full bg-muted/60 hidden xs:inline">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-black text-primary/40 bg-primary/10 px-2 py-0.5 rounded-md">
+                  {section.num}
+                </span>
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   {section.tag}
                 </span>
               </div>
-
-              <div className="text-xs sm:text-sm text-muted-foreground print:text-neutral-800 whitespace-pre-line space-y-2.5 font-normal leading-relaxed">
+              <h2 className="text-xl md:text-2xl font-bold tracking-tight">
+                {section.title}
+              </h2>
+              <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none text-muted-foreground whitespace-pre-wrap leading-relaxed">
                 {section.content}
               </div>
-            </article>
+            </motion.section>
           ))}
         </div>
 
-        {/* Printable & Interactive Footer Section */}
-        <div className="pt-6 border-t border-border/40 space-y-4 text-left">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 sm:p-6 rounded-2xl bg-card border border-border/40 shadow-xs print:bg-white print:border-neutral-300">
-            <div>
-              <h3 className="font-bold text-xs sm:text-sm text-foreground print:text-black">Questions or Legal Inquiries?</h3>
-              <p className="text-xs text-muted-foreground print:text-neutral-600 mt-0.5">
-                Contact our legal and compliance desk at <strong className="text-foreground font-mono">support@string.com.ng</strong>
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto print:hidden">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handlePrint}
-                className="flex-1 sm:flex-none rounded-xl text-xs font-semibold gap-1.5 h-9"
-              >
-                <Printer className="h-3.5 w-3.5" />
-                Print
-              </Button>
-              <Link to="/privacy" className="flex-1 sm:flex-none">
-                <Button 
-                  variant="default" 
-                  size="sm" 
-                  className="w-full rounded-xl text-xs font-bold gap-1.5 h-9"
-                >
-                  Privacy Rules
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </Button>
-              </Link>
-            </div>
-          </div>
-          <p className="text-[10px] sm:text-[11px] text-center text-muted-foreground font-mono print:text-neutral-500">
-            © {new Date().getFullYear()} String Platform (syntax-services/string). All rights reserved. Registered in Nigeria.
+        {/* FOOTER */}
+        <div className="mt-20 pt-8 border-t border-border/20 text-center space-y-4">
+          <ShieldCheck className="h-8 w-8 text-muted-foreground/30 mx-auto" />
+          <p className="text-sm font-medium text-muted-foreground">
+            By continuing to use String, you acknowledge that you have read, understood, and agreed to these terms.
           </p>
         </div>
-
       </main>
     </div>
   );
