@@ -23,12 +23,9 @@ import {
 } from "lucide-react";
 import { StructuredLocationSelection, formatStructuredLocation, getLocationCoords } from "@/hooks/useStructuredLocations";
 
-// Modular settings components
-import { BusinessLaunchStoreCard } from "@/components/business/settings/BusinessLaunchStoreCard";
 import { BusinessStoreProfileForm } from "@/components/business/settings/BusinessStoreProfileForm";
 import { BusinessWalletSettings } from "@/components/business/settings/BusinessWalletSettings";
 import { BusinessThemeSettings } from "@/components/business/settings/BusinessThemeSettings";
-import { AccountDeletionDialog } from "@/components/auth/AccountDeletionDialog";
 
 interface BusinessData {
   id?: string;
@@ -65,7 +62,6 @@ export default function BusinessSettings() {
   const [businessData, setBusinessData] = useState<BusinessData | null>(null);
   const [structuredLocation, setStructuredLocation] = useState<StructuredLocationSelection | null>(null);
   const [saving, setSaving] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Accordion State
   const [expandedSection, setExpandedSection] = useState<string | null>("profile");
@@ -485,36 +481,7 @@ export default function BusinessSettings() {
               <BusinessThemeSettings />
             )}
           </div>
-
-          {/* Danger Zone: Account Deletion */}
-          <div className="border border-destructive/20 rounded-2xl bg-destructive/5 p-5 shadow-xs text-left">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="space-y-1">
-                <p className="text-xs font-bold text-destructive uppercase tracking-wider">Danger Zone</p>
-                <p className="text-xs text-muted-foreground">
-                  Permanently delete your business account, unlist all products/services, and erase shop history.
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                onClick={() => setShowDeleteModal(true)}
-                className="rounded-2xl text-xs font-black shrink-0 active:scale-95 transition-transform shadow-xs"
-              >
-                Delete Business Account
-              </Button>
-            </div>
-          </div>
-
         </div>
-
-        {/* Account Deletion Confirmation Modal */}
-        <AccountDeletionDialog
-          open={showDeleteModal}
-          onOpenChange={setShowDeleteModal}
-          userType="business"
-        />
       </div>
     </DashboardLayout>
   );

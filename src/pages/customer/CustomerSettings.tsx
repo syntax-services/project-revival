@@ -14,7 +14,6 @@ import { TagInput } from "@/components/ui/tag-input";
 import { useReferral } from "@/hooks/useReferral";
 import { StructuredLocationPicker } from "@/components/location/StructuredLocationPicker";
 import { StructuredLocationSelection, formatStructuredLocation, getLocationCoords } from "@/hooks/useStructuredLocations";
-import { AccountDeletionDialog } from "@/components/auth/AccountDeletionDialog";
 import { cn } from "@/lib/utils";
 import { getEdgeFunctionErrorMessage } from "@/lib/edgeFunctionErrors";
 import {
@@ -131,8 +130,8 @@ export default function CustomerSettings() {
     budget_alert_max: 10000000,
   });
   const [saving, setSaving] = useState(false);
+  const [pushNotifications, setPushNotifications] = useState(true);
   const [verifyingIdentity, setVerifyingIdentity] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const handleVerifyIdentity = async () => {
     if (!user) return;
@@ -729,34 +728,6 @@ export default function CustomerSettings() {
             Sign Out
           </Button>
         </div>
-
-        {/* Danger Zone: Account Deletion */}
-        <div className="dashboard-card border border-destructive/20 bg-destructive/5 space-y-3 pt-4 text-left">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold text-destructive uppercase tracking-wider">Danger Zone</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Permanently delete your String account and all associated profile, order, and chat history.
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="destructive"
-              size="sm"
-              onClick={() => setShowDeleteModal(true)}
-              className="rounded-2xl text-xs font-black shrink-0 active:scale-95 transition-transform shadow-xs"
-            >
-              Delete Account
-            </Button>
-          </div>
-        </div>
-
-        {/* Account Deletion Confirmation Modal */}
-        <AccountDeletionDialog
-          open={showDeleteModal}
-          onOpenChange={setShowDeleteModal}
-          userType="customer"
-        />
       </div>
     </DashboardLayout>
   );
