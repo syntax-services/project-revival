@@ -13,7 +13,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "keepalive": "node scripts/keepalive.js"
+    "keepalive": "node scripts/keepalive.js",
+    "prebuild": "node scripts/generate-product-feed.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
