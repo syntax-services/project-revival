@@ -136,7 +136,7 @@ export default function CustomerDiscover() {
  image_url: p.image_url || (Array.isArray(p.images) && p.images[0]) || null,
  images: p.images || (p.image_url ? [p.image_url] : []),
  description: p.description || null,
- category: p.category || "CAMPUS STORE",
+ category: p.category || "Other",
  tags: p.tags || [],
  business: {
  id: biz.id,
@@ -173,7 +173,7 @@ export default function CustomerDiscover() {
  image_url: (Array.isArray(s.images) && s.images[0]) || null,
  images: s.images || [],
  description: s.description || null,
- category: s.category || "SERVICES",
+ category: s.category || "Other Services",
  tags: [],
  business: {
  id: biz.id,
@@ -676,3 +676,5 @@ export default function CustomerDiscover() {
  </DashboardLayout>
  );
 }
+
+
