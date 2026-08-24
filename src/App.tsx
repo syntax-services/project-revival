@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { TermsGuard } from "@/components/auth/TermsGuard";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Landing from "./pages/Landing";
+import About from "./pages/About";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import AuthLinks from "./pages/AuthLinks";
@@ -167,6 +168,7 @@ const App = () => (
                 <TermsGuard>
                   <Routes>
                   <Route path="/" element={<Landing />} />
+                  <Route path="/about" element={<About />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
