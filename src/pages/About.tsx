@@ -1,42 +1,162 @@
-import { motion } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { Link } from "react-router-dom";
-import { MessageCircle, TrendingUp, Sparkles, ShieldCheck, ArrowRight, MapPin, Globe } from "lucide-react";
+import { 
+  MessageCircle, TrendingUp, Sparkles, ShieldCheck, 
+  ArrowRight, MapPin, Globe, Volume2, VolumeX, 
+  AlertTriangle, CheckCircle2, Gift, Zap, Package, 
+  Map as MapIcon, Lock, Users 
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
-export default function About() {
+import stringLogoLight from "@/assets/string-logo-light.png";
+import stringLogoDark from "@/assets/String-logo-dark.png";
+
+// ==========================================
+// 1. WEB AUDIO API - ZERO ASSET SOUND EFFECTS
+// ==========================================
+const createAudioContext = () => {
+  const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+  return new AudioContext();
+};
+
+let audioCtx: AudioContext | null = null;
+
+const playPop = () => {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
+  gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.1);
+};
+
+const playSwoosh = () => {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.type = "triangle";
+  osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.3);
+  gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.3);
+};
+
+// ==========================================
+// 2. QUANTUM PARTICLES BACKGROUND
+// ==========================================
+const QuantumParticles = () => {
+  // Generate random particles that float in the background
+  const particles = Array.from({ length: 30 }).map((_, i) => ({
+    id: i,
+    size: Math.random() * 4 + 1,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    duration: Math.random() * 20 + 10,
+    delay: Math.random() * 5,
+  }));
+
   return (
-    <div className="min-h-screen bg-background text-foreground selection:bg-primary/20">
-      {/* 
-        SEO & BOT METADATA 
-        This content is heavily crawled. Using semantic HTML5 tags ensures AI bots
-        (ChatGPT, Perplexity, Gemini) and Google understand exactly what String is.
-      */}
-      <header className="fixed top-0 left-0 right-0 h-16 z-50 bg-background/80 backdrop-blur-xl border-b border-border/10 flex items-center justify-between px-6">
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 opacity-40">
+      {particles.map((p) => (
+        <motion.div
+          key={p.id}
+          className="absolute rounded-full bg-primary/30 blur-[1px]"
+          style={{ width: p.size, height: p.size, left: `${p.x}%`, top: `${p.y}%` }}
+          animate={{
+            y: [0, -100, 0],
+            x: [0, Math.random() * 50 - 25, 0],
+            opacity: [0.2, 0.8, 0.2],
+          }}
+          transition={{
+            duration: p.duration,
+            repeat: Infinity,
+            delay: p.delay,
+            ease: "linear"
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
+// ==========================================
+// 3. MAIN COMPONENT
+// ==========================================
+export default function About() {
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const giftRef = useRef<HTMLDivElement>(null);
+  const giftInView = useInView(giftRef, { margin: "-200px 0px" });
+
+  useEffect(() => {
+    if (soundEnabled && !audioCtx) {
+      audioCtx = createAudioContext();
+    }
+  }, [soundEnabled]);
+
+  useEffect(() => {
+    if (giftInView && soundEnabled) {
+      playSwoosh();
+      setTimeout(playPop, 300);
+      setTimeout(playPop, 500);
+    }
+  }, [giftInView, soundEnabled]);
+
+  const toggleSound = () => {
+    setSoundEnabled(!soundEnabled);
+    if (!soundEnabled) {
+      audioCtx = createAudioContext();
+      playPop();
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/20 relative">
+      <QuantumParticles />
+
+      {/* HEADER */}
+      <header className="fixed top-0 left-0 right-0 h-16 z-50 bg-background/80 backdrop-blur-xl border-b border-border/10 flex items-center justify-between px-4 md:px-6">
         <Link to="/" className="flex items-center gap-2 group">
-          <div className="h-8 w-8 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-black text-lg shadow-[0_0_15px_rgba(var(--primary),0.3)] group-hover:scale-105 transition-transform">
-            S
-          </div>
-          <span className="font-black text-lg tracking-tight">String</span>
+          <img src={stringLogoLight} alt="String" className="h-12 w-auto logo-light group-hover:scale-105 transition-transform" />
+          <img src={stringLogoDark} alt="String" className="h-12 w-auto logo-dark group-hover:scale-105 transition-transform" />
         </Link>
-        <nav className="flex items-center gap-4 text-sm font-semibold">
-          <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">Home</Link>
+        <nav className="flex items-center gap-2 md:gap-4 text-xs md:text-sm font-semibold">
+          <button 
+            onClick={toggleSound}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 hover:bg-muted text-muted-foreground transition-colors"
+          >
+            {soundEnabled ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4" />}
+            <span className="hidden sm:inline">{soundEnabled ? "Sound On" : "Sound Off"}</span>
+          </button>
+          <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors px-2">Home</Link>
           <Link to="/auth" className="bg-primary text-primary-foreground px-4 py-1.5 rounded-full hover:bg-primary/90 transition-colors shadow-sm">
             Sign In
           </Link>
         </nav>
       </header>
 
-      <main className="pt-24 pb-20 px-6 max-w-4xl mx-auto space-y-24">
+      <main className="pt-24 pb-20 px-4 md:px-6 max-w-4xl mx-auto space-y-32 relative z-10">
         
         {/* HERO SECTION */}
-        <section className="text-center space-y-6 pt-12">
+        <section className="text-center space-y-6 pt-12 md:pt-24">
           <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.7, type: "spring", bounce: 0.4 }}
             className="text-4xl md:text-6xl font-black tracking-tight leading-[1.1]"
           >
-            The Future of <br className="hidden md:block" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60">
+            Rewiring <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-indigo-500 to-primary/60 animate-gradient-x">
               Campus Commerce
             </span>
           </motion.h1>
@@ -44,164 +164,217 @@ export default function About() {
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
-            className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto font-medium"
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="text-base md:text-xl text-muted-foreground max-w-2xl mx-auto font-medium"
           >
-            String is built to make buying and selling around campus incredibly simple, safe, and social. Say goodbye to scattered WhatsApp groups and hello to a personalized marketplace designed for you.
+            String is built to make buying and selling around campus incredibly simple, safe, and social. 
+            We are solving the massive problems left behind by legacy e-commerce platforms in Nigeria.
           </motion.p>
         </section>
 
-        {/* FEATURES GRID */}
+        {/* THE PROBLEM WITH EXISTING PLATFORMS */}
         <section className="space-y-12">
           <div className="text-center space-y-2">
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight">Everything you need, in one place</h2>
-            <p className="text-muted-foreground font-medium">We do all the heavy lifting so you can focus on finding what you want.</p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            
-            {/* Feature 1: Socialized Home Feed */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="group p-6 rounded-3xl bg-muted/30 border border-border/20 hover:border-primary/30 hover:bg-muted/50 transition-colors"
-            >
-              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <Sparkles className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Socialized Home Feed</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Discover goods tailored exactly to your taste. Follow your favorite campus sellers, see what's trending, and enjoy a feed that learns what you love. No more digging—just scroll and discover.
-              </p>
-            </motion.div>
-
-            {/* Feature 2: Direct Communication */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-              className="group p-6 rounded-3xl bg-muted/30 border border-border/20 hover:border-primary/30 hover:bg-muted/50 transition-colors"
-            >
-              <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <MessageCircle className="h-6 w-6 text-indigo-500" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Seamless Communication</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Chat directly with businesses in real-time. Negotiate prices, ask for product details, and send voice notes without ever leaving the app or sharing your personal phone number.
-              </p>
-            </motion.div>
-
-            {/* Feature 3: Boosting Sales */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-              className="group p-6 rounded-3xl bg-muted/30 border border-border/20 hover:border-primary/30 hover:bg-muted/50 transition-colors"
-            >
-              <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <TrendingUp className="h-6 w-6 text-emerald-500" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Boosting Sales</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                For sellers, getting eyes on your products has never been easier. We bring the customers right to your digital storefront, helping you move inventory faster than ever before.
-              </p>
-            </motion.div>
-
-            {/* Feature 4: Escrow System (Coming Soon) */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.3 }}
-              className="group p-6 rounded-3xl bg-muted/30 border border-border/20 hover:border-primary/30 hover:bg-muted/50 transition-colors relative overflow-hidden"
-            >
-              <div className="absolute top-4 right-4 bg-amber-500/10 text-amber-500 text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wider">
-                Coming Soon
-              </div>
-              <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <ShieldCheck className="h-6 w-6 text-amber-500" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Zero-Risk Escrow</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Pay with absolute confidence. Our upcoming escrow system will hold your payment safely until you receive and approve your item. Total peace of mind for both buyers and sellers.
-              </p>
-            </motion.div>
-
-          </div>
-        </section>
-
-        {/* THE STRING FLOW & VISION */}
-        <section className="py-12 border-t border-border/20">
-          <div className="text-center space-y-6 mb-12">
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight">Our Master Plan</h2>
-            <p className="text-muted-foreground font-medium max-w-xl mx-auto">
-              We are on a mission to connect campuses everywhere. Here is how String plans to expand and operate.
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight">Why we built String</h2>
+            <p className="text-muted-foreground font-medium text-sm md:text-base max-w-xl mx-auto">
+              Legacy platforms like Jumia and Jiji weren't built for the dynamic, hyper-local reality of campus life.
             </p>
           </div>
 
-          <div className="relative">
-            {/* Connecting line */}
-            <div className="absolute top-1/2 left-0 right-0 h-1 bg-gradient-to-r from-primary/10 via-primary to-primary/10 -translate-y-1/2 hidden md:block" />
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* The Jiji Problem */}
+            <motion.div 
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              className="p-6 md:p-8 rounded-3xl bg-red-500/5 border border-red-500/10 space-y-4"
+            >
+              <div className="flex items-center gap-3 text-red-500 font-bold">
+                <AlertTriangle className="h-6 w-6" />
+                The Classifieds Problem
+              </div>
+              <h3 className="text-lg font-bold">Zero Trust & Scams</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                On general classifieds (like Jiji), anyone can post anything anonymously. This leads to rampant scams, fake products, and the notorious "what I ordered vs what I got" anxiety. There is zero buyer protection.
+              </p>
+            </motion.div>
 
-            <div className="grid md:grid-cols-3 gap-8 relative z-10">
+            {/* The Jumia Problem */}
+            <motion.div 
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              className="p-6 md:p-8 rounded-3xl bg-orange-500/5 border border-orange-500/10 space-y-4"
+            >
+              <div className="flex items-center gap-3 text-orange-500 font-bold">
+                <Package className="h-6 w-6" />
+                The Retail Giant Problem
+              </div>
+              <h3 className="text-lg font-bold">Slow & Expensive Logistics</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                On massive platforms (like Jumia), shipping to a university campus takes days or weeks. The delivery fees often cost more than the item itself, making it useless for daily student needs.
+              </p>
+            </motion.div>
+          </div>
+
+          {/* The String Solution */}
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            className="p-8 md:p-10 rounded-[2.5rem] bg-gradient-to-br from-primary/10 via-background to-primary/5 border border-primary/20 shadow-2xl relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+            
+            <div className="flex items-center gap-3 text-primary font-black text-xl mb-6">
+              <CheckCircle2 className="h-8 w-8" />
+              The String Solution
+            </div>
+            
+            <div className="grid sm:grid-cols-2 gap-6 relative z-10">
+              <div className="space-y-2">
+                <h4 className="font-bold flex items-center gap-2"><Lock className="h-4 w-4 text-primary" /> Verified Trust</h4>
+                <p className="text-sm text-muted-foreground">Every seller is a verified student or local campus merchant. You know exactly who you are dealing with.</p>
+              </div>
+              <div className="space-y-2">
+                <h4 className="font-bold flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /> Hyper-Local Speed</h4>
+                <p className="text-sm text-muted-foreground">Why wait days? Your seller is in the next hostel. Delivery takes minutes with zero shipping fees.</p>
+              </div>
+              <div className="space-y-2">
+                <h4 className="font-bold flex items-center gap-2"><MessageCircle className="h-4 w-4 text-primary" /> Real-Time Negotiation</h4>
+                <p className="text-sm text-muted-foreground">Chat, haggle, and send voice notes directly in the app. No need to share personal numbers on WhatsApp.</p>
+              </div>
+              <div className="space-y-2">
+                <h4 className="font-bold flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" /> Socialized Feed</h4>
+                <p className="text-sm text-muted-foreground">Follow your favorite sellers. Your feed adapts to what you love, making discovery effortless.</p>
+              </div>
+            </div>
+          </motion.div>
+        </section>
+
+        {/* ANIMATED GIFT BOX SECTION */}
+        <section ref={giftRef} className="py-20 relative text-center">
+          <div className="max-w-xl mx-auto space-y-6">
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight">We Love Surprises</h2>
+            <p className="text-muted-foreground text-sm font-medium">
+              We are constantly building tools to help our buyers and sellers win. Scroll to reveal what's coming next.
+            </p>
+            
+            {/* The SVG Gift Box Animation */}
+            <div className="relative h-64 w-full mt-12 flex justify-center items-end overflow-visible">
               
-              {/* Step 1: OOU */}
+              {/* Particles Popping Out */}
               <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="bg-background border border-border/20 p-6 rounded-3xl text-center shadow-lg relative"
+                animate={giftInView ? { opacity: 1, y: -80, scale: 1 } : { opacity: 0, y: 0, scale: 0 }}
+                transition={{ duration: 0.6, type: "spring", bounce: 0.5, delay: 0.2 }}
+                className="absolute top-0 flex flex-col items-center z-10"
               >
-                <div className="h-12 w-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto mb-4 font-black shadow-md">
-                  1
+                <div className="bg-primary/10 border border-primary/20 backdrop-blur-md px-6 py-4 rounded-3xl shadow-2xl">
+                  <h3 className="font-black text-primary text-lg mb-1 flex items-center justify-center gap-2">
+                    <ShieldCheck className="h-5 w-5" /> Free Zero-Risk Escrow!
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Soon, buyers can pay securely in-app. Funds are only released to the seller <strong>after</strong> the buyer confirms they received exactly what they ordered. 
+                  </p>
                 </div>
-                <h4 className="font-bold text-lg mb-2 flex items-center justify-center gap-2">
-                  <MapPin className="h-4 w-4 text-primary" /> The Genesis
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  Starting right here at <strong>Olabisi Onabanjo University (OOU)</strong>. Perfecting the formula, building trust, and proving the concept with our home community.
-                </p>
               </motion.div>
 
-              {/* Step 2: Nigeria */}
+              {/* The Box Lid */}
               <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.2 }}
-                className="bg-background border border-border/20 p-6 rounded-3xl text-center shadow-lg relative"
+                animate={giftInView ? { y: -120, rotate: -15, x: -20, opacity: 0 } : { y: 0, rotate: 0, x: 0, opacity: 1 }}
+                transition={{ duration: 0.8, ease: "easeInOut" }}
+                className="absolute bottom-20 z-20"
               >
-                <div className="h-12 w-12 bg-muted text-foreground rounded-full flex items-center justify-center mx-auto mb-4 font-black">
-                  2
-                </div>
-                <h4 className="font-bold text-lg mb-2 flex items-center justify-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-primary" /> Across Nigeria
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  Expanding the network to cover every major university campus across Nigeria, creating a unified student economy nationwide.
-                </p>
+                <svg width="120" height="40" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="120" height="40" rx="8" fill="var(--primary)" />
+                  <rect x="50" width="20" height="40" fill="rgba(255,255,255,0.2)" />
+                </svg>
               </motion.div>
 
-              {/* Step 3: Africa & Beyond */}
+              {/* The Box Base */}
               <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.4 }}
-                className="bg-background border border-border/20 p-6 rounded-3xl text-center shadow-lg relative"
+                animate={giftInView ? { scale: [1, 1.1, 1] } : { scale: 1 }}
+                transition={{ duration: 0.4 }}
+                className="absolute bottom-0 z-0"
               >
-                <div className="h-12 w-12 bg-muted text-foreground rounded-full flex items-center justify-center mx-auto mb-4 font-black">
-                  3
+                <svg width="100" height="90" viewBox="0 0 100 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="100" height="90" rx="4" fill="var(--primary)" opacity="0.9" />
+                  <rect x="40" width="20" height="90" fill="rgba(255,255,255,0.15)" />
+                </svg>
+              </motion.div>
+            </div>
+          </div>
+        </section>
+
+        {/* ROADMAP SECTION (MOBILE FOCUSED) */}
+        <section className="py-12 border-t border-border/20 relative">
+          <div className="text-center space-y-4 mb-16">
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight">The Master Roadmap</h2>
+            <p className="text-muted-foreground font-medium text-sm">
+              String isn't just a project. It's a continent-wide mission.
+            </p>
+          </div>
+
+          {/* Vertical Timeline */}
+          <div className="relative max-w-lg mx-auto">
+            {/* The Track Line */}
+            <div className="absolute left-6 top-4 bottom-4 w-1 bg-gradient-to-b from-primary via-primary/50 to-transparent rounded-full" />
+
+            <div className="space-y-12 relative z-10">
+              
+              {/* Step 1 */}
+              <motion.div 
+                initial={{ opacity: 0, x: 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                className="flex items-start gap-6"
+              >
+                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(var(--primary),0.5)] relative">
+                  <div className="absolute inset-0 rounded-full border-2 border-primary animate-ping opacity-20" />
+                  <MapPin className="h-5 w-5 text-primary-foreground" />
                 </div>
-                <h4 className="font-bold text-lg mb-2 flex items-center justify-center gap-2">
-                  <Globe className="h-4 w-4 text-primary" /> The Continent
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  Crossing borders into other African countries and beyond, scaling String into a global ecosystem for localized, high-trust commerce.
-                </p>
+                <div className="pt-2">
+                  <h3 className="font-black text-xl mb-2 text-primary">The Genesis: OOU</h3>
+                  <p className="text-sm text-muted-foreground">
+                    We start here at Olabisi Onabanjo University (OOU). Building the infrastructure, gathering feedback from real students, and proving that localized digital trust actually works.
+                  </p>
+                </div>
+              </motion.div>
+
+              {/* Step 2 */}
+              <motion.div 
+                initial={{ opacity: 0, x: 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                className="flex items-start gap-6"
+              >
+                <div className="w-12 h-12 rounded-full bg-muted border-2 border-primary/30 flex items-center justify-center shrink-0">
+                  <Users className="h-5 w-5 text-foreground/50" />
+                </div>
+                <div className="pt-2 opacity-75">
+                  <h3 className="font-bold text-xl mb-2">Across Nigeria</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Next, we scale. Expanding the String network to every major university and polytechnic across the nation, creating a unified student economy.
+                  </p>
+                </div>
+              </motion.div>
+
+              {/* Step 3 */}
+              <motion.div 
+                initial={{ opacity: 0, x: 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                className="flex items-start gap-6"
+              >
+                <div className="w-12 h-12 rounded-full bg-muted border-2 border-border flex items-center justify-center shrink-0">
+                  <Globe className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="pt-2 opacity-50">
+                  <h3 className="font-bold text-xl mb-2">The Continent</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Crossing borders. Taking the localized commerce model to campuses across Africa, empowering a new generation of digital entrepreneurs.
+                  </p>
+                </div>
               </motion.div>
 
             </div>
@@ -209,25 +382,26 @@ export default function About() {
         </section>
 
         {/* CTA */}
-        <section className="text-center pt-8">
+        <section className="text-center pt-8 pb-12">
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.9 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
+            whileHover={{ scale: 1.05 }}
             className="inline-block"
           >
             <Link 
               to="/auth" 
-              className="bg-primary text-primary-foreground font-black text-lg px-8 py-4 rounded-full flex items-center gap-2 hover:bg-primary/90 transition-all shadow-[0_0_25px_rgba(var(--primary),0.3)] hover:shadow-[0_0_35px_rgba(var(--primary),0.5)] active:scale-95"
+              className="bg-primary text-primary-foreground font-black text-lg px-10 py-5 rounded-full flex items-center gap-3 hover:bg-primary/90 transition-all shadow-[0_0_25px_rgba(var(--primary),0.3)] active:scale-95"
             >
-              Join String Today <ArrowRight className="h-5 w-5" />
+              Start Buying & Selling <ArrowRight className="h-5 w-5" />
             </Link>
           </motion.div>
         </section>
 
       </main>
 
-      <footer className="text-center py-8 text-sm text-muted-foreground font-medium border-t border-border/10">
+      <footer className="text-center py-8 text-sm text-muted-foreground font-medium border-t border-border/10 relative z-10 bg-background/50 backdrop-blur-md">
         <p>&copy; {new Date().getFullYear()} String Marketplace. All rights reserved.</p>
         <div className="flex items-center justify-center gap-4 mt-2">
           <Link to="/privacy-policy" className="hover:text-primary transition-colors">Privacy</Link>
