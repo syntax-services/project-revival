@@ -1,3 +1,4 @@
+import { RareBadgeIcon } from "@/components/ui/RareBadgeIcon";
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -656,9 +657,9 @@ export default function BusinessPublicProfile() {
                               </span>
                             )}
                             {product.is_rare && (
-                              <span className="px-2 py-0.5 rounded-md bg-amber-500/90 text-white text-[9px] font-black uppercase tracking-wider backdrop-blur-md flex items-center gap-0.5">
-                                <Sparkles className="h-2.5 w-2.5" /> Rare
-                              </span>
+                              <div title="Rare Product" className="bg-background/80 p-1 rounded-full shadow-sm backdrop-blur-md border border-primary/20 flex items-center justify-center">
+                                <RareBadgeIcon className="h-4 w-4 text-primary" />
+                              </div>
                             )}
                           </div>
 
