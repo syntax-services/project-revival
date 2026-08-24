@@ -288,7 +288,7 @@ export default function CustomerMessages() {
           setSending(true);
           try {
             const fileExt = file.name ? file.name.split(".").pop() || "png" : "png";
-            const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+            const fileName = `${user.id}/${Date.now()}_${i}.${fileExt}`;
             const { error: uploadError } = await supabase.storage
               .from("chat-attachments")
               .upload(fileName, file, { contentType: file.type || "image/png" });
@@ -573,12 +573,20 @@ export default function CustomerMessages() {
           read: !!m.read_at,
         })));
 
-        await supabase
+        const { error } = await supabase
           .from("messages")
           .update({ read_at: new Date().toISOString() })
           .eq("conversation_id", selectedConversation.id)
           .eq("sender_type", "business")
           .is("read_at", null);
+
+        if (!error) {
+          setConversations((prev) =>
+            prev.map((c) =>
+              c.id === selectedConversation.id ? { ...c, unread_count: 0 } : c
+            )
+          );
+        }
       }
     };
 

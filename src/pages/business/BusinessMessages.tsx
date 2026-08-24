@@ -285,12 +285,12 @@ export default function BusinessMessages() {
             toast({
               variant: "destructive",
               title: "Image Upload Failed",
-              description: err.message || "Please try again.",
+              description: err.message || "Could not send image",
             });
           } finally {
             setSending(false);
           }
-          return;
+          break; // Prevent duplicate messages from multi-format clipboard items
         }
       }
     }
@@ -527,17 +527,20 @@ export default function BusinessMessages() {
 
     // Mark as read
     const markRead = async () => {
-      await supabase
+      const { error } = await supabase
         .from("messages")
         .update({ read: true, read_at: new Date().toISOString() })
         .eq("conversation_id", selectedConversation.id)
         .eq("sender_type", "customer")
         .is("read_at", null);
 
-      await supabase
-        .from("conversations")
-        .update({ unread_count: 0 })
-        .eq("id", selectedConversation.id);
+      if (!error) {
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === selectedConversation.id ? { ...c, unread_count: 0 } : c
+          )
+        );
+      }
     };
     markRead();
 
