@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft,
-  Heart,
+  Heart, UserPlus,
   MessageCircle,
   MapPin,
   Briefcase,
@@ -228,11 +228,11 @@ export default function BusinessPublicProfile() {
       if (isSaved) {
         await supabase.from("saved_businesses").delete().eq("customer_id", customerId).eq("business_id", id);
         setIsSaved(false);
-        toast.success("Removed from favorites");
+        toast.success("Unfollowed store");
       } else {
         await supabase.from("saved_businesses").insert({ customer_id: customerId, business_id: id });
         setIsSaved(true);
-        toast.success("Saved to favorites");
+        toast.success("Following store");
       }
     } catch (error) {
       toast.error("Action failed");
@@ -481,8 +481,8 @@ export default function BusinessPublicProfile() {
                   onClick={toggleSave}
                   className="rounded-2xl text-xs font-bold gap-1.5 h-10 px-3.5 active:scale-95 transition-all"
                 >
-                  <Heart className={cn("h-4 w-4", isSaved ? "fill-rose-500 text-rose-500" : "text-muted-foreground")} />
-                  {isSaved ? "Saved" : "Save"}
+                  <UserPlus className={cn("h-4 w-4", isSaved ? "text-primary" : "text-muted-foreground")} />
+                  {isSaved ? "Following" : "Follow"}
                 </Button>
 
                 <Button
@@ -902,3 +902,5 @@ export default function BusinessPublicProfile() {
     </DashboardLayout>
   );
 }
+
+
