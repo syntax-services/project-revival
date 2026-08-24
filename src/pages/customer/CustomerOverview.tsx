@@ -123,7 +123,7 @@ export default function CustomerOverview() {
  is_rare,
  is_featured,
  created_at,
- businesses(id, company_name, logo_url, cover_image_url, verified, is_active)
+ businesses(id, company_name, logo_url, cover_image_url, verified, is_active), product_comments(count)
  `)
  .eq("in_stock", true)
  .order("created_at", { ascending: false });
@@ -143,7 +143,7 @@ export default function CustomerOverview() {
  images,
  category,
  created_at,
- businesses(id, company_name, logo_url, cover_image_url, verified, is_active)
+ businesses(id, company_name, logo_url, cover_image_url, verified, is_active), product_comments(count)
  `)
  .order("created_at", { ascending: false });
 
@@ -175,8 +175,8 @@ export default function CustomerOverview() {
               category: (p.category || "CAMPUS STORE").toUpperCase(),
               likes: `${totalLikes}`,
               likeCount: totalLikes,
-              comments: "0",
-              commentCount: 0,
+              comments: `${p.product_comments?.[0]?.count || 0}`,
+              commentCount: p.product_comments?.[0]?.count || 0,
               bookmarks: `${totalBookmarks}`,
               bookmarkCount: totalBookmarks,
               is_featured: !!p.is_featured,
@@ -216,8 +216,8 @@ export default function CustomerOverview() {
               category: (s.category || "SERVICES").toUpperCase(),
               likes: `${totalLikes}`,
               likeCount: totalLikes,
-              comments: "0",
-              commentCount: 0,
+              comments: `${p.product_comments?.[0]?.count || 0}`,
+              commentCount: p.product_comments?.[0]?.count || 0,
               bookmarks: `${totalBookmarks}`,
               bookmarkCount: totalBookmarks,
               is_featured: false,
@@ -555,9 +555,7 @@ export default function CustomerOverview() {
  )}
  />
  <span>
- {likedIds.includes(heroPost.id)
- ? `${heroPost.likeCount + 1}`
- : heroPost.likes}
+ {heroPost.likes}
  </span>
  </button>
 
@@ -765,3 +763,4 @@ export default function CustomerOverview() {
  </DashboardLayout>
  );
 }
+
