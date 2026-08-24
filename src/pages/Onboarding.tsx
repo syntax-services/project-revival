@@ -57,13 +57,10 @@ const AccountCompletionBadge = ({ className = "h-5 w-5" }: { className?: string 
   </svg>
 );
 
-// Focused exclusively on Olabisi Onabanjo University (OOU)
+// Focused exclusively on Olabisi Onabanjo University (OOU) Ago-Iwoye Main & Mini Campuses
 const OOU_CAMPUSES = [
   "OOU Main Campus (Ago-Iwoye)",
   "OOU Mini Campus (Ago-Iwoye)",
-  "OOU Sagamu Campus (College of Health Sciences)",
-  "OOU Ayetoro Campus (College of Agricultural Sciences)",
-  "OOU Ibogun Campus (College of Engineering & Tech)",
 ];
 
 export default function Onboarding() {
@@ -448,14 +445,11 @@ export default function Onboarding() {
               </div>
             </div>
 
-            {/* Campus Selection - Restricted to OOU */}
+            {/* Campus Selection - Restricted to OOU Ago-Iwoye Main & Mini Campuses */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="campus" className="flex items-center gap-1.5">
-                  <School className="h-4 w-4 text-primary" /> OOU Campus Location
-                </Label>
-                <span className="text-[11px] font-semibold text-primary">Pilot Phase</span>
-              </div>
+              <Label htmlFor="campus" className="flex items-center gap-1.5">
+                <School className="h-4 w-4 text-primary" /> OOU Campus Location
+              </Label>
               <div className="relative">
                 <select
                   id="campus"
@@ -472,7 +466,7 @@ export default function Onboarding() {
                 </select>
               </div>
               <p className="text-xs text-muted-foreground">
-                Currently exclusively operating across all Olabisi Onabanjo University campuses.
+                Currently exclusively operating across OOU Main Campus & Mini Campus (Ago-Iwoye).
               </p>
             </div>
 
