@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
+  <channel>
+    <title>String Campus Marketplace Product Feed</title>
+    <link>https://www.string.com.ng</link>
+    <description>Verified student goods, gadgets, fashion, and campus essentials from String Marketplace</description>
+    
+    <!-- Sample Structure for Google Merchant Center & Catalog Sync -->
+    <item>
+      <g:id>sample-item-1</g:id>
+      <g:title>String Campus Verified Marketplace Product</g:title>
+      <g:description>Discover authentic verified goods and student services on String Marketplace across Nigerian universities.</g:description>
+      <g:link>https://www.string.com.ng/customer/discover</g:link>
+      <g:image_link>https://www.string.com.ng/String-logo-dark.png</g:image_link>
+      <g:price>0.00 NGN</g:price>
+      <g:availability>in stock</g:availability>
+      <g:condition>new</g:condition>
+      <g:brand>String</g:brand>
+      <g:product_type>Campus Marketplace</g:product_type>
+      <g:identifier_exists>no</g:identifier_exists>
+    </item>
+  </channel>
+</rss>
