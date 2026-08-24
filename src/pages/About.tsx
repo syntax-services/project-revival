@@ -1,82 +1,42 @@
-import { useState, useEffect, useRef } from "react";
-import { motion, useScroll, useTransform, useInView } from "framer-motion";
+import { useRef } from "react";
+import { motion, useInView } from "framer-motion";
 import { Link } from "react-router-dom";
 import { 
-  MessageCircle, TrendingUp, Sparkles, ShieldCheck, 
-  ArrowRight, MapPin, Globe, Volume2, VolumeX, 
-  AlertTriangle, CheckCircle2, Gift, Zap, Package, 
-  Map as MapIcon, Lock, Users 
+  MessageCircle, TrendingUp, ShieldCheck, 
+  ArrowRight, MapPin, Globe, CheckCircle2, 
+  Lock, Users, Package, AlertTriangle, Search
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 import stringLogoLight from "@/assets/string-logo-light.png";
 import stringLogoDark from "@/assets/String-logo-dark.png";
 
 // ==========================================
-// 1. WEB AUDIO API - ZERO ASSET SOUND EFFECTS
-// ==========================================
-const createAudioContext = () => {
-  const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-  return new AudioContext();
-};
-
-let audioCtx: AudioContext | null = null;
-
-const playPop = () => {
-  if (!audioCtx) return;
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.type = "sine";
-  osc.frequency.setValueAtTime(300, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
-  gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-  osc.start();
-  osc.stop(audioCtx.currentTime + 0.1);
-};
-
-const playSwoosh = () => {
-  if (!audioCtx) return;
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.type = "triangle";
-  osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.3);
-  gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-  osc.start();
-  osc.stop(audioCtx.currentTime + 0.3);
-};
-
-// ==========================================
-// 2. QUANTUM PARTICLES BACKGROUND
+// QUANTUM PARTICLES BACKGROUND (GLITCH-FREE)
 // ==========================================
 const QuantumParticles = () => {
   // Generate random particles that float in the background
-  const particles = Array.from({ length: 30 }).map((_, i) => ({
+  // Constrain X to 5% - 95% to absolutely prevent horizontal overflow
+  const particles = Array.from({ length: 40 }).map((_, i) => ({
     id: i,
-    size: Math.random() * 4 + 1,
-    x: Math.random() * 100,
+    size: Math.random() * 3 + 1,
+    x: Math.random() * 90 + 5,
     y: Math.random() * 100,
-    duration: Math.random() * 20 + 10,
+    duration: Math.random() * 20 + 15,
     delay: Math.random() * 5,
   }));
 
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 opacity-40">
+      <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px]" />
       {particles.map((p) => (
         <motion.div
           key={p.id}
-          className="absolute rounded-full bg-primary/30 blur-[1px]"
+          className="absolute rounded-full bg-primary/40 blur-[1px]"
           style={{ width: p.size, height: p.size, left: `${p.x}%`, top: `${p.y}%` }}
           animate={{
-            y: [0, -100, 0],
-            x: [0, Math.random() * 50 - 25, 0],
-            opacity: [0.2, 0.8, 0.2],
+            y: [0, -60, 0],
+            x: [0, Math.random() * 20 - 10, 0],
+            opacity: [0.1, 0.6, 0.1],
           }}
           transition={{
             duration: p.duration,
@@ -91,55 +51,25 @@ const QuantumParticles = () => {
 };
 
 // ==========================================
-// 3. MAIN COMPONENT
+// MAIN COMPONENT
 // ==========================================
 export default function About() {
-  const [soundEnabled, setSoundEnabled] = useState(false);
   const giftRef = useRef<HTMLDivElement>(null);
-  const giftInView = useInView(giftRef, { margin: "-200px 0px" });
-
-  useEffect(() => {
-    if (soundEnabled && !audioCtx) {
-      audioCtx = createAudioContext();
-    }
-  }, [soundEnabled]);
-
-  useEffect(() => {
-    if (giftInView && soundEnabled) {
-      playSwoosh();
-      setTimeout(playPop, 300);
-      setTimeout(playPop, 500);
-    }
-  }, [giftInView, soundEnabled]);
-
-  const toggleSound = () => {
-    setSoundEnabled(!soundEnabled);
-    if (!soundEnabled) {
-      audioCtx = createAudioContext();
-      playPop();
-    }
-  };
+  const giftInView = useInView(giftRef, { margin: "-150px 0px" });
 
   return (
-    <div className="min-h-screen bg-background text-foreground selection:bg-primary/20 relative">
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/20 relative overflow-x-hidden">
       <QuantumParticles />
 
       {/* HEADER */}
       <header className="fixed top-0 left-0 right-0 h-16 z-50 bg-background/80 backdrop-blur-xl border-b border-border/10 flex items-center justify-between px-4 md:px-6">
         <Link to="/" className="flex items-center gap-2 group">
-          <img src={stringLogoLight} alt="String" className="h-12 w-auto logo-light group-hover:scale-105 transition-transform" />
-          <img src={stringLogoDark} alt="String" className="h-12 w-auto logo-dark group-hover:scale-105 transition-transform" />
+          <img src={stringLogoLight} alt="String" className="h-10 w-auto logo-light group-hover:scale-105 transition-transform" />
+          <img src={stringLogoDark} alt="String" className="h-10 w-auto logo-dark group-hover:scale-105 transition-transform" />
         </Link>
-        <nav className="flex items-center gap-2 md:gap-4 text-xs md:text-sm font-semibold">
-          <button 
-            onClick={toggleSound}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 hover:bg-muted text-muted-foreground transition-colors"
-          >
-            {soundEnabled ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4" />}
-            <span className="hidden sm:inline">{soundEnabled ? "Sound On" : "Sound Off"}</span>
-          </button>
+        <nav className="flex items-center gap-4 text-sm font-semibold">
           <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors px-2">Home</Link>
-          <Link to="/auth" className="bg-primary text-primary-foreground px-4 py-1.5 rounded-full hover:bg-primary/90 transition-colors shadow-sm">
+          <Link to="/auth" className="bg-primary text-primary-foreground px-5 py-2 rounded-full hover:bg-primary/90 transition-colors shadow-sm">
             Sign In
           </Link>
         </nav>
@@ -150,13 +80,13 @@ export default function About() {
         {/* HERO SECTION */}
         <section className="text-center space-y-6 pt-12 md:pt-24">
           <motion.h1 
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.7, type: "spring", bounce: 0.4 }}
-            className="text-4xl md:text-6xl font-black tracking-tight leading-[1.1]"
+            className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.1]"
           >
             Rewiring <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-indigo-500 to-primary/60 animate-gradient-x">
+            <span className="text-primary">
               Campus Commerce
             </span>
           </motion.h1>
@@ -164,7 +94,7 @@ export default function About() {
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
             className="text-base md:text-xl text-muted-foreground max-w-2xl mx-auto font-medium"
           >
             String is built to make buying and selling around campus incredibly simple, safe, and social. 
@@ -177,55 +107,53 @@ export default function About() {
           <div className="text-center space-y-2">
             <h2 className="text-2xl md:text-3xl font-black tracking-tight">Why we built String</h2>
             <p className="text-muted-foreground font-medium text-sm md:text-base max-w-xl mx-auto">
-              Legacy platforms like Jumia and Jiji weren't built for the dynamic, hyper-local reality of campus life.
+              Legacy platforms weren't built for the dynamic, hyper-local reality of campus life.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* The Jiji Problem */}
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* The Classifieds Problem */}
             <motion.div 
-              initial={{ opacity: 0, x: -30 }}
+              initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, margin: "-100px" }}
-              className="p-6 md:p-8 rounded-3xl bg-red-500/5 border border-red-500/10 space-y-4"
+              className="p-6 md:p-8 rounded-3xl bg-primary/5 border border-primary/10 space-y-4"
             >
-              <div className="flex items-center gap-3 text-red-500 font-bold">
+              <div className="flex items-center gap-3 text-primary font-bold">
                 <AlertTriangle className="h-6 w-6" />
                 The Classifieds Problem
               </div>
               <h3 className="text-lg font-bold">Zero Trust & Scams</h3>
               <p className="text-muted-foreground text-sm leading-relaxed">
-                On general classifieds (like Jiji), anyone can post anything anonymously. This leads to rampant scams, fake products, and the notorious "what I ordered vs what I got" anxiety. There is zero buyer protection.
+                On general classifieds, anyone can post anything anonymously. This leads to rampant scams, fake products, and the notorious "what I ordered vs what I got" anxiety. There is zero buyer protection.
               </p>
             </motion.div>
 
-            {/* The Jumia Problem */}
+            {/* The Retail Giant Problem */}
             <motion.div 
-              initial={{ opacity: 0, x: 30 }}
+              initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, margin: "-100px" }}
-              className="p-6 md:p-8 rounded-3xl bg-orange-500/5 border border-orange-500/10 space-y-4"
+              className="p-6 md:p-8 rounded-3xl bg-primary/5 border border-primary/10 space-y-4"
             >
-              <div className="flex items-center gap-3 text-orange-500 font-bold">
+              <div className="flex items-center gap-3 text-primary font-bold">
                 <Package className="h-6 w-6" />
                 The Retail Giant Problem
               </div>
               <h3 className="text-lg font-bold">Slow & Expensive Logistics</h3>
               <p className="text-muted-foreground text-sm leading-relaxed">
-                On massive platforms (like Jumia), shipping to a university campus takes days or weeks. The delivery fees often cost more than the item itself, making it useless for daily student needs.
+                On massive platforms, shipping to a university campus takes days or weeks. The delivery fees often cost more than the item itself, making it useless for daily student needs.
               </p>
             </motion.div>
           </div>
 
           {/* The String Solution */}
           <motion.div 
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             className="p-8 md:p-10 rounded-[2.5rem] bg-gradient-to-br from-primary/10 via-background to-primary/5 border border-primary/20 shadow-2xl relative overflow-hidden"
           >
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-            
             <div className="flex items-center gap-3 text-primary font-black text-xl mb-6">
               <CheckCircle2 className="h-8 w-8" />
               The String Solution
@@ -237,7 +165,7 @@ export default function About() {
                 <p className="text-sm text-muted-foreground">Every seller is a verified student or local campus merchant. You know exactly who you are dealing with.</p>
               </div>
               <div className="space-y-2">
-                <h4 className="font-bold flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /> Hyper-Local Speed</h4>
+                <h4 className="font-bold flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" /> Hyper-Local Speed</h4>
                 <p className="text-sm text-muted-foreground">Why wait days? Your seller is in the next hostel. Delivery takes minutes with zero shipping fees.</p>
               </div>
               <div className="space-y-2">
@@ -245,7 +173,7 @@ export default function About() {
                 <p className="text-sm text-muted-foreground">Chat, haggle, and send voice notes directly in the app. No need to share personal numbers on WhatsApp.</p>
               </div>
               <div className="space-y-2">
-                <h4 className="font-bold flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" /> Socialized Feed</h4>
+                <h4 className="font-bold flex items-center gap-2"><Search className="h-4 w-4 text-primary" /> Socialized Feed</h4>
                 <p className="text-sm text-muted-foreground">Follow your favorite sellers. Your feed adapts to what you love, making discovery effortless.</p>
               </div>
             </div>
@@ -266,10 +194,10 @@ export default function About() {
               {/* Particles Popping Out */}
               <motion.div 
                 animate={giftInView ? { opacity: 1, y: -80, scale: 1 } : { opacity: 0, y: 0, scale: 0 }}
-                transition={{ duration: 0.6, type: "spring", bounce: 0.5, delay: 0.2 }}
-                className="absolute top-0 flex flex-col items-center z-10"
+                transition={{ duration: 0.6, type: "spring", bounce: 0.5, delay: 0.1 }}
+                className="absolute top-0 flex flex-col items-center z-10 w-full px-4"
               >
-                <div className="bg-primary/10 border border-primary/20 backdrop-blur-md px-6 py-4 rounded-3xl shadow-2xl">
+                <div className="bg-background border border-primary/20 px-6 py-4 rounded-3xl shadow-[0_10px_30px_rgba(var(--primary),0.15)] w-full max-w-sm">
                   <h3 className="font-black text-primary text-lg mb-1 flex items-center justify-center gap-2">
                     <ShieldCheck className="h-5 w-5" /> Free Zero-Risk Escrow!
                   </h3>
@@ -282,7 +210,7 @@ export default function About() {
               {/* The Box Lid */}
               <motion.div 
                 animate={giftInView ? { y: -120, rotate: -15, x: -20, opacity: 0 } : { y: 0, rotate: 0, x: 0, opacity: 1 }}
-                transition={{ duration: 0.8, ease: "easeInOut" }}
+                transition={{ duration: 0.6, ease: "easeInOut" }}
                 className="absolute bottom-20 z-20"
               >
                 <svg width="120" height="40" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -293,7 +221,7 @@ export default function About() {
 
               {/* The Box Base */}
               <motion.div 
-                animate={giftInView ? { scale: [1, 1.1, 1] } : { scale: 1 }}
+                animate={giftInView ? { scale: [1, 1.05, 1] } : { scale: 1 }}
                 transition={{ duration: 0.4 }}
                 className="absolute bottom-0 z-0"
               >
@@ -324,7 +252,7 @@ export default function About() {
               
               {/* Step 1 */}
               <motion.div 
-                initial={{ opacity: 0, x: 50 }}
+                initial={{ opacity: 0, x: 30 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
                 className="flex items-start gap-6"
@@ -343,15 +271,15 @@ export default function About() {
 
               {/* Step 2 */}
               <motion.div 
-                initial={{ opacity: 0, x: 50 }}
+                initial={{ opacity: 0, x: 30 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
                 className="flex items-start gap-6"
               >
-                <div className="w-12 h-12 rounded-full bg-muted border-2 border-primary/30 flex items-center justify-center shrink-0">
-                  <Users className="h-5 w-5 text-foreground/50" />
+                <div className="w-12 h-12 rounded-full bg-background border-2 border-primary/50 flex items-center justify-center shrink-0">
+                  <Users className="h-5 w-5 text-primary/70" />
                 </div>
-                <div className="pt-2 opacity-75">
+                <div className="pt-2 opacity-80">
                   <h3 className="font-bold text-xl mb-2">Across Nigeria</h3>
                   <p className="text-sm text-muted-foreground">
                     Next, we scale. Expanding the String network to every major university and polytechnic across the nation, creating a unified student economy.
@@ -361,12 +289,12 @@ export default function About() {
 
               {/* Step 3 */}
               <motion.div 
-                initial={{ opacity: 0, x: 50 }}
+                initial={{ opacity: 0, x: 30 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
                 className="flex items-start gap-6"
               >
-                <div className="w-12 h-12 rounded-full bg-muted border-2 border-border flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 rounded-full bg-background border-2 border-border flex items-center justify-center shrink-0">
                   <Globe className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <div className="pt-2 opacity-50">
@@ -384,7 +312,7 @@ export default function About() {
         {/* CTA */}
         <section className="text-center pt-8 pb-12">
           <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             whileHover={{ scale: 1.05 }}

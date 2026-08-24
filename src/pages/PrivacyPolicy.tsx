@@ -12,7 +12,7 @@ const QuantumParticles = () => {
   const particles = Array.from({ length: 25 }).map((_, i) => ({
     id: i,
     size: Math.random() * 4 + 1,
-    x: Math.random() * 100,
+    x: Math.random() * 90 + 5,
     y: Math.random() * 100,
     duration: Math.random() * 20 + 10,
     delay: Math.random() * 5,
@@ -20,6 +20,7 @@ const QuantumParticles = () => {
 
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 opacity-30">
+      <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px]" />
       {particles.map((p) => (
         <motion.div
           key={p.id}
@@ -27,7 +28,7 @@ const QuantumParticles = () => {
           style={{ width: p.size, height: p.size, left: `${p.x}%`, top: `${p.y}%` }}
           animate={{
             y: [0, -50, 0],
-            x: [0, Math.random() * 30 - 15, 0],
+            x: [0, Math.random() * 20 - 10, 0],
             opacity: [0.1, 0.5, 0.1],
           }}
           transition={{
@@ -113,7 +114,7 @@ D. Communications: Direct in-app text messages, voice memos, photo attachments e
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground relative selection:bg-primary/20">
+    <div className="min-h-screen bg-background text-foreground relative selection:bg-primary/20 overflow-x-hidden">
       <QuantumParticles />
 
       {/* HEADER */}
