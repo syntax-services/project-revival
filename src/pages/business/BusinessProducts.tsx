@@ -1,3 +1,4 @@
+import { RareBadgeIcon } from "@/components/ui/RareBadgeIcon";
 import { useState, useEffect } from "react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { Link } from "react-router-dom";
@@ -477,9 +478,9 @@ export default function BusinessProducts() {
                       <div className="flex items-center gap-2">
                         <CardTitle className="text-lg truncate">{product.name}</CardTitle>
                         {product.is_rare && (
-                          <Badge variant="secondary" className="text-[10px] h-5 bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200 shrink-0">
-                            Rare
-                          </Badge>
+                          <div title="Rare Product" className="flex items-center justify-center">
+                            <RareBadgeIcon className="h-5 w-5 text-amber-500" />
+                          </div>
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-1">

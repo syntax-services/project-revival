@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Package, Star, MessageSquare, Crown } from "lucide-react";
+import { RareBadgeIcon } from "@/components/ui/RareBadgeIcon";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -138,7 +139,12 @@ export function ProductGrid({ products }: ProductGridProps) {
                 </Badge>
               )}
               {product.is_rare && (
-                <Badge variant="destructive">Rare</Badge>
+                <div 
+                  title="Rare Product" 
+                  className="bg-background/80 p-1.5 rounded-full shadow-sm backdrop-blur-md border border-primary/20 flex items-center justify-center"
+                >
+                  <RareBadgeIcon className="h-5 w-5 text-primary" />
+                </div>
               )}
             </div>
 
