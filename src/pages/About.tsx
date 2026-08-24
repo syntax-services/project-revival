@@ -182,35 +182,66 @@ export default function About() {
 
         {/* THE SURPRISE SECTION */}
         <section ref={giftRef} className="py-20 relative text-center">
-          <div className="max-w-xl mx-auto space-y-12">
-            <div className="space-y-4">
+          <div className="max-w-5xl mx-auto space-y-12">
+            <div className="space-y-4 max-w-xl mx-auto">
               <h2 className="text-2xl md:text-3xl font-black tracking-tight">We Love Surprises</h2>
               <p className="text-muted-foreground text-sm font-medium">
-                We are constantly building tools to help our buyers and sellers win. Here is what's coming next.
+                We are constantly building tools to help our buyers and sellers win. Here is a sneak peek at what's dropping soon.
               </p>
             </div>
             
-            {/* Clean Feature Card (Glitch-Free) */}
-            <motion.div 
-              animate={giftInView ? { opacity: 1, scale: 1, y: 0 } : { opacity: 0, scale: 0.9, y: 30 }}
-              transition={{ duration: 0.6, type: "spring", bounce: 0.4 }}
-              className="relative mx-auto flex flex-col items-center justify-center p-8 md:p-10 rounded-[2.5rem] bg-primary/5 border border-primary/20 shadow-[0_10px_40px_rgba(var(--primary),0.1)] overflow-hidden w-full max-w-sm"
-            >
-              {/* Subtle background glow */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+            <div className="grid md:grid-cols-3 gap-6">
+              {/* Feature 1: Escrow */}
+              <motion.div 
+                animate={giftInView ? { opacity: 1, scale: 1, y: 0 } : { opacity: 0, scale: 0.9, y: 30 }}
+                transition={{ duration: 0.6, type: "spring", bounce: 0.4, delay: 0.1 }}
+                className="relative flex flex-col items-center text-center p-8 rounded-[2rem] bg-primary/5 border border-primary/10 hover:border-primary/30 transition-colors overflow-hidden"
+              >
+                <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-5 relative z-10">
+                  <ShieldCheck className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="font-black text-lg mb-2 relative z-10 text-foreground">
+                  Zero-Risk Escrow
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed relative z-10">
+                  Pay securely in-app. Funds are only released to the seller <strong>after</strong> you confirm you received exactly what you ordered.
+                </p>
+              </motion.div>
 
-              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 relative z-10">
-                <ShieldCheck className="h-8 w-8 text-primary" />
-              </div>
-              
-              <h3 className="font-black text-xl mb-3 relative z-10 text-foreground">
-                Free Zero-Risk Escrow
-              </h3>
-              
-              <p className="text-sm text-muted-foreground leading-relaxed relative z-10">
-                Soon, buyers can pay securely in-app. Funds are only released to the seller <strong>after</strong> the buyer confirms they received exactly what they ordered. No more payment anxiety.
-              </p>
-            </motion.div>
+              {/* Feature 2: Services & Gigs */}
+              <motion.div 
+                animate={giftInView ? { opacity: 1, scale: 1, y: 0 } : { opacity: 0, scale: 0.9, y: 30 }}
+                transition={{ duration: 0.6, type: "spring", bounce: 0.4, delay: 0.2 }}
+                className="relative flex flex-col items-center text-center p-8 rounded-[2rem] bg-primary/5 border border-primary/10 hover:border-primary/30 transition-colors overflow-hidden"
+              >
+                <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-5 relative z-10">
+                  <Package className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="font-black text-lg mb-2 relative z-10 text-foreground">
+                  Student Gigs
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed relative z-10">
+                  Need a quick flyer, a haircut, or someone to run errands? Soon you'll be able to hire verified student freelancers on campus.
+                </p>
+              </motion.div>
+
+              {/* Feature 3: Group Buys */}
+              <motion.div 
+                animate={giftInView ? { opacity: 1, scale: 1, y: 0 } : { opacity: 0, scale: 0.9, y: 30 }}
+                transition={{ duration: 0.6, type: "spring", bounce: 0.4, delay: 0.3 }}
+                className="relative flex flex-col items-center text-center p-8 rounded-[2rem] bg-primary/5 border border-primary/10 hover:border-primary/30 transition-colors overflow-hidden"
+              >
+                <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-5 relative z-10">
+                  <Users className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="font-black text-lg mb-2 relative z-10 text-foreground">
+                  Hostel Group Buys
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed relative z-10">
+                  Want to buy groceries in bulk but lack the cash? Team up with other students in your hostel to split the cost and share the goods.
+                </p>
+              </motion.div>
+            </div>
           </div>
         </section>
 
