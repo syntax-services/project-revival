@@ -1,4 +1,6 @@
 import { useRef } from "react";
+import { usePageMeta } from "@/hooks/usePageMeta";
+
 import { motion, useInView } from "framer-motion";
 import { Link } from "react-router-dom";
 import { 
@@ -56,6 +58,21 @@ const QuantumParticles = () => {
 // MAIN COMPONENT
 // ==========================================
 export default function About() {
+  usePageMeta({
+    title: "About String | The #1 OOU Campus Marketplace",
+    description: "Learn about String, the exclusive and verified marketplace for Olabisi Onabanjo University (OOU). Discover our mission to connect students, freelancers, and verified campus merchants safely.",
+    keywords: ["About String", "OOU Marketplace", "Student commerce", "Verified campus merchants", "String mission"],
+    structuredData: {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "String",
+      "legalName": "String Campus Services",
+      "url": "https://www.string.com.ng/about",
+      "logo": "https://www.string.com.ng/String-logo-dark.png",
+      "description": "String is a hyper-localized, verified digital marketplace connecting students, creators, and merchants at Olabisi Onabanjo University (OOU) Ago-Iwoye. We prioritize safe, in-person meetups and verified student commerce.",
+      "knowsAbout": ["Campus Commerce", "Student Freelancing", "OOU Ago-Iwoye", "Nigeria Student Market"]
+    }
+  });
   const giftRef = useRef<HTMLDivElement>(null);
   const giftInView = useInView(giftRef, { margin: "-150px 0px" });
 
@@ -376,3 +393,4 @@ export default function About() {
     </div>
   );
 }
+

@@ -240,7 +240,31 @@ export default function Landing() {
     title: "Nigeria's Verified Campus Marketplace & Services",
     description: "Connect with verified student merchants, discover trending campus goods, gadgets, fashion, and hire skilled student freelancers on String.",
     keywords: ["String","String Nigeria","campus marketplace","student commerce","buy and sell on campus","verified merchants","university market"],
-    });
+    structuredData: [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "String",
+        "url": "https://www.string.com.ng/",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://www.string.com.ng/discover?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "String",
+        "url": "https://www.string.com.ng/",
+        "logo": "https://www.string.com.ng/String-logo-dark.png",
+        "description": "String is the #1 exclusive, verified student marketplace and freelance services platform tailored for Olabisi Onabanjo University (OOU) and Nigerian campuses.",
+        "sameAs": [
+          "https://twitter.com/StringPlatform"
+        ]
+      }
+    ]
+  });
 
  const { dashboardPath, user } = useAuth();
  const [searchQuery, setSearchQuery] = useState("");
