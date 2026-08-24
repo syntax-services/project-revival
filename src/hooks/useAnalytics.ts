@@ -133,7 +133,9 @@ export function useBusinessAnalytics(businessId: string | undefined, period: "we
       // Top products
       const topProducts = (products || []).map((p) => ({
         name: p.name,
-        orders: p.total_orders || 0,`n        impressions: p.impressions || 0,`n        clicks: p.clicks || 0,
+        orders: p.total_orders || 0,
+        impressions: p.impressions || 0,
+        clicks: p.clicks || 0,
         revenue: 0, // Would need order items breakdown
       }));
 
@@ -187,4 +189,5 @@ export function useBusinessAnalytics(businessId: string | undefined, period: "we
     enabled: !!businessId,
   });
 }
+
 
