@@ -38,8 +38,8 @@ export function RareBadgeIcon({ animated = true, className = '', ...props }: Rar
         fillOpacity='0.05'
         filter='url(#rare-glow)'
         initial={animated ? { rotate: 0 } : false}
-        animate={animated ? { rotate: [0, 2, -2, 0] } : false}
-        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+        animate={animated ? { rotate: [0, 5, -5, 0] } : false}
+        transition={{ duration: 1, repeat: Infinity, ease: 'easeInOut' }}
       />
       
       {/* Inner Floating Crystal Core */}
@@ -49,7 +49,7 @@ export function RareBadgeIcon({ animated = true, className = '', ...props }: Rar
         fillOpacity='0.9'
         initial={animated ? { scale: 0.9, opacity: 0.7 } : false}
         animate={animated ? { scale: [0.9, 1.1, 0.9], opacity: [0.7, 1, 0.7] } : false}
-        transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
       />
       
       {/* Center Shine Star / Highlight */}
@@ -58,7 +58,7 @@ export function RareBadgeIcon({ animated = true, className = '', ...props }: Rar
         fill='white'
         initial={animated ? { rotate: 0, scale: 0.8 } : false}
         animate={animated ? { rotate: 180, scale: [0.8, 1.2, 0.8] } : false}
-        transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
       />
     </svg>
   );
