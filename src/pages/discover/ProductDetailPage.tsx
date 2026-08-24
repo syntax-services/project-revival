@@ -1,3 +1,4 @@
+import { RareBadgeIcon } from "@/components/ui/RareBadgeIcon";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -279,8 +280,8 @@ export default function ProductDetailPage() {
               )}
 
               {product.is_rare && (
-                <div className="absolute top-3 left-3 bg-amber-500 text-black text-[10px] font-black px-2.5 py-1 rounded-full shadow-md flex items-center gap-1">
-                  <Sparkles className="h-3 w-3 fill-current" /> Rare Find
+                <div title="Rare Product" className="absolute top-3 left-3 bg-background/80 p-1.5 rounded-full shadow-md backdrop-blur-md border border-primary/20 flex items-center justify-center">
+                  <RareBadgeIcon className="h-6 w-6 text-primary" />
                 </div>
               )}
 
