@@ -286,7 +286,17 @@ export default function BusinessAnalytics() {
                           <span className="text-sm text-muted-foreground w-5">{index + 1}.</span>
                           <span className="text-foreground">{product.name}</span>
                         </div>
-                        <Badge variant="secondary">{product.orders} orders</Badge>
+                        <div className="flex gap-2 items-center">
+  <Badge variant="secondary">{product.orders} orders</Badge>
+  <Badge variant="outline" className="text-muted-foreground whitespace-nowrap">
+    {product.impressions || 0} views
+  </Badge>
+  {(product.impressions || 0) > 0 && (
+    <Badge variant="outline" className="text-primary/70 whitespace-nowrap">
+      {(((product.clicks || 0) / (product.impressions || 1)) * 100).toFixed(1)}% CTR
+    </Badge>
+  )}
+</div>
                       </div>
                     ))}
                   </div>
@@ -320,3 +330,4 @@ export default function BusinessAnalytics() {
     </DashboardLayout>
   );
 }
+

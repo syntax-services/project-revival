@@ -12,7 +12,7 @@ interface AnalyticsData {
   revenueByDay: Array<{ date: string; revenue: number }>;
   ordersByStatus: Record<string, number>;
   jobsByStatus: Record<string, number>;
-  topProducts: Array<{ name: string; orders: number; revenue: number }>;
+  topProducts: Array<{ name: string; orders: number; revenue: number; impressions?: number; clicks?: number; }>;
   topServices: Array<{ name: string; jobs: number; revenue: number }>;
   customerMetrics: {
     totalCustomers: number;
@@ -67,7 +67,7 @@ export function useBusinessAnalytics(businessId: string | undefined, period: "we
       // Fetch products for top products
       const { data: products } = await supabase
         .from("products")
-        .select("id, name, total_orders")
+        .select("id, name, total_orders, impressions, clicks")
         .eq("business_id", businessId)
         .order("total_orders", { ascending: false })
         .limit(5);
@@ -133,7 +133,7 @@ export function useBusinessAnalytics(businessId: string | undefined, period: "we
       // Top products
       const topProducts = (products || []).map((p) => ({
         name: p.name,
-        orders: p.total_orders || 0,
+        orders: p.total_orders || 0,`n        impressions: p.impressions || 0,`n        clicks: p.clicks || 0,
         revenue: 0, // Would need order items breakdown
       }));
 
@@ -187,3 +187,4 @@ export function useBusinessAnalytics(businessId: string | undefined, period: "we
     enabled: !!businessId,
   });
 }
+
