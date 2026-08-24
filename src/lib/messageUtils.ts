@@ -25,19 +25,19 @@ export function extractCleanSnippet(content: string | null | undefined, maxLengt
     return "Message";
   }
 
+  // Check for voice note first
+  if (text.startsWith("[AUDIO_NOTE]:") || text.includes(".webm") || text.includes(".m4a") || text.includes(".mp3")) {
+    return "Voice note";
+  }
+
   // Check for image attachment
   if (
     text.startsWith("[IMAGE]:") || 
     text.startsWith("[IMAGE]") || 
-    text.includes("/chat-attachments/") ||
-    /\.(jpg|jpeg|png|webp|gif|svg|avif)(\?.*)?$/i.test(text)
+    (/\.(jpg|jpeg|png|webp|gif|svg|avif)(\?.*)?$/i.test(text)) ||
+    (text.includes("/chat-attachments/") && !text.includes(".webm") && !text.includes(".m4a"))
   ) {
     return "Photo attachment";
-  }
-
-  // Check for voice note
-  if (text.startsWith("[AUDIO_NOTE]:")) {
-    return "Voice note";
   }
 
   // Check for custom bid

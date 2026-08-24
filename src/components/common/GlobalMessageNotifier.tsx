@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useLocation, useNavigate } from "react-router-dom";
+import { extractCleanSnippet } from "@/lib/messageUtils";
 
 export function GlobalMessageNotifier() {
   const { user } = useAuth();
@@ -66,9 +67,12 @@ export function GlobalMessageNotifier() {
             audioRef.current.play().catch(e => console.log("Audio play failed:", e));
           }
 
+          // Clean up the message for the notification preview
+          const cleanMessage = extractCleanSnippet(newMessage.content, 50);
+
           // Show in-app toast
           toast.success("New Message Received", {
-            description: newMessage.content ? (newMessage.content.length > 30 ? newMessage.content.substring(0, 30) + '...' : newMessage.content) : "Sent an image/file",
+            description: cleanMessage,
             action: {
               label: "View",
               onClick: () => {
@@ -83,7 +87,7 @@ export function GlobalMessageNotifier() {
             // Check if page is hidden
             if (document.hidden) {
               const notification = new Notification("New Message on String", {
-                body: newMessage.content || "You received a new message",
+                body: cleanMessage || "You received a new message",
                 icon: "/favicon.ico",
               });
               notification.onclick = () => {
