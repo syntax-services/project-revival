@@ -180,57 +180,37 @@ export default function About() {
           </motion.div>
         </section>
 
-        {/* ANIMATED GIFT BOX SECTION */}
+        {/* THE SURPRISE SECTION */}
         <section ref={giftRef} className="py-20 relative text-center">
-          <div className="max-w-xl mx-auto space-y-6">
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight">We Love Surprises</h2>
-            <p className="text-muted-foreground text-sm font-medium">
-              We are constantly building tools to help our buyers and sellers win. Scroll to reveal what's coming next.
-            </p>
-            
-            {/* The SVG Gift Box Animation */}
-            <div className="relative h-64 w-full mt-12 flex justify-center items-end overflow-visible">
-              
-              {/* Particles Popping Out */}
-              <motion.div 
-                animate={giftInView ? { opacity: 1, y: -80, scale: 1 } : { opacity: 0, y: 0, scale: 0 }}
-                transition={{ duration: 0.6, type: "spring", bounce: 0.5, delay: 0.1 }}
-                className="absolute top-0 flex flex-col items-center z-10 w-full px-4"
-              >
-                <div className="bg-background border border-primary/20 px-6 py-4 rounded-3xl shadow-[0_10px_30px_rgba(var(--primary),0.15)] w-full max-w-sm">
-                  <h3 className="font-black text-primary text-lg mb-1 flex items-center justify-center gap-2">
-                    <ShieldCheck className="h-5 w-5" /> Free Zero-Risk Escrow!
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Soon, buyers can pay securely in-app. Funds are only released to the seller <strong>after</strong> the buyer confirms they received exactly what they ordered. 
-                  </p>
-                </div>
-              </motion.div>
-
-              {/* The Box Lid */}
-              <motion.div 
-                animate={giftInView ? { y: -120, rotate: -15, x: -20, opacity: 0 } : { y: 0, rotate: 0, x: 0, opacity: 1 }}
-                transition={{ duration: 0.6, ease: "easeInOut" }}
-                className="absolute bottom-20 z-20"
-              >
-                <svg width="120" height="40" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="120" height="40" rx="8" fill="var(--primary)" />
-                  <rect x="50" width="20" height="40" fill="rgba(255,255,255,0.2)" />
-                </svg>
-              </motion.div>
-
-              {/* The Box Base */}
-              <motion.div 
-                animate={giftInView ? { scale: [1, 1.05, 1] } : { scale: 1 }}
-                transition={{ duration: 0.4 }}
-                className="absolute bottom-0 z-0"
-              >
-                <svg width="100" height="90" viewBox="0 0 100 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="100" height="90" rx="4" fill="var(--primary)" opacity="0.9" />
-                  <rect x="40" width="20" height="90" fill="rgba(255,255,255,0.15)" />
-                </svg>
-              </motion.div>
+          <div className="max-w-xl mx-auto space-y-12">
+            <div className="space-y-4">
+              <h2 className="text-2xl md:text-3xl font-black tracking-tight">We Love Surprises</h2>
+              <p className="text-muted-foreground text-sm font-medium">
+                We are constantly building tools to help our buyers and sellers win. Here is what's coming next.
+              </p>
             </div>
+            
+            {/* Clean Feature Card (Glitch-Free) */}
+            <motion.div 
+              animate={giftInView ? { opacity: 1, scale: 1, y: 0 } : { opacity: 0, scale: 0.9, y: 30 }}
+              transition={{ duration: 0.6, type: "spring", bounce: 0.4 }}
+              className="relative mx-auto flex flex-col items-center justify-center p-8 md:p-10 rounded-[2.5rem] bg-primary/5 border border-primary/20 shadow-[0_10px_40px_rgba(var(--primary),0.1)] overflow-hidden w-full max-w-sm"
+            >
+              {/* Subtle background glow */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 relative z-10">
+                <ShieldCheck className="h-8 w-8 text-primary" />
+              </div>
+              
+              <h3 className="font-black text-xl mb-3 relative z-10 text-foreground">
+                Free Zero-Risk Escrow
+              </h3>
+              
+              <p className="text-sm text-muted-foreground leading-relaxed relative z-10">
+                Soon, buyers can pay securely in-app. Funds are only released to the seller <strong>after</strong> the buyer confirms they received exactly what they ordered. No more payment anxiety.
+              </p>
+            </motion.div>
           </div>
         </section>
 
