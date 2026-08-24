@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { StructuredLocationSelection, formatStructuredLocation, getLocationCoords } from "@/hooks/useStructuredLocations";
 
+import { BusinessLaunchStoreCard } from "@/components/business/settings/BusinessLaunchStoreCard";
 import { BusinessStoreProfileForm } from "@/components/business/settings/BusinessStoreProfileForm";
 import { BusinessWalletSettings } from "@/components/business/settings/BusinessWalletSettings";
 import { BusinessThemeSettings } from "@/components/business/settings/BusinessThemeSettings";
