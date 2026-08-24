@@ -9,6 +9,8 @@ import {
 
 import stringLogoLight from "@/assets/string-logo-light.png";
 import stringLogoDark from "@/assets/String-logo-dark.png";
+import heroMockup from "@/assets/hero-mockup.jpg";
+import networkMap from "@/assets/network-map.jpg";
 
 // ==========================================
 // QUANTUM PARTICLES BACKGROUND (GLITCH-FREE)
