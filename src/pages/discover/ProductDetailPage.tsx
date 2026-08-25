@@ -123,9 +123,32 @@ export default function ProductDetailPage() {
           console.error("Error fetching product:", error);
         }
 
-        if (data) {
-          setProduct(data as any);
-        }
+                  if (data) {
+            setProduct(data as any);
+            
+            // Track Click & Taste Profile (TikTok-style analytics)
+            supabase.rpc('increment_product_clicks', { p_product_id: data.id }).catch(console.warn);
+            
+            if (user?.id) {
+              // Track category preference
+              if (data.category) {
+                supabase.from('user_taste_profile').insert({
+                  customer_id: user.id,
+                  search_query: data.category,
+                  weight: 2 // Higher weight for clicks vs searches
+                }).catch(console.warn);
+              }
+              // Track tag preferences
+              if (data.tags && data.tags.length > 0) {
+                const tagInserts = data.tags.map((tag: string) => ({
+                  customer_id: user.id,
+                  search_query: tag,
+                  weight: 1
+                }));
+                supabase.from('user_taste_profile').insert(tagInserts).catch(console.warn);
+              }
+            }
+          }
       } catch (err) {
         console.error("Failed to load product:", err);
       } finally {
@@ -456,3 +479,6 @@ export default function ProductDetailPage() {
     </DashboardLayout>
   );
 }
+
+
+

@@ -108,7 +108,13 @@ export default function CustomerOverview() {
  const loadSocialFeed = async () => {
  setLoading(true);
  try {
- // 1. Query live active products from database
+ // 0. Query BOOSTED products using the intelligent matching algorithm!
+ const { data: boostedData } = await supabase
+   .rpc('get_intelligent_feed', { p_customer_id: customer?.id || null, p_limit: 10 });
+ 
+ const boostedProductIds = (boostedData || []).map((p: any) => p.id);
+
+ // 1. Query normal live active products from database
  const { data: dbProducts, error: prodErr } = await supabase
  .from("products")
  .select(`
@@ -150,12 +156,50 @@ export default function CustomerOverview() {
  if (srvErr) {
  console.warn("Error querying services:", srvErr);
  }
+        const liveMapped: SocialFeedPost[] = [];
 
- const liveMapped: SocialFeedPost[] = [];
+        // Map Boosted Products
+        if (boostedData) {
+          boostedData.forEach((p: any, idx: number) => {
+            const cleanName = (p.company_name || "Merchant").toLowerCase().replace(/[^a-z0-9]/g, "_");
+            const isUserSaved = savedIds.includes(p.id);
+            const isUserLiked = likedIds.includes(p.id);
+            const totalLikes = (p.likes || 0) + (isUserLiked ? 1 : 0);
+            const totalBookmarks = (p.shares || 0) + (isUserSaved ? 1 : 0);
+
+            liveMapped.push({
+              id: p.id,
+              name: p.name || "Product",
+              description: p.description || null,
+              price: p.price || 0,
+              image_url: p.image_url || (Array.isArray(p.images) && p.images[0]) || null,
+              category: (p.category || "CAMPUS STORE").toUpperCase(),
+              likes: `${totalLikes}`,
+              likeCount: totalLikes,
+              comments: `${p.comments || 0}`,
+              commentCount: p.comments || 0,
+              bookmarks: `${totalBookmarks}`,
+              bookmarkCount: totalBookmarks,
+              is_featured: !!p.is_featured,
+              is_rare: !!p.is_rare,
+              aspectRatio: idx % 3 === 0 ? "aspect-[4/3]" : idx % 3 === 1 ? "aspect-[3/4]" : "aspect-square",
+              isService: false,
+              business: {
+                id: p.business_id,
+                company_name: p.company_name || "Merchant Shop",
+                handle: `@${cleanName}`,
+                logo_url: p.logo_url || null,
+                verified: !!p.verified,
+              }
+            });
+          });
+        }
 
         // Map real products
         if (dbProducts) {
           dbProducts.forEach((p: any, idx: number) => {
+            if (boostedProductIds.includes(p.id)) return; // Skip boosted products here to prevent duplicates
+            
             const biz = p.businesses;
             if (!biz || biz.is_active === false) return;
             const cleanName = (biz.company_name || "Merchant").toLowerCase().replace(/[^a-z0-9]/g, "_");
@@ -763,5 +807,6 @@ export default function CustomerOverview() {
  </DashboardLayout>
  );
 }
+
 
 

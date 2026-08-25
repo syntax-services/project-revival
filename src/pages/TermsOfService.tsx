@@ -194,6 +194,19 @@ If you do not agree to these Terms in their entirety, you must immediately disco
           ))}
         </div>
 
+        <motion.section className="mt-12 space-y-4 bg-muted/30 p-6 rounded-2xl border border-border/10">
+          <h2 className="text-xl md:text-2xl font-bold tracking-tight">
+            10. Contact Information & Merchant Support
+          </h2>
+          <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none text-muted-foreground whitespace-pre-wrap leading-relaxed">
+            If you have any questions, concerns, or need support regarding our Terms of Service, billing, or platform policies, please contact us at:
+            
+            <strong className="block mt-4 text-foreground">Email:</strong> support@stringcampus.com
+            <strong className="block mt-2 text-foreground">Phone:</strong> +234 812 345 6789
+            <strong className="block mt-2 text-foreground">Physical Address:</strong> Olabisi Onabanjo University (OOU), Ago-Iwoye, Ogun State, Nigeria
+          </div>
+        </motion.section>
+
         {/* FOOTER */}
         <div className="mt-20 pt-8 border-t border-border/20 text-center space-y-4">
           <ShieldCheck className="h-8 w-8 text-muted-foreground/30 mx-auto" />
@@ -205,3 +218,4 @@ If you do not agree to these Terms in their entirety, you must immediately disco
     </div>
   );
 }
+

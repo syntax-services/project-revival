@@ -194,6 +194,19 @@ D. Communications: Direct in-app text messages, voice memos, photo attachments e
           ))}
         </div>
 
+        <motion.section className="mt-12 space-y-4 bg-muted/30 p-6 rounded-2xl border border-border/10">
+          <h2 className="text-xl md:text-2xl font-bold tracking-tight">
+            10. Contact & Privacy Inquiries
+          </h2>
+          <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none text-muted-foreground whitespace-pre-wrap leading-relaxed">
+            If you have any questions about this Privacy Policy, your rights, or our data handling practices, please contact our Data Protection Officer at:
+            
+            <strong className="block mt-4 text-foreground">Email:</strong> privacy@stringcampus.com or support@stringcampus.com
+            <strong className="block mt-2 text-foreground">Phone:</strong> +234 812 345 6789
+            <strong className="block mt-2 text-foreground">Physical Address:</strong> Olabisi Onabanjo University (OOU), Ago-Iwoye, Ogun State, Nigeria
+          </div>
+        </motion.section>
+
         {/* FOOTER */}
         <div className="mt-20 pt-8 border-t border-border/20 text-center space-y-4">
           <Database className="h-8 w-8 text-muted-foreground/30 mx-auto" />
@@ -205,3 +218,4 @@ D. Communications: Direct in-app text messages, voice memos, photo attachments e
     </div>
   );
 }
+

@@ -16,6 +16,8 @@ import Onboarding from "./pages/Onboarding";
 import AuthLinks from "./pages/AuthLinks";
 import Contact from "./pages/Contact";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import RefundPolicy from "./pages/RefundPolicy";
+import ShippingPolicy from "./pages/ShippingPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import NotFound from "./pages/NotFound";
 import Banned from "./pages/Banned";
@@ -177,6 +179,8 @@ const App = () => (
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/terms" element={<TermsOfService />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
+                    <Route path="/refund-policy" element={<RefundPolicy />} />
+                    <Route path="/shipping-policy" element={<ShippingPolicy />} />
                   <Route path="/banned" element={<Banned />} />
 
                   {/* Customer Routes */}
@@ -261,4 +265,5 @@ const App = () => (
 );
 
 export default App;
+
 

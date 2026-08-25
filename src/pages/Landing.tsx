@@ -671,6 +671,8 @@ export default function Landing() {
  </div>
  <nav className="flex gap-5 font-semibold">
  <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
+              <Link to="/refund-policy" className="hover:text-foreground transition-colors">Refund Policy</Link>
+              <Link to="/shipping-policy" className="hover:text-foreground transition-colors">Shipping Policy</Link>
  <Link to="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
  <Link to="/contact" className="hover:text-foreground transition-colors">Contact Support</Link>
  </nav>
@@ -722,3 +724,4 @@ export default function Landing() {
  </div>
  );
 }
+

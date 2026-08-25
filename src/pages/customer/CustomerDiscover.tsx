@@ -208,7 +208,7 @@ export default function CustomerDiscover() {
  const { data: saved } = await supabase
  .from('saved_businesses')
  .select('business_id')
- .eq('customer_id', customer.id);
+ .eq('customer_id', user.id);
  
  if (saved) {
  setFollowedBusinessIds(saved.map(s => s.business_id));
@@ -281,13 +281,13 @@ export default function CustomerDiscover() {
  const { data: existingConv } = await supabase
  .from("conversations")
  .select("id")
- .eq("customer_id", customer.id)
+ .eq("customer_id", user.id)
  .eq("business_id", item.business.id)
  .maybeSingle();
 
  if (!existingConv) {
  await supabase.from("conversations").insert({
- customer_id: customer.id,
+ customer_id: user.id,
  business_id: item.business.id
  });
  }
@@ -321,11 +321,11 @@ export default function CustomerDiscover() {
  const { data: customer } = await supabase.from('customers').select('id').eq('user_id', user.id).maybeSingle();
  if (customer) {
  if (isAlreadyFollowing) {
- await supabase.from("saved_businesses").delete().eq("customer_id", customer.id).eq("business_id", businessId);
+ await supabase.from("saved_businesses").delete().eq("customer_id", user.id).eq("business_id", businessId);
  toast({ title: "Store unfollowed" });
  } else {
  await supabase.from("saved_businesses").insert({
- customer_id: customer.id,
+ customer_id: user.id,
  business_id: businessId
  });
  toast({ title: "Store followed! " });
@@ -676,5 +676,6 @@ export default function CustomerDiscover() {
  </DashboardLayout>
  );
 }
+
 
 
