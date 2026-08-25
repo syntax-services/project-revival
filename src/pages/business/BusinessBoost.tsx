@@ -1,11 +1,11 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/hooks/useBusiness";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Rocket, Award, Loader2, ArrowLeft, Sparkles } from "lucide-react";
+import { Rocket, Award, Loader2, ArrowLeft, Sparkles, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -13,12 +13,21 @@ import { StringPremiumIcon } from "@/components/business/VerificationBadge";
 import { playPremiumMatchChime } from "@/hooks/useAudioSignals";
 import { getEdgeFunctionErrorMessage } from "@/lib/edgeFunctionErrors";
 
+const plans = {
+  weekend: { id: "weekend", price: 1500, days: 3, label: "Weekend Boost", duration: "3 Days" },
+  weekly: { id: "weekly", price: 3500, days: 7, label: "Weekly Boost", duration: "7 Days" },
+  monthly: { id: "monthly", price: 10000, days: 30, label: "Monthly Boost", duration: "30 Days" }
+};
+type PlanKey = keyof typeof plans;
+
 export default function BusinessBoost() {
+  const [selectedPlan, setSelectedPlan] = useState<PlanKey>("weekend");
+
   usePageMeta({
     title: "Boost Store Visibility & Top Search Rank",
     description: "Subscribe to monthly Boosters to rank #1 in campus searches and get 10x more unique buyer impressions.",
-    keywords: ["boost store","search ranking","sponsored listings","visibility"],
-    });
+    keywords: ["boost store", "search ranking", "sponsored listings", "visibility"],
+  });
 
   const { user } = useAuth();
   const { data: business } = useBusiness();
@@ -40,7 +49,6 @@ export default function BusinessBoost() {
 
     setLoadingPayment(true);
     try {
-      // Ensure customer profile exists for checkout compatibility
       try {
         await supabase.from("customers").upsert({
           user_id: user.id,
@@ -48,22 +56,21 @@ export default function BusinessBoost() {
           street_address: "Campus Store",
           area_name: "Main Campus",
         }, { onConflict: "user_id" });
-      } catch {
-        // Fallback for customer provisioning
-      }
+      } catch {}
 
+      const activePlan = plans[selectedPlan];
       const { data, error } = await supabase.functions.invoke("initialize-payment", {
         body: {
           email: user.email,
-          total: boosterPrice,
-          amount: boosterPrice,
+          total: activePlan.price,
+          amount: activePlan.price,
           businessId: activeBusinessId,
           deliveryType: "pickup",
           items: [
             {
-              productId: "booster-30d",
-              name: "Visibility Booster (30 Days)",
-              price: boosterPrice,
+              productId: "booster-" + activePlan.days + "d",
+              name: activePlan.label,
+              price: activePlan.price,
               quantity: 1,
             }
           ],
@@ -91,32 +98,13 @@ export default function BusinessBoost() {
     }
   };
 
-  // 1. Fetch booster price dynamically configured by admins
-  const { data: boosterPrice = 15000, isLoading: loadingPrice } = useQuery({
-    queryKey: ["visibility-booster-price"],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from("system_config")
-          .select("value")
-          .eq("key", "booster_monthly_price")
-          .maybeSingle();
-
-        if (error || !data) throw new Error("Fallback");
-        return Number(data.value);
-      } catch {
-        const stored = localStorage.getItem("booster_monthly_price");
-        return stored ? Number(stored) : 15000;
-      }
-    }
-  });
-
   const activateBoost = useMutation({
     mutationFn: async () => {
       const activeBusinessId = business?.id || user?.id;
       if (!activeBusinessId) throw new Error("Please log in to continue.");
+      const activePlan = plans[selectedPlan];
       const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30);
+      expiresAt.setDate(expiresAt.getDate() + activePlan.days);
 
       const { error } = await (supabase as any)
         .from("businesses")
@@ -135,7 +123,7 @@ export default function BusinessBoost() {
           status: "active",
           started_at: new Date().toISOString(),
           expires_at: expiresAt.toISOString(),
-          amount_paid: boosterPrice,
+          amount_paid: activePlan.price,
         }, { onConflict: "business_id" });
 
       if (subscriptionError) throw subscriptionError;
@@ -148,21 +136,16 @@ export default function BusinessBoost() {
         data: {
           email_type: "booster_active",
           subject: "Visibility Booster Activated! ",
-          body: `Hi ${business.company_name || 'Partner'}, your payment has been processed successfully. Your Gold Elite Premium badge has been awarded, and search prioritization weights are engaged.`
+          body: "Hi " + (business.company_name || 'Partner') + ", your payment has been processed successfully. Your Gold Elite Premium badge has been awarded."
         }
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["business"] });
       queryClient.invalidateQueries({ queryKey: ["my-location-request"] });
-      
-      // Play premium glowing sound signals!
       try {
         playPremiumMatchChime();
-      } catch (err) {
-        console.warn("Audio synthesizer failed:", err);
-      }
-
+      } catch (err) {}
       toast.success("Visibility Booster activated! Search prioritizations are engaged.");
     },
     onError: (err: any) => {
@@ -176,7 +159,6 @@ export default function BusinessBoost() {
     <DashboardLayout>
       <div className="max-w-md mx-auto space-y-6 pb-20 animate-fade-in">
         
-        {/* Header Navigation */}
         <div className="flex items-center gap-3">
           <button 
             onClick={() => navigate("/business/profile")}
@@ -188,13 +170,11 @@ export default function BusinessBoost() {
             <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-1.5">
               Visibility Booster
             </h1>
-            <p className="text-xs text-muted-foreground">Maximize search weighting & platforms matches (Paid)</p>
+            <p className="text-xs text-muted-foreground">Maximize search weighting & platforms matches</p>
           </div>
         </div>
 
         {isPremium ? (
-          
-          /* ACTIVE BOOSTER CARD */
           <div className="dashboard-card border-orange-500/20 bg-gradient-to-br from-orange-500/[0.02] to-yellow-500/[0.01] p-6 text-center space-y-5 relative overflow-hidden rounded-[32px] shadow-lg shadow-orange-500/5">
             <div className="absolute -inset-10 bg-gradient-to-r from-orange-500/10 to-yellow-500/5 blur-3xl rounded-full" />
             <div className="relative mx-auto h-20 w-20 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 flex items-center justify-center border-0 shadow-lg shadow-orange-500/20 animate-pulse">
@@ -223,11 +203,7 @@ export default function BusinessBoost() {
           </div>
 
         ) : (
-
-          /* PROMOTIONAL & PURCHASE SHEET */
           <div className="space-y-5">
-            
-            {/* Promo grid */}
             <div className="dashboard-card p-6 space-y-5 rounded-[32px]">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500 shrink-0">
@@ -257,30 +233,55 @@ export default function BusinessBoost() {
                 </div>
               </div>
 
-              {/* Dynamic Pricing Display */}
-              <div className="border-t border-border/20 pt-4 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Booster Fee</p>
-                  <p className="text-2xl font-extrabold text-foreground mt-1.5">
-                    ₦{boosterPrice.toLocaleString()}
-                    <span className="text-xs font-semibold text-muted-foreground"> / month</span>
-                  </p>
-                </div>
+              {/* Plan Selection */}
+              <div className="border-t border-border/20 pt-4 space-y-3">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Select Plan</p>
                 
-                <Button 
-                  onClick={handleBoosterPayment}
-                  disabled={loadingPayment}
-                  className="rounded-full bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 text-white font-bold text-xs px-5 shadow-md shadow-orange-500/20 active:scale-95 transition-all"
-                >
-                  {loadingPayment ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin text-white" />
-                      Initializing...
-                    </>
-                  ) : (
-                    "Boost Now"
-                  )}
-                </Button>
+                <div className="grid gap-2">
+                  {Object.values(plans).map(plan => (
+                    <div 
+                      key={plan.id}
+                      onClick={() => setSelectedPlan(plan.id as PlanKey)}
+                      className={"flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer " + 
+                        (selectedPlan === plan.id 
+                          ? "border-orange-500 bg-orange-500/5" 
+                          : "border-border/10 bg-muted/20 hover:bg-muted/40")
+                      }
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={"h-4 w-4 rounded-full border flex items-center justify-center " + (selectedPlan === plan.id ? "border-orange-500" : "border-muted-foreground/30")}>
+                           {selectedPlan === plan.id && <div className="h-2 w-2 bg-orange-500 rounded-full" />}
+                        </div>
+                        <div>
+                          <p className={"font-bold text-sm " + (selectedPlan === plan.id ? "text-orange-500" : "text-foreground")}>
+                            {plan.label}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{plan.duration}</p>
+                        </div>
+                      </div>
+                      <p className="text-sm font-extrabold text-foreground">
+                        ?{plan.price.toLocaleString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pt-4">
+                  <Button 
+                    onClick={handleBoosterPayment}
+                    disabled={loadingPayment}
+                    className="w-full rounded-2xl bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 text-white font-bold text-sm py-5 shadow-md shadow-orange-500/20 active:scale-95 transition-all"
+                  >
+                    {loadingPayment ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin text-white" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Activate " + plans[selectedPlan].label + " (?" + plans[selectedPlan].price.toLocaleString() + ")"
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
