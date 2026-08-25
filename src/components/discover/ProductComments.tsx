@@ -17,6 +17,7 @@ export function ProductComments({ productId }: ProductCommentsProps) {
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
   const [newComment, setNewComment] = useState("");
+  const [replyTo, setReplyTo] = useState<string | null>(null);
 
   const { data: comments = [], isLoading } = useQuery({
     queryKey: ["product-comments", productId],
@@ -29,7 +30,8 @@ export function ProductComments({ productId }: ProductCommentsProps) {
           created_at,
           rating,
           reviewer_id,
-          reviewer_type
+          reviewer_type,
+          parent_id
         `)
         .eq("product_id", productId)
         .order("created_at", { ascending: true });
@@ -75,12 +77,14 @@ export function ProductComments({ productId }: ProductCommentsProps) {
           rating: 5,
           reviewer_id: user.id,
           reviewer_type: profile?.user_type || 'customer',
-          verified_purchase: true
+          verified_purchase: true,
+          parent_id: replyTo
         });
       if (error) throw error;
     },
     onSuccess: () => {
       setNewComment("");
+      setReplyTo(null);
       queryClient.invalidateQueries({ queryKey: ["product-comments", productId] });
       toast.success("Comment posted!");
     },
@@ -114,31 +118,53 @@ export function ProductComments({ productId }: ProductCommentsProps) {
             No comments yet. Have a question about this item? Be the first to ask!
           </div>
         ) : (
-          comments.map((comment: any) => (
-            <div key={comment.id} className="flex gap-3 items-start p-3 rounded-2xl bg-card border border-border/20 shadow-xs">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden border border-border/30">
-                {comment.profile?.avatar_url ? (
-                  <img src={getMaskedAssetUrl(comment.profile.avatar_url)} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <UserIcon className="w-4 h-4 text-primary" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-foreground truncate">
-                    {comment.profile?.full_name || "Verified Member"}
-                  </span>
-                  <ShieldCheck className="h-3 w-3 text-primary shrink-0 fill-primary/20" />
-                  <span className="text-[10px] text-muted-foreground ml-auto shrink-0">
-                    {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
-                  </span>
+          (() => {
+            const rootComments = comments.filter((c: any) => !c.parent_id);
+            const repliesByParent = comments.reduce((acc: any, c: any) => {
+              if (c.parent_id) {
+                if (!acc[c.parent_id]) acc[c.parent_id] = [];
+                acc[c.parent_id].push(c);
+              }
+              return acc;
+            }, {});
+
+            const renderComment = (comment: any, isReply = false) => (
+              <div key={comment.id} className={`flex gap-3 items-start p-3 rounded-2xl bg-card border border-border/20 shadow-xs ${isReply ? 'ml-8 mt-2 !bg-muted/10' : ''}`}>
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden border border-border/30">
+                  {comment.profile?.avatar_url ? (
+                    <img src={getMaskedAssetUrl(comment.profile.avatar_url)} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <UserIcon className="w-4 h-4 text-primary" />
+                  )}
                 </div>
-                <p className="text-xs text-foreground/90 mt-1 leading-relaxed">
-                  {comment.content}
-                </p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-foreground truncate">
+                      {comment.profile?.full_name || "Verified Member"}
+                    </span>
+                    <ShieldCheck className="h-3 w-3 text-primary shrink-0 fill-primary/20" />
+                    <span className="text-[10px] text-muted-foreground ml-auto shrink-0">
+                      {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                    </span>
+                  </div>
+                  <p className="text-xs text-foreground/90 mt-1 leading-relaxed">
+                    {comment.content}
+                  </p>
+                  {!isReply && user && (
+                    <button 
+                      onClick={() => setReplyTo(replyTo === comment.id ? null : comment.id)}
+                      className="text-[10px] font-bold text-primary mt-1 hover:underline"
+                    >
+                      {replyTo === comment.id ? 'Cancel Reply' : 'Reply'}
+                    </button>
+                  )}
+                  {repliesByParent[comment.id]?.map((reply: any) => renderComment(reply, true))}
+                </div>
               </div>
-            </div>
-          ))
+            );
+
+            return rootComments.map((c: any) => renderComment(c));
+          })()
         )}
       </div>
 
@@ -147,7 +173,7 @@ export function ProductComments({ productId }: ProductCommentsProps) {
           <Input
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Ask a question or leave a review..."
+            placeholder={replyTo ? "Write a reply..." : "Ask a question or leave a review..."}
             className="google-input text-xs"
             disabled={postCommentMutation.isPending}
           />
@@ -164,3 +190,4 @@ export function ProductComments({ productId }: ProductCommentsProps) {
     </div>
   );
 }
+

@@ -1,0 +1,1 @@
+INSERT INTO system_config (key, value) VALUES ('latest_terms_version', '3') ON CONFLICT (key) DO UPDATE SET value = '3';
