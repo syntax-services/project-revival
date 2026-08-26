@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -71,6 +72,7 @@ export default function CustomerDiscover() {
     });
 
  const { user } = useAuth();
+ const isMobile = useIsMobile();
  const { toast } = useToast();
  const navigate = useNavigate();
  
@@ -137,7 +139,7 @@ export default function CustomerDiscover() {
  if (directProducts) {
  directProducts.forEach((p: any) => {
  const biz = p.businesses;
- if (biz && biz.is_active !== false && (p.stock_quantity === undefined || p.stock_quantity === null || p.stock_quantity > 0)) {
+ if (biz && biz.is_active !== false) {
  flatItems.push({
  id: p.id,
  name: p.name || "Product",
@@ -355,11 +357,11 @@ export default function CustomerDiscover() {
  };
 
  return (
-    <DashboardLayout hideHeader={true}>
-      <div className="min-h-screen bg-background pb-20 animate-fade-in max-w-7xl mx-auto">
+    <DashboardLayout hideHeader={isMobile}>
+      <div className="min-h-screen bg-background pb-20 pt-0 md:pt-16 animate-fade-in max-w-7xl mx-auto">
         
         {/* Sleek Mobile-First Sticky Header */}
-        <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border/5 px-4 pt-4 pb-3 flex flex-col gap-3">
+        <div className="sticky md:top-16 top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border/5 px-4 md:pt-4 pt-4 pb-3 flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="shrink-0 -ml-2 rounded-full">
               <ArrowLeft className="w-5 h-5" />

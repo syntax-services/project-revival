@@ -355,8 +355,8 @@ export default function BusinessUpload() {
       const rawCompare = productDraft.productCompareAtPrice ? parseFloat(productDraft.productCompareAtPrice.toString().replace(/,/g, '').trim()) : null;
       const parsedCompare = rawCompare !== null && !isNaN(rawCompare) ? Math.min(Math.max(0, rawCompare), 999999999) : null;
 
-      const rawStock = parseInt(productDraft.productStockQuantity || "0", 10);
-      const parsedStock = isNaN(rawStock) ? 0 : Math.max(0, rawStock);
+      const rawStock = parseInt(productDraft.productStockQuantity || "1", 10);
+      const parsedStock = isNaN(rawStock) ? 1 : Math.max(0, rawStock);
 
       // Arrange cover image first
       const orderedImages = [...productDraft.productImages];
