@@ -80,16 +80,6 @@ export default function Contact() {
   return (
     <DashboardLayout>
       <div className="space-y-6 pb-20 lg:pb-6 max-w-4xl mx-auto px-1">
-        {/* Systems status bar */}
-        <div className="flex items-center justify-between p-3 rounded-2xl bg-primary/5 border border-primary/10 shadow-sm animate-pulse">
-          <div className="flex items-center gap-2 text-xs font-semibold text-primary">
-            <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-ping"></div>
-            <Activity className="h-4 w-4" />
-            <span>ALL STRING PLATFORM SYSTEMS OPERATIONAL</span>
-          </div>
-          <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-mono">Ping: 12ms</span>
-        </div>
-
         {/* Title */}
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground flex items-center gap-2">

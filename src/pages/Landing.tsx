@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { BottomNav } from "@/components/layout/BottomNav";
 import { updateMetaTags } from "@/lib/seo";
 import {
  Dialog,
@@ -721,7 +722,9 @@ export default function Landing() {
  </DialogFooter>
  </DialogContent>
  </Dialog>
- </div>
+ 
+      <BottomNav />
+    </div>
  );
 }
 
