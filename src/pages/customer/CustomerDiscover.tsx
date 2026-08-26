@@ -118,15 +118,20 @@ export default function CustomerDiscover() {
  try {
  const flatItems: DiscoverItem[] = [];
 
- // 1. Fetch direct products with business information
- const { data: directProducts } = await supabase
- .from("products")
- .select(`
- id, name, business_id, price, image_url, images, description, category, tags, is_orderable, stock_quantity,
- businesses (id, company_name, logo_url, location_verified, verified, is_active, verification_tier, is_open_now)
- `)
- .eq("in_stock", true)
- .order("created_at", { ascending: false });
+    // 1. Fetch direct products with business information
+    const { data: directProducts, error: productsError } = await supabase
+      .from("products")
+      .select(`
+        id, name, business_id, price, image_url, images, description, category, tags, is_orderable, stock_quantity,
+        businesses (id, company_name, logo_url, location_verified, verified, is_active, verification_tier, is_open_now)
+      `)
+      .eq("in_stock", true)
+      .order("created_at", { ascending: false });
+
+    if (productsError) {
+      console.error("Products fetch error:", productsError);
+      toast({ variant: "destructive", title: "Error", description: `Error: ${productsError.message || "Failed to load products"}` });
+    }
 
  if (directProducts) {
  directProducts.forEach((p: any) => {
