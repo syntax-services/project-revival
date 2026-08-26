@@ -14,14 +14,12 @@ import { cn } from "@/lib/utils";
 
 export const customerNavItems = [
   { href: "/customer", label: "Store", icon: PremiumStore },
-  { href: "/customer/discover", label: "Discover", icon: Search },
   { href: "/customer/messages", label: "Inbox", icon: PremiumMessage, id: "messages" },
   { href: "/customer/profile", label: "Profile", icon: PremiumUser },
 ];
 
 export const businessNavItems = [
   { href: "/business", label: "Store", icon: PremiumStore },
-  { href: "/business/discover", label: "Discover", icon: Search },
   { href: "/business/messages", label: "Inbox", icon: PremiumMessage, id: "messages" },
   { href: "/business/profile", label: "Profile", icon: PremiumUser },
 ];

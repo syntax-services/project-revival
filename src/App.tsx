@@ -184,9 +184,9 @@ const App = () => (
                   <Route path="/banned" element={<Banned />} />
 
                   {/* Customer Routes */}
-                  <Route path="/customer" element={<ProtectedRoute requiredUserType="customer"><CustomerOverview /></ProtectedRoute>} />
+                  <Route path="/customer" element={<ProtectedRoute requiredUserType="customer"><CustomerDiscover /></ProtectedRoute>} />
                   <Route path="/customer/overview" element={<Navigate to="/customer" replace />} />
-                  <Route path="/customer/discover" element={<ProtectedRoute requiredUserType="customer"><CustomerDiscover /></ProtectedRoute>} />
+                  <Route path="/customer/discover" element={<Navigate to="/customer" replace />} />
                   <Route path="/customer/orders" element={<ProtectedRoute requiredUserType="customer"><CustomerOrders /></ProtectedRoute>} />
                   <Route path="/customer/checkout" element={<ProtectedRoute requiredUserType="customer"><Checkout /></ProtectedRoute>} />
                   <Route path="/customer/offers" element={<ProtectedRoute requiredUserType="customer"><CustomerOffers /></ProtectedRoute>} />

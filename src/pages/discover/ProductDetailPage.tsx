@@ -242,9 +242,9 @@ export default function ProductDetailPage() {
       <DashboardLayout>
         <div className="max-w-md mx-auto text-center py-20 space-y-4">
           <Package className="h-12 w-12 mx-auto text-muted-foreground opacity-30" />
-          <h2 className="text-xl font-bold">Product Not Found</h2>
+          <h2 className="text-xl font-medium">Product Not Found</h2>
           <p className="text-xs text-muted-foreground">This item may have been unlisted or removed by the seller.</p>
-          <Button onClick={() => navigate(-1)} variant="secondary" className="rounded-2xl text-xs font-bold">
+          <Button onClick={() => navigate(-1)} variant="secondary" className="rounded-2xl text-xs font-medium">
             <ArrowLeft className="h-4 w-4 mr-2" /> Back to Discover
           </Button>
         </div>
@@ -261,7 +261,7 @@ export default function ProductDetailPage() {
             onClick={handleGoBack} 
             variant="ghost" 
             size="sm" 
-            className="rounded-2xl gap-2 font-bold text-xs hover:bg-muted/40"
+            className="rounded-2xl gap-2 font-medium text-xs hover:bg-muted/40"
           >
             <ArrowLeft className="h-4 w-4" /> Back to Feed
           </Button>
@@ -371,40 +371,68 @@ export default function ProductDetailPage() {
           <div className="space-y-5">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <Badge variant="secondary" className="text-[10px] font-bold rounded-full px-2.5 py-0.5">
+                <Badge variant="secondary" className="text-[10px] font-medium rounded-full px-2.5 py-0.5">
                   {product.category || "General"}
                 </Badge>
                 {product.in_stock ? (
-                  <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[10px] font-bold rounded-full px-2.5 py-0.5">
+                  <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[10px] font-medium rounded-full px-2.5 py-0.5">
                     <CheckCircle2 className="h-3 w-3 mr-1" /> In Stock ({product.stock_quantity || 1})
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="text-[10px] text-muted-foreground font-bold rounded-full px-2.5 py-0.5">
+                  <Badge variant="outline" className="text-[10px] text-muted-foreground font-medium rounded-full px-2.5 py-0.5">
                     Out of Stock
                   </Badge>
                 )}
-                {product.in_stock && product.stock_quantity > 0 && product.stock_quantity <= 5 && (
-                  <Badge className="bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold rounded-full px-2.5 py-0.5">
-                    Only {product.stock_quantity} items left!
-                  </Badge>
-                )}
+                
               </div>
 
-              <h1 className="text-2xl font-black text-foreground tracking-tight leading-tight">
+              <h1 className="text-2xl font-semibold text-foreground tracking-tight leading-tight">
                 {product.name}
               </h1>
 
               {/* Pricing */}
               <div className="flex items-baseline gap-3 mt-3">
-                <span className="text-3xl font-black text-foreground">
+                <span className="text-3xl font-semibold text-foreground">
                   ₦{(product.price || 0).toLocaleString()}
                 </span>
                 {product.compare_at_price && product.compare_at_price > (product.price || 0) && (
-                  <span className="text-sm font-semibold text-muted-foreground line-through">
+                  <span className="text-sm font-medium text-muted-foreground line-through">
                     ₦{product.compare_at_price.toLocaleString()}
                   </span>
                 )}
+                {discountPercent && (
+                  <span className="text-xs font-semibold bg-red-500/10 text-red-600 px-2 py-0.5 rounded ml-1">
+                    -{discountPercent}%
+                  </span>
+                )}
               </div>
+              
+              {product.in_stock && product.stock_quantity > 0 && (
+                <div className="mt-4 space-y-1">
+                  <div className="flex justify-between text-xs text-muted-foreground font-medium">
+                    <span>{product.stock_quantity} items left</span>
+                  </div>
+                  <div className="w-full bg-muted/50 rounded-full h-1.5 overflow-hidden">
+                    <div 
+                      className="bg-orange-500 h-full rounded-full" 
+                      style={{ width: `${Math.min((product.stock_quantity / 50) * 100, 100)}%` }} 
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Trust Badges */}
+              <div className="flex items-center gap-4 mt-4 py-3 border-y border-border/20 text-xs font-medium text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className="h-4 w-4 text-green-500" />
+                  <span>Zero wahala, swift deals</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-4 w-4 text-blue-500" />
+                  <span>Oya, grab yours</span>
+                </div>
+              </div>
+
             </div>
 
             {/* Merchant Info Banner */}
@@ -422,17 +450,23 @@ export default function ProductDetailPage() {
                     )}
                   </div>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 font-bold text-xs text-foreground group-hover:text-primary transition-colors">
+                    <div className="flex items-center gap-1.5 font-medium text-xs text-foreground group-hover:text-primary transition-colors">
                       <span className="truncate">{product.business.company_name}</span>
                       {product.business.verified && (
                         <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0 fill-primary/20" />
                       )}
                     </div>
-                    {product.business.business_location && (
-                      <p className="text-[10px] text-muted-foreground flex items-center gap-1 truncate mt-0.5">
-                        <MapPin className="h-3 w-3 shrink-0" /> {product.business.business_location}
-                      </p>
-                    )}
+                    
+                    <p className="text-[10px] text-muted-foreground flex items-center gap-1 truncate mt-0.5">
+                      {product.business.business_location && (
+                        <>
+                          <MapPin className="h-3 w-3 shrink-0" /> {product.business.business_location}
+                          <span className="mx-1 text-border/50">|</span>
+                        </>
+                      )}
+                      <span className="font-medium text-foreground/70">Seller Score: 100%</span>
+                    </p>
+
                   </div>
                 </Link>
 
@@ -440,7 +474,7 @@ export default function ProductDetailPage() {
                   onClick={handleStartChat} 
                   variant="outline" 
                   size="sm" 
-                  className="rounded-2xl text-xs font-bold shrink-0 gap-1.5 h-9"
+                  className="rounded-2xl text-xs font-medium shrink-0 gap-1.5 h-9"
                 >
                   <MessageCircle className="h-3.5 w-3.5" /> Chat
                 </Button>
@@ -448,24 +482,32 @@ export default function ProductDetailPage() {
             )}
 
             {/* Action Buttons */}
-            <div className="space-y-2 pt-2">
+            <div className="flex items-center gap-3 pt-2">
               <Button
                 onClick={handleStartChat}
-                disabled={!product.in_stock || (product.stock_quantity !== undefined && product.stock_quantity <= 0)}
-                className="w-full h-12 rounded-2xl font-black text-xs active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2"
+                variant="outline"
+                className="flex-1 h-12 rounded-xl font-medium text-xs active:scale-95 transition-all flex items-center justify-center gap-2 border-border/40 hover:bg-muted/50"
               >
                 <MessageCircle className="h-4 w-4" />
-                Chat to Buy
+                Chat
               </Button>
-              <p className="text-[10px] text-center text-muted-foreground">
-                Connect directly with the seller to negotiate and arrange delivery.
-              </p>
+              <Button
+                onClick={handleDirectCheckout}
+                disabled={!product.in_stock || (product.stock_quantity !== undefined && product.stock_quantity <= 0)}
+                className="flex-[2] h-12 rounded-xl font-medium text-xs active:scale-95 transition-all shadow-md flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                <ShoppingCart className="h-4 w-4" />
+                Add to Cart
+              </Button>
             </div>
+            <p className="text-[10px] text-center text-muted-foreground pt-1">
+              Connect directly with the seller or purchase now.
+            </p>
 
             {/* Description */}
             {product.description && (
               <div className="space-y-1.5 pt-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Description</h3>
+                <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Description</h3>
                 <p className="text-xs text-foreground/90 leading-relaxed whitespace-pre-line bg-muted/10 p-3.5 rounded-2xl border border-border/20">
                   {product.description}
                 </p>
@@ -475,7 +517,7 @@ export default function ProductDetailPage() {
             {/* Search Tags */}
             {product.tags && product.tags.length > 0 && (
               <div className="space-y-1.5">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                   <Tag className="h-3 w-3 text-primary" /> Keywords & Nicknames
                 </h3>
                 <div className="flex flex-wrap gap-1.5">
@@ -502,7 +544,7 @@ export default function ProductDetailPage() {
       <Dialog open={isChatModalOpen} onOpenChange={setIsChatModalOpen}>
         <DialogContent className="sm:max-w-md bg-card border-border/40 rounded-[28px] shadow-2xl">
           <DialogHeader className="text-left space-y-1">
-            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+            <DialogTitle className="text-xl font-medium flex items-center gap-2">
               <MessageCircle className="h-5 w-5 text-primary" />
               Chat to Buy
             </DialogTitle>
@@ -513,7 +555,7 @@ export default function ProductDetailPage() {
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-xs font-bold text-foreground">Meetup Landmark</label>
+              <label className="text-xs font-medium text-foreground">Meetup Landmark</label>
               <Select value={meetupLandmark} onValueChange={setMeetupLandmark}>
                 <SelectTrigger className="w-full rounded-2xl h-12 bg-muted/20 border-border/30 font-medium">
                   <SelectValue placeholder="Select landmark (e.g., PS, Fine Arts)" />
@@ -528,7 +570,7 @@ export default function ProductDetailPage() {
             </div>
             
             <div className="space-y-2">
-              <label className="text-xs font-bold text-foreground">Meetup Time</label>
+              <label className="text-xs font-medium text-foreground">Meetup Time</label>
               <Select value={meetupTime} onValueChange={setMeetupTime}>
                 <SelectTrigger className="w-full rounded-2xl h-12 bg-muted/20 border-border/30 font-medium">
                   <SelectValue placeholder="Select when to meet" />
@@ -546,14 +588,14 @@ export default function ProductDetailPage() {
             <Button
               variant="outline"
               onClick={() => setIsChatModalOpen(false)}
-              className="rounded-2xl h-11 text-xs font-bold w-full"
+              className="rounded-2xl h-11 text-xs font-medium w-full"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSubmitChat}
               disabled={!meetupLandmark || !meetupTime}
-              className="rounded-2xl h-11 text-xs font-bold w-full gap-2 bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20"
+              className="rounded-2xl h-11 text-xs font-medium w-full gap-2 bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20"
             >
               Send Message <ArrowLeft className="h-4 w-4 rotate-180" />
             </Button>
