@@ -342,8 +342,8 @@ export default function BusinessUpload() {
       return;
     }
 
-    if (productDraft.productImages.length < 3) {
-      toast.error("Please upload between 3 and 7 product photos for high visibility.");
+    if (productDraft.productImages.length < 1) {
+      toast.error("Please upload at least 1 product photo.");
       return;
     }
 
@@ -525,14 +525,14 @@ export default function BusinessUpload() {
           </TabsList>
 
           {/* ========================================================================= */}
-          {/* PRODUCT FORM (DETAILED 3-7 IMAGES, SPECS, CATEGORIES) */}
+          {/* PRODUCT FORM (DETAILED 1-7 IMAGES, SPECS, CATEGORIES) */}
           {/* ========================================================================= */}
           <TabsContent value="product" className="mt-4 space-y-6">
             <Card className="rounded-3xl border-border/40 bg-card/60 backdrop-blur-xl shadow-lg">
               <CardHeader className="pb-4 border-b border-border/10">
                 <CardTitle className="text-base font-bold flex items-center justify-between">
                   <span>Product Details & Multi-Photo Gallery</span>
-                  <span className="text-xs font-normal text-muted-foreground">Range: 3 to 7 photos required</span>
+                  <span className="text-xs font-normal text-muted-foreground">Range: 1 to 7 photos</span>
                 </CardTitle>
                 <CardDescription className="text-xs">
                   Upload multiple angles, packaging, and details so customers can inspect quality before ordering.
@@ -541,7 +541,7 @@ export default function BusinessUpload() {
               <CardContent className="pt-6">
                 <form onSubmit={handleProductSubmit} className="space-y-6">
                   
-                  {/* Photo Gallery (3 - 7 Images) */}
+                  {/* Photo Gallery (1 - 7 Images) */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-bold flex items-center gap-1.5">
@@ -550,7 +550,7 @@ export default function BusinessUpload() {
                       </Label>
                       {productDraft.productImages.length < 3 && (
                         <span className="text-[11px] font-semibold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md">
-                          Add at least {3 - productDraft.productImages.length} more image{3 - productDraft.productImages.length > 1 ? "s" : ""}
+                          Minimum: 3 recommended
                         </span>
                       )}
                     </div>
