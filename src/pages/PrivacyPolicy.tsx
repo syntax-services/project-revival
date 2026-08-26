@@ -1,221 +1,125 @@
-import { useState } from "react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ShieldCheck, Download, Scale, Database, Lock, MapPin, Eye, AlertTriangle } from "lucide-react";
-import { motion } from "framer-motion";
-import { toast } from "sonner";
-
-// ==========================================
-// QUANTUM PARTICLES BACKGROUND
-// ==========================================
-const QuantumParticles = () => {
-  const particles = Array.from({ length: 25 }).map((_, i) => ({
-    id: i,
-    size: Math.random() * 4 + 1,
-    x: Math.random() * 90 + 5,
-    y: Math.random() * 100,
-    duration: Math.random() * 20 + 10,
-    delay: Math.random() * 5,
-  }));
-
-  return (
-    <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 opacity-30">
-      <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px]" />
-      {particles.map((p) => (
-        <motion.div
-          key={p.id}
-          className="absolute rounded-full bg-primary/30 blur-[1px]"
-          style={{ width: p.size, height: p.size, left: `${p.x}%`, top: `${p.y}%` }}
-          animate={{
-            y: [0, -50, 0],
-            x: [0, Math.random() * 20 - 10, 0],
-            opacity: [0.1, 0.5, 0.1],
-          }}
-          transition={{
-            duration: p.duration,
-            repeat: Infinity,
-            delay: p.delay,
-            ease: "linear"
-          }}
-        />
-      ))}
-    </div>
-  );
-};
+import { ArrowLeft, ShieldCheck, Database, Lock, MapPin, Eye, AlertTriangle } from "lucide-react";
 
 export default function PrivacyPolicy() {
   usePageMeta({
-    title: "Privacy Policy & Data Protection (NDPA Compliant)",
-    description: "Learn how String protects your personal data, transactions, and campus location under Nigerian data privacy laws (NDPA).",
-    keywords: ["String privacy policy", "data protection Nigeria", "NDPA compliance", "OOU privacy"],
+    title: "Privacy Policy | String Campus Marketplace",
+    description: "Read String's Privacy Policy. Learn how we protect your personal data, location data, and transactions on Nigeria's safest campus marketplace.",
+    url: "https://www.string.com.ng/privacy",
+    type: "website",
+    keywords: ["String privacy policy", "data protection Nigeria", "NDPR compliance", "campus marketplace privacy"],
+    structuredData: {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How does String protect my payment data?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "String uses secure escrow services and encrypted payment gateways (like Squad/GTCO) to process transactions. We never store your raw credit card details on our servers."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does String track my location?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "String only requests location data during the 'Proximity Sale Verification' process to ensure the buyer and seller are physically at the same meetup spot. We do not track your location in the background."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is my data shared with third parties?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "String does not sell your personal data. We only share necessary order details with sellers or delivery runners to facilitate your transaction on campus."
+          }
+        }
+      ]
+    }
   });
 
-  const handlePrint = () => {
-    window.print();
-    toast.success("Preparing Privacy Document for print/download...");
-  };
-
-  const sections = [
-    {
-      id: "controller",
-      num: "01",
-      title: "Data Controller & Statutory Framework",
-      tag: "NDPA 2023",
-      content: `String Platform operates as a decentralized campus commerce directory and messaging service in Nigeria.
-
-• Data Controller Contact: String Data Protection Officer (DPO), reachable via email at support@string.com.ng.
-• Statutory Compliance: This Privacy Policy complies strictly with the Nigeria Data Protection Act 2023 (NDPA) and global best practices for digital commerce.`
-    },
-    {
-      id: "safety-privacy",
-      num: "02",
-      title: "Physical Safety & Meetup Data Privacy",
-      tag: "Critical Safety Policy",
-      content: `While we protect your digital data, we mandate strict rules for your physical safety regarding the real-world transactions you coordinate on this platform:
-
-• Public Meetups Only: Physical exchanges of goods or cash MUST only occur in well-lit, highly populated public spaces (e.g., campus squares, busy cafeterias).
-• Avoid Isolated Areas: To avoid the risk of kidnapping, theft, or physical harm, NEVER agree to meet a buyer or seller in isolated locations, private dorm rooms, or unverified addresses. 
-• Location Data: We process your location solely to show proximity. You should never share your precise real-time private location in chat unless meeting in a verified public zone.`
-    },
-    {
-      id: "data-collected",
-      num: "03",
-      title: "Categories of Personal Data We Collect",
-      tag: "Data Minimization",
-      content: `We collect personal information directly from you and via verified service integrations:
-
-A. Account & Identity Data: Legal Full Name, Email, Phone Number, and Profile Photograph. Identity Credentials submitted for verification.
-B. Precise Geolocation: GPS Coordinates used strictly to calculate proximity distances for campus discoverability.
-C. Marketplace Data: Product titles, descriptions, pricing, media, and reviews.
-D. Communications: Direct in-app text messages, voice memos, photo attachments exchanged between buyers and merchants.`
-    },
-    {
-      id: "legal-basis",
-      num: "04",
-      title: "Lawful Basis for Data Processing",
-      tag: "Legal Grounds",
-      content: `Under the NDPA, we process your personal data under the following lawful bases:
-
-1. Performance of a Contract: To deliver the core service, maintain your account, route messages, and display catalogs.
-2. Explicit User Consent: Where you grant permissions for device geolocation, camera access, and microphone recording.
-3. Legitimate Interests: Detecting fraudulent account creation, enforcing platform safety, and deduplicating listing views.
-4. Legal Obligation: Complying with mandatory disclosures required by Nigerian law enforcement.`
-    },
-    {
-      id: "third-parties",
-      num: "05",
-      title: "Third-Party Data Processors",
-      tag: "Secure Integrations",
-      content: `We partner with enterprise-grade infrastructure providers. We do not sell your personal data to data brokers.
-
-• Cloud Database & Authentication (Supabase): Stores encrypted database records and authentication tokens with Row Level Security (RLS) enforcement.
-• Transactional Email Service (Resend): Delivers authentication OTPs and security notifications via TLS encrypted transport.`
-    }
-  ];
-
   return (
-    <div className="min-h-screen bg-background text-foreground relative selection:bg-primary/20 overflow-x-hidden">
-      <QuantumParticles />
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Navbar */}
+      <nav className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl border-b border-white/5">
+        <div className="container mx-auto px-4 h-16 flex items-center">
+          <Link to="/" className="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors">
+            <ArrowLeft className="w-4 h-4" /> Back to Home
+          </Link>
+        </div>
+      </nav>
 
-      {/* HEADER */}
-      <header className="fixed top-0 left-0 right-0 h-16 z-50 bg-background/80 backdrop-blur-xl border-b border-border/10 flex items-center justify-between px-4 md:px-6">
-        <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group">
-          <ArrowLeft className="h-5 w-5 group-hover:-translate-x-1 transition-transform" />
-          <span className="font-semibold text-sm">Back to Home</span>
-        </Link>
-        <button 
-          onClick={handlePrint}
-          className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm font-semibold"
-        >
-          <Download className="h-4 w-4" />
-          <span className="hidden sm:inline">Download PDF</span>
-        </button>
-      </header>
-
-      <main className="pt-24 pb-20 px-4 md:px-6 max-w-3xl mx-auto relative z-10">
-        
-        {/* TITLE SECTION */}
-        <div className="space-y-4 mb-12">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted/50 border border-border/50 text-xs font-semibold text-muted-foreground mb-4">
-            <ShieldCheck className="h-3.5 w-3.5" /> Data Protection
-          </div>
-          <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-[1.1]">
-            Privacy Policy
-          </h1>
-          <p className="text-muted-foreground font-medium text-sm md:text-base">
-            Effective Date: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-          </p>
+      <main className="container mx-auto px-4 pt-32 pb-24 max-w-4xl relative z-10">
+        <div className="mb-12">
+          <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-4">Privacy Policy</h1>
+          <p className="text-muted-foreground text-lg">Effective Date: August 26, 2026</p>
         </div>
 
-        {/* SAFETY ALERT */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-5 md:p-6 rounded-2xl bg-red-500/10 border border-red-500/20 mb-12"
-        >
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="h-6 w-6 text-red-500 shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <h3 className="font-bold text-red-500">Critical Meetup Safety Requirement</h3>
-              <p className="text-sm text-red-500/80 leading-relaxed">
-                While we secure your digital privacy, your physical safety is paramount. You agree to only conduct physical transactions in well-lit, highly populated public spaces. Do not meet strangers in isolated locations to prevent kidnapping, theft, or physical harm.
-              </p>
+        <div className="space-y-12 text-muted-foreground leading-relaxed">
+          
+          <section className="space-y-4">
+            <div className="flex items-center gap-3 text-foreground mb-6">
+              <ShieldCheck className="w-6 h-6 text-primary" />
+              <h2 className="text-2xl font-bold">1. Introduction</h2>
             </div>
-          </div>
-        </motion.div>
+            <p>Welcome to String ("we," "our," or "us"). We are committed to protecting your personal information and your right to privacy. This Privacy Policy governs the manner in which String collects, uses, maintains, and discloses information collected from users (each, a "User") of the https://www.string.com.ng website and mobile application.</p>
+            <p>This policy applies to all products, services, and features offered by String, specifically tailored for the hyper-local Nigerian university campus ecosystem. By using our platform, you consent to the data practices described in this statement, in compliance with the Nigerian Data Protection Regulation (NDPR).</p>
+          </section>
 
-        {/* CONTENT */}
-        <div className="space-y-12">
-          {sections.map((section, index) => (
-            <motion.section 
-              key={section.id}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
-              transition={{ delay: index * 0.1 }}
-              className="space-y-4 scroll-mt-24"
-              id={section.id}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-black text-primary/40 bg-primary/10 px-2 py-0.5 rounded-md">
-                  {section.num}
-                </span>
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  {section.tag}
-                </span>
-              </div>
-              <h2 className="text-xl md:text-2xl font-bold tracking-tight">
-                {section.title}
-              </h2>
-              <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                {section.content}
-              </div>
-            </motion.section>
-          ))}
-        </div>
-
-        <motion.section className="mt-12 space-y-4 bg-muted/30 p-6 rounded-2xl border border-border/10">
-          <h2 className="text-xl md:text-2xl font-bold tracking-tight">
-            10. Contact & Privacy Inquiries
-          </h2>
-          <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none text-muted-foreground whitespace-pre-wrap leading-relaxed">
-            If you have any questions about this Privacy Policy, your rights, or our data handling practices, please contact our Data Protection Officer at:
+          <section className="space-y-4">
+            <div className="flex items-center gap-3 text-foreground mb-6">
+              <Database className="w-6 h-6 text-primary" />
+              <h2 className="text-2xl font-bold">2. Information We Collect</h2>
+            </div>
+            <h3 className="text-foreground font-semibold">2.1 Personal Identification Information</h3>
+            <p>We may collect personal identification information from Users in a variety of ways, including, but not limited to, when Users visit our site, register on the site, list a product, place an order, and in connection with other activities, services, features or resources we make available on our Site. Users may be asked for, as appropriate: name, email address, phone number, university affiliation, and student ID (for merchant verification).</p>
             
-            <strong className="block mt-4 text-foreground">Email:</strong> privacy@stringcampus.com or support@stringcampus.com
-            <strong className="block mt-2 text-foreground">Phone:</strong> +234 812 345 6789
-            <strong className="block mt-2 text-foreground">Physical Address:</strong> Olabisi Onabanjo University (OOU), Ago-Iwoye, Ogun State, Nigeria
-          </div>
-        </motion.section>
+            <h3 className="text-foreground font-semibold mt-4">2.2 Proximity & Location Data</h3>
+            <p>To facilitate our unique "Chat-to-Buy Proximity Verification" feature, String requests real-time location data (GPS coordinates) exclusively when a buyer and seller are confirming a physical transaction. <strong className="text-foreground">We do not track continuous background location.</strong> Location data is used strictly to calculate the Haversine distance between parties to unlock the escrow payout and review system.</p>
+          </section>
 
-        {/* FOOTER */}
-        <div className="mt-20 pt-8 border-t border-border/20 text-center space-y-4">
-          <Database className="h-8 w-8 text-muted-foreground/30 mx-auto" />
-          <p className="text-sm font-medium text-muted-foreground">
-            By continuing to use String, you acknowledge that you have read, understood, and agreed to this Privacy Policy.
-          </p>
+          <section className="space-y-4">
+            <div className="flex items-center gap-3 text-foreground mb-6">
+              <Lock className="w-6 h-6 text-primary" />
+              <h2 className="text-2xl font-bold">3. How We Use Collected Information</h2>
+            </div>
+            <ul className="list-disc pl-6 space-y-2">
+              <li><strong>To process payments securely:</strong> We use escrow infrastructure. Your payment details are processed by compliant gateways (e.g., Squad/GTCO) and are not stored in raw format on our servers.</li>
+              <li><strong>To facilitate campus commerce:</strong> To connect buyers with verified sellers and dispatch runners.</li>
+              <li><strong>To prevent fraud:</strong> Our system analyzes behavioral patterns and physical proximity pings to prevent fraudulent reviews and fake vendor scams.</li>
+              <li><strong>To improve user experience:</strong> We use aggregate data to understand how our student demographics use the platform.</li>
+            </ul>
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex items-center gap-3 text-foreground mb-6">
+              <Eye className="w-6 h-6 text-primary" />
+              <h2 className="text-2xl font-bold">4. How We Protect Your Information</h2>
+            </div>
+            <p>We adopt appropriate data collection, storage and processing practices and security measures to protect against unauthorized access, alteration, disclosure or destruction of your personal information, username, password, transaction information and data stored on our Site. Sensitive and private data exchange between the Site and its Users happens over an SSL secured communication channel and is encrypted and protected with digital signatures.</p>
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex items-center gap-3 text-foreground mb-6">
+              <MapPin className="w-6 h-6 text-primary" />
+              <h2 className="text-2xl font-bold">5. Sharing Your Personal Information</h2>
+            </div>
+            <p>We do not sell, trade, or rent Users personal identification information to others. We may share generic aggregated demographic information not linked to any personal identification information regarding visitors and users with our business partners, trusted affiliates and advertisers. We will share your campus delivery landmark and contact details with verified delivery runners or merchants *only* upon your explicit confirmation of an order.</p>
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex items-center gap-3 text-foreground mb-6">
+              <AlertTriangle className="w-6 h-6 text-primary" />
+              <h2 className="text-2xl font-bold">6. Changes to this Privacy Policy</h2>
+            </div>
+            <p>String has the discretion to update this privacy policy at any time. When we do, we will post a notification on the main page of our Site and revise the updated date at the bottom of this page. We encourage Users to frequently check this page for any changes to stay informed about how we are helping to protect the personal information we collect.</p>
+          </section>
+
         </div>
       </main>
     </div>
   );
 }
-
