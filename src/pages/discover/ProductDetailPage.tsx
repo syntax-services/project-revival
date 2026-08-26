@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import { getMaskedAssetUrl } from "@/lib/assetMask";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { ShareButton } from "@/components/common/ShareButton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ProductDetailData {
   id: string;
@@ -52,6 +54,10 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState<ProductDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
+
+  const [isChatModalOpen, setIsChatModalOpen] = useState(false);
+  const [meetupLandmark, setMeetupLandmark] = useState("");
+  const [meetupTime, setMeetupTime] = useState("");
 
   const { liked, saved, toggleLike, toggleSave } = useProductSocial(id);
 
@@ -184,7 +190,16 @@ export default function ProductDetailPage() {
       navigate(`/auth?redirect=${encodeURIComponent(`/product/${product.id}`)}`);
       return;
     }
-    navigate(`/customer/messages?biz=${product.business.id}&product=${encodeURIComponent(product.name)}`);
+    setIsChatModalOpen(true);
+  };
+
+  const handleSubmitChat = () => {
+    if (!meetupLandmark || !meetupTime) {
+      toast.error("Please select a landmark and time.");
+      return;
+    }
+    setIsChatModalOpen(false);
+    navigate(`/customer/messages?biz=${product?.business?.id}&product=${encodeURIComponent(product?.name || "")}&landmark=${encodeURIComponent(meetupLandmark)}&time=${encodeURIComponent(meetupTime)}`);
   };
 
   const handleDirectCheckout = () => {
@@ -368,6 +383,11 @@ export default function ProductDetailPage() {
                     Out of Stock
                   </Badge>
                 )}
+                {product.in_stock && product.stock_quantity > 0 && product.stock_quantity <= 5 && (
+                  <Badge className="bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold rounded-full px-2.5 py-0.5">
+                    Only {product.stock_quantity} items left!
+                  </Badge>
+                )}
               </div>
 
               <h1 className="text-2xl font-black text-foreground tracking-tight leading-tight">
@@ -431,9 +451,11 @@ export default function ProductDetailPage() {
             <div className="space-y-2 pt-2">
               <Button
                 onClick={handleStartChat}
+                disabled={!product.in_stock || (product.stock_quantity !== undefined && product.stock_quantity <= 0)}
                 className="w-full h-12 rounded-2xl font-black text-xs active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2"
               >
-                <MessageCircle className="h-4 w-4" /> Chat with Seller to Buy
+                <MessageCircle className="h-4 w-4" />
+                Chat to Buy
               </Button>
               <p className="text-[10px] text-center text-muted-foreground">
                 Connect directly with the seller to negotiate and arrange delivery.
@@ -476,6 +498,68 @@ export default function ProductDetailPage() {
           <ProductComments productId={product.id} />
         </div>
       </div>
+
+      <Dialog open={isChatModalOpen} onOpenChange={setIsChatModalOpen}>
+        <DialogContent className="sm:max-w-md bg-card border-border/40 rounded-[28px] shadow-2xl">
+          <DialogHeader className="text-left space-y-1">
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-primary" />
+              Chat to Buy
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Select your preferred meetup details to quickly arrange a purchase with the merchant.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-foreground">Meetup Landmark</label>
+              <Select value={meetupLandmark} onValueChange={setMeetupLandmark}>
+                <SelectTrigger className="w-full rounded-2xl h-12 bg-muted/20 border-border/30 font-medium">
+                  <SelectValue placeholder="Select landmark (e.g., PS, Fine Arts)" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl border-border/30 shadow-xl">
+                  <SelectItem value="PS">PS</SelectItem>
+                  <SelectItem value="Fine Arts">Fine Arts</SelectItem>
+                  <SelectItem value="Fidelma Hostel">Fidelma Hostel</SelectItem>
+                  <SelectItem value="Motion Ground">Motion Ground</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-foreground">Meetup Time</label>
+              <Select value={meetupTime} onValueChange={setMeetupTime}>
+                <SelectTrigger className="w-full rounded-2xl h-12 bg-muted/20 border-border/30 font-medium">
+                  <SelectValue placeholder="Select when to meet" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl border-border/30 shadow-xl">
+                  <SelectItem value="In 10 mins">In 10 mins</SelectItem>
+                  <SelectItem value="In 1 hr">In 1 hr</SelectItem>
+                  <SelectItem value="Tomorrow">Tomorrow</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2 mt-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsChatModalOpen(false)}
+              className="rounded-2xl h-11 text-xs font-bold w-full"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmitChat}
+              disabled={!meetupLandmark || !meetupTime}
+              className="rounded-2xl h-11 text-xs font-bold w-full gap-2 bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20"
+            >
+              Send Message <ArrowLeft className="h-4 w-4 rotate-180" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

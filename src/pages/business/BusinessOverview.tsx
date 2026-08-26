@@ -11,8 +11,9 @@ import {
 import { 
   MessageSquare, Package, Briefcase, Star, DollarSign, 
   ArrowUpRight, ShieldCheck, TrendingUp, Clock,
-  AlertTriangle, Store, Eye
+  AlertTriangle, Store, Eye, Plus
 } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -296,10 +297,21 @@ export default function BusinessOverview() {
           </div>
         </div>
 
-        {/* KPIs Grid */}
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        {/* Chat-to-buy giant button */}
+        <div className="flex justify-center py-2 mb-4">
+          <Button 
+            onClick={() => navigate("/business/upload")}
+            className="w-full sm:w-auto px-12 py-8 rounded-3xl bg-primary hover:bg-primary/90 text-primary-foreground font-black shadow-xl shadow-primary/20 transition-all duration-300 active:scale-95 flex items-center justify-center gap-3 text-lg"
+          >
+            <Plus className="h-8 w-8" />
+            Create Product Listing
+          </Button>
+        </div>
+
+        {/* 'Pending Orders / Leads' summary list */}
+        <div className="grid gap-4 grid-cols-2">
           {isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => (
+            Array.from({ length: 2 }).map((_, i) => (
               <div key={i} className="stat-card">
                 <div className="flex items-center justify-between">
                   <Skeleton className="h-4 w-20" />
@@ -309,43 +321,77 @@ export default function BusinessOverview() {
               </div>
             ))
           ) : (
-            statCards.map((stat) => {
-              const Icon = stat.icon;
-              return (
-                <div
-                  key={stat.label}
-                  className={`stat-card relative overflow-hidden transition-all duration-300 ${stat.onClick ? "cursor-pointer active:scale-95 hover:border-primary/20 hover:shadow-lg hover:shadow-black/5" : ""} ${stat.highlight ? "border-primary/30 bg-primary/[0.02]" : "bg-card/50"}`}
-                  onClick={stat.onClick}
-                >
-                  {stat.highlight && (
-                    <div className="absolute top-0 right-0 h-1.5 w-1.5 rounded-full bg-primary m-3 animate-ping" />
-                  )}
-                  <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{stat.label}</p>
-                    <Icon className={`h-4 w-4 ${stat.highlight ? "text-primary" : "text-muted-foreground"}`} />
-                  </div>
-                  <p className="text-xl sm:text-2xl font-bold mt-2 text-foreground">
-                    {stat.value}
-                  </p>
-                  {stat.highlight && stat.onClick && (
-                    <p className="text-[10px] font-bold text-primary mt-1">Tap to review</p>
-                  )}
+            <>
+              <div
+                className="stat-card relative overflow-hidden transition-all duration-300 cursor-pointer active:scale-95 hover:border-primary/20 hover:shadow-lg hover:shadow-black/5 bg-card/50 border border-border/40"
+                onClick={() => navigate("/business/orders")}
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Pending Orders</p>
+                  <Package className="h-4 w-4 text-muted-foreground" />
                 </div>
-              );
-            })
+                <p className="text-xl sm:text-2xl font-bold mt-2 text-foreground">
+                  {stats?.pendingOrders || 0}
+                </p>
+              </div>
+              <div
+                className="stat-card relative overflow-hidden transition-all duration-300 cursor-pointer active:scale-95 hover:border-primary/20 hover:shadow-lg hover:shadow-black/5 bg-card/50 border border-border/40"
+                onClick={() => navigate("/business/leads")}
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Market Leads</p>
+                  <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <p className="text-xl sm:text-2xl font-bold mt-2 text-foreground">
+                  {leadsCount}
+                </p>
+              </div>
+            </>
           )}
         </div>
 
-        {/* View Detailed Analytics Button */}
-        <div className="flex justify-center py-2">
-          <Button 
-            onClick={() => navigate("/business/analytics")}
-            className="w-full sm:w-auto px-8 py-6 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-md shadow-primary/20 transition-all duration-300 active:scale-95 flex items-center justify-center gap-2"
-          >
-            <TrendingUp className="h-5 w-5" />
-            View Detailed Analytics
-          </Button>
-        </div>
+        {leadsCount > 10 && (
+          <Accordion type="single" collapsible className="w-full mt-4 bg-card/50 rounded-2xl border border-border/20 px-4">
+            <AccordionItem value="advanced-tools" className="border-0">
+              <AccordionTrigger className="text-sm font-bold text-foreground hover:no-underline">Advanced Tools</AccordionTrigger>
+              <AccordionContent className="space-y-4 pt-2 pb-4">
+                <div className="grid gap-4 grid-cols-2">
+                  <div
+                    className="stat-card relative overflow-hidden transition-all duration-300 cursor-pointer active:scale-95 hover:border-primary/20 hover:shadow-lg hover:shadow-black/5 bg-background border border-border/20"
+                    onClick={() => navigate("/business/jobs")}
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Job Requests</p>
+                      <Briefcase className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <p className="text-xl font-bold mt-2 text-foreground">
+                      {stats?.pendingJobs || 0}
+                    </p>
+                  </div>
+                  <div
+                    className="stat-card relative overflow-hidden transition-all duration-300 bg-background border border-border/20"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Profile Views</p>
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <p className="text-xl font-bold mt-2 text-foreground">
+                      {business?.views_count || 0}
+                    </p>
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={() => navigate("/business/analytics")}
+                  className="w-full px-6 py-4 rounded-2xl bg-secondary hover:bg-secondary/90 font-bold transition-all duration-300 active:scale-95 flex items-center justify-center gap-2 text-foreground"
+                >
+                  <TrendingUp className="h-4 w-4" />
+                  View Detailed Analytics
+                </Button>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        )}
 
         {/* Bottom Grid: Live Activity Stream & Actions/Info */}
         <div className="grid gap-4 sm:grid-cols-2">

@@ -97,7 +97,7 @@ const initialProductDraft: ProductDraft = {
   productCategory: "Groceries & Food",
   productPrice: "",
   productCompareAtPrice: "",
-  productStockQuantity: "10",
+  productStockQuantity: "1",
   productNicknames: [],
   productInStock: true,
   productIsRare: false,

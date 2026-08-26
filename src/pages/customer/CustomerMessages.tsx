@@ -63,11 +63,16 @@ export default function CustomerMessages() {
   const [searchParams] = useSearchParams();
   const targetBizId = searchParams.get("biz");
   const targetProduct = searchParams.get("product") || searchParams.get("service");
+  const targetLandmark = searchParams.get("landmark");
+  const targetTime = searchParams.get("time");
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<MessageData[]>([]);
   const [newMessage, setNewMessage] = useState(() => {
+    if (targetLandmark && targetTime) {
+      return `Hi, I want to buy ${targetProduct || 'this'}. Let's meet at ${targetLandmark} at ${targetTime}.`;
+    }
     return targetProduct ? `Hello! I am interested in: ${targetProduct}` : "";
   });
   const [customerId, setCustomerId] = useState<string | null>(null);
@@ -83,6 +88,26 @@ export default function CustomerMessages() {
   const [replyingTo, setReplyingTo] = useState<MessageData | null>(null);
   const [forwardModalOpen, setForwardModalOpen] = useState(false);
   const [messageToForward, setMessageToForward] = useState<MessageData | null>(null);
+  const [activeStatus, setActiveStatus] = useState(false);
+
+  useEffect(() => {
+    if (!selectedConversation?.business_id) return;
+    const checkStatus = async () => {
+      const { data: bData } = await supabase.from('businesses').select('user_id').eq('id', selectedConversation.business_id).maybeSingle();
+      if (bData?.user_id) {
+        const { data: pData } = await supabase.from('profiles').select('last_seen_at').eq('id', bData.user_id).maybeSingle();
+        if (pData?.last_seen_at) {
+          const diff = Date.now() - new Date(pData.last_seen_at).getTime();
+          setActiveStatus(diff < 5 * 60 * 1000);
+        } else {
+          setActiveStatus(false);
+        }
+      }
+    };
+    checkStatus();
+    const interval = setInterval(checkStatus, 60000);
+    return () => clearInterval(interval);
+  }, [selectedConversation?.business_id]);
 
   // Dynamic Floating Date Pill state
   const [floatingDate, setFloatingDate] = useState<string>("Today");
@@ -374,6 +399,54 @@ export default function CustomerMessages() {
     } finally {
       setSending(false);
     }
+  };
+
+  const handleConfirmSale = (msgId: string, payload: any) => {
+    if (!navigator.geolocation) {
+      toast({ title: "Geolocation not supported", variant: "destructive" });
+      return;
+    }
+    
+    toast({ title: "Verifying location..." });
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      try {
+        const { latitude, longitude } = position.coords;
+        const R = 6371e3;
+        const dLat = (latitude - payload.seller_lat) * Math.PI / 180;
+        const dLon = (longitude - payload.seller_lng) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+          Math.cos(payload.seller_lat * Math.PI / 180) * Math.cos(latitude * Math.PI / 180) *
+          Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const distance = R * c;
+
+        if (distance > 1500) {
+          toast({ title: "Verification failed", description: `You are too far from the seller (${Math.round(distance)}m).`, variant: "destructive" });
+          return;
+        }
+
+        const newPayload = { ...payload, status: 'confirmed' };
+        
+        await supabase.from("messages").update({
+          content: `[SALE_CONFIRMATION]:${JSON.stringify(newPayload)}`,
+          tool_payload: newPayload
+        }).eq("id", msgId);
+
+        await supabase.from("chat_verified_sales").insert({
+          conversation_id: selectedConversation!.id,
+          business_id: selectedConversation!.business_id,
+          customer_id: customerId,
+          product_id: payload.product_id,
+          distance_meters: Math.round(distance),
+        });
+
+        toast({ title: "Sale Confirmed!", description: "Awesome! Don't forget to review your purchase." });
+      } catch (err: any) {
+        toast({ title: "Error confirming sale", description: err.message, variant: "destructive" });
+      }
+    }, (error) => {
+      toast({ title: "Failed to get location", description: error.message, variant: "destructive" });
+    });
   };
 
   // 1. Fetch Conversations & Handle Deep-linked Merchants
@@ -844,9 +917,14 @@ export default function CustomerMessages() {
                   <h2 className="font-bold text-xs text-foreground truncate flex items-center gap-1 group-hover:text-primary transition-colors">
                     {selectedConversation.business_name}
                     {selectedConversation.verified && (
-                      <ShieldCheck className="h-3.5 w-3.5 text-primary fill-primary/10 shrink-0" />
+                      <ShieldCheck className="h-4 w-4 text-emerald-500 ml-1.5 shrink-0" />
                     )}
                   </h2>
+                  {activeStatus && (
+                    <span className="text-[11px] font-medium text-muted-foreground mt-0.5">
+                      Active
+                    </span>
+                  )}
                   <p className="text-[10px] text-muted-foreground font-medium">
                     Campus Merchant
                   </p>
@@ -931,6 +1009,7 @@ export default function CustomerMessages() {
                         onReply={handleReplyMessage}
                         onForward={handleForwardMessage}
                         onDelete={handleDeleteMessage}
+                        onConfirmSale={handleConfirmSale}
                       />
                     ))}
                   </div>

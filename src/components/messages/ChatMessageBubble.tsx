@@ -49,6 +49,7 @@ interface ChatMessageBubbleProps {
   onReply?: (message: MessageData) => void;
   onForward?: (message: MessageData) => void;
   onDelete?: (msgId: string) => void;
+  onConfirmSale?: (msgId: string, payload: any) => void;
 }
 
 export function ChatMessageBubble({
@@ -60,6 +61,7 @@ export function ChatMessageBubble({
   onReply,
   onForward,
   onDelete,
+  onConfirmSale,
 }: ChatMessageBubbleProps) {
   const isSelf = message.sender_type === currentUserType;
   const [imgError, setImgError] = useState(false);
@@ -424,6 +426,51 @@ export function ChatMessageBubble({
                 } catch {
                   return <p className="text-xs">{cleanContent}</p>;
                 }
+              })() : cleanContent.startsWith("[SALE_CONFIRMATION]:") ? (() => {
+                try {
+                  const payload = JSON.parse(cleanContent.slice(20));
+                  return (
+                    <div className="space-y-2 text-xs min-w-[210px] p-1.5 text-left bg-background/50 rounded-xl border border-border/20">
+                      <div className="flex items-center justify-between border-b border-border/15 pb-1.5">
+                        <span className="font-bold text-[10px] uppercase tracking-wider flex items-center gap-1 opacity-90">
+                          Sale Verification
+                        </span>
+                        <span className={cn(
+                          "text-[9px] font-black uppercase px-2 py-0.5 rounded-full",
+                          payload.status === "confirmed" ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30" :
+                          "bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                        )}>
+                          {payload.status}
+                        </span>
+                      </div>
+                      
+                      {payload.status === "pending" && !isSelf && (
+                        <>
+                          <p className="text-[11px] text-foreground font-medium">
+                            Seller wants to verify this sale. Are you at the meetup spot?
+                          </p>
+                          {onConfirmSale && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onConfirmSale(message.id, payload);
+                              }}
+                              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 mt-2"
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5" /> Confirm Received
+                            </button>
+                          )}
+                        </>
+                      )}
+                      {payload.status === "confirmed" && (
+                         <div className="text-emerald-600 dark:text-emerald-400 font-bold text-[11px] flex items-center gap-1">
+                           <CheckCircle2 className="h-3.5 w-3.5" /> Sale Confirmed
+                         </div>
+                      )}
+                    </div>
+                  );
+                } catch { return <span>Invalid Sale Data</span>; }
               })() : isAudio ? (
                 /* 3. ULTRA-MINIMAL VOICE NOTE PLAYER */
                 <AudioPlayer

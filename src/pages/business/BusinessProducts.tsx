@@ -70,6 +70,7 @@ export default function BusinessProducts() {
   const [isOrderable, setIsOrderable] = useState(true);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [stockQuantity, setStockQuantity] = useState("1");
 
   // Fetch business ID
   const { data: business } = useBusiness();
@@ -89,6 +90,7 @@ export default function BusinessProducts() {
     setIsOrderable(true);
     setImageUrl(null);
     setImageFile(null);
+    setStockQuantity("1");
     setEditingProduct(null);
     localStorage.removeItem("string_products_manager_draft");
   };
@@ -98,11 +100,11 @@ export default function BusinessProducts() {
       const hasContent = name || description || price || tags.length > 0;
       if (hasContent) {
         localStorage.setItem("string_products_manager_draft", JSON.stringify({
-          name, description, price, compareAtPrice, commissionPercent, isRare, tags, inStock, isOrderable, imageUrl
+          name, description, price, compareAtPrice, commissionPercent, isRare, tags, inStock, isOrderable, imageUrl, stockQuantity
         }));
       }
     }
-  }, [editingProduct, isDialogOpen, name, description, price, compareAtPrice, commissionPercent, isRare, tags, inStock, isOrderable, imageUrl]);
+  }, [editingProduct, isDialogOpen, name, description, price, compareAtPrice, commissionPercent, isRare, tags, inStock, isOrderable, imageUrl, stockQuantity]);
 
   const openDialog = (product?: Product) => {
     if (product) {
@@ -117,6 +119,7 @@ export default function BusinessProducts() {
       setInStock(product.in_stock);
       setIsOrderable(product.is_orderable ?? true);
       setImageUrl(product.image_url);
+      setStockQuantity(product.stock_quantity?.toString() || "1");
     } else {
       setEditingProduct(null);
       try {
@@ -133,6 +136,7 @@ export default function BusinessProducts() {
           setInStock(parsed.inStock ?? true);
           setIsOrderable(parsed.isOrderable ?? true);
           setImageUrl(parsed.imageUrl || null);
+          setStockQuantity(parsed.stockQuantity || "1");
         } else {
           resetForm();
         }
@@ -193,6 +197,9 @@ export default function BusinessProducts() {
       const cleanComm = commissionPercent ? parseFloat(commissionPercent.toString().replace(/,/g, '').trim()) : 10.0;
       const validComm = !isNaN(cleanComm) ? Math.min(Math.max(1, cleanComm), 99.99) : 10.0;
 
+      const cleanStock = parseInt(stockQuantity || "0", 10);
+      const validStock = isNaN(cleanStock) ? 0 : Math.max(0, cleanStock);
+
       const productData = {
         name: name.trim(),
         description: description.trim() || null,
@@ -204,6 +211,7 @@ export default function BusinessProducts() {
         in_stock: inStock,
         image_url: finalImageUrl,
         business_id: activeBusinessId,
+        stock_quantity: validStock,
       };
 
       if (editingProduct) {
@@ -346,7 +354,7 @@ export default function BusinessProducts() {
                   />
                 </div>
 
-                {/* Price */}
+                {/* Price and Stock */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="price">Price (₦) *</Label>
@@ -361,6 +369,20 @@ export default function BusinessProducts() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label htmlFor="stock">Stock Quantity</Label>
+                    <Input
+                      id="stock"
+                      type="number"
+                      min="0"
+                      value={stockQuantity}
+                      onChange={(e) => setStockQuantity(e.target.value)}
+                      placeholder="1"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
                     <Label htmlFor="compare-at">Compare At (₦)</Label>
                     <Input
                       id="compare-at"
@@ -372,20 +394,18 @@ export default function BusinessProducts() {
                       placeholder="0.00"
                     />
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="commission">Commission (%)</Label>
-                  <Input
-                    id="commission"
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="100"
-                    value={commissionPercent}
-                    onChange={(e) => setCommissionPercent(e.target.value)}
-                  />
-                  <p className="text-[10px] text-muted-foreground">Standard platform fee: 10%</p>
+                  <div className="space-y-2">
+                    <Label htmlFor="commission">Commission (%)</Label>
+                    <Input
+                      id="commission"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      value={commissionPercent}
+                      onChange={(e) => setCommissionPercent(e.target.value)}
+                    />
+                  </div>
                 </div>
 
                 {/* Toggles */}

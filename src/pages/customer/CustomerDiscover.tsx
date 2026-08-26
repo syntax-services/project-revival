@@ -24,6 +24,7 @@ interface Business {
  logo_url: string | null;
  verified: boolean | null;
  verification_tier?: string;
+ is_open_now?: boolean;
 }
 
 interface Product {
@@ -33,6 +34,7 @@ interface Product {
  price?: number | null;
  image_url?: string | null;
  description?: string | null;
+ stock_quantity?: number | null;
 }
 
 interface Service {
@@ -77,6 +79,7 @@ export default function CustomerDiscover() {
  const [itemTypeFilter, setItemTypeFilter] = useState<"all" | "products" | "services">(() => (sessionStorage.getItem("string_discover_type") as any) || "all");
  const [categoryFilter, setCategoryFilter] = useState(() => sessionStorage.getItem("string_discover_category") || "all");
  const [priceFilter, setPriceFilter] = useState(() => sessionStorage.getItem("string_discover_price") || "all");
+ const [openNowFilter, setOpenNowFilter] = useState(false);
  const [loading, setLoading] = useState(true);
  const [selectedItem, setSelectedItem] = useState<DiscoverItem | null>(null);
  const [isScrolled, setIsScrolled] = useState(false);
@@ -119,8 +122,8 @@ export default function CustomerDiscover() {
  const { data: directProducts } = await supabase
  .from("products")
  .select(`
- id, name, business_id, price, image_url, images, description, category, tags, is_orderable,
- businesses (id, company_name, logo_url, location_verified, verified, is_active, verification_tier)
+ id, name, business_id, price, image_url, images, description, category, tags, is_orderable, stock_quantity,
+ businesses (id, company_name, logo_url, location_verified, verified, is_active, verification_tier, is_open_now)
  `)
  .eq("in_stock", true)
  .order("created_at", { ascending: false });
@@ -128,7 +131,7 @@ export default function CustomerDiscover() {
  if (directProducts) {
  directProducts.forEach((p: any) => {
  const biz = p.businesses;
- if (biz && biz.is_active !== false) {
+ if (biz && biz.is_active !== false && (p.stock_quantity === undefined || p.stock_quantity === null || p.stock_quantity > 0)) {
  flatItems.push({
  id: p.id,
  name: p.name || "Product",
@@ -144,6 +147,7 @@ export default function CustomerDiscover() {
  logo_url: biz.logo_url || null,
  verified: !!(biz.location_verified || biz.verified),
  verification_tier: biz.verification_tier || 'none',
+ is_open_now: biz.is_open_now,
  },
  isService: false,
  aspectRatio: Math.random() > 0.5 ? "aspect-[3/4]" : "aspect-square",
@@ -158,7 +162,7 @@ export default function CustomerDiscover() {
  .from("services")
  .select(`
  id, name, business_id, images, price_min, price_max, description, category, is_orderable,
- businesses (id, company_name, logo_url, location_verified, verified, is_active, verification_tier)
+ businesses (id, company_name, logo_url, location_verified, verified, is_active, verification_tier, is_open_now)
  `)
  .order("created_at", { ascending: false });
 
@@ -177,10 +181,11 @@ export default function CustomerDiscover() {
  tags: [],
  business: {
  id: biz.id,
- company_name: biz.company_name || "Service Pro",
+ company_name: biz.company_name || "Service Provider",
  logo_url: biz.logo_url || null,
  verified: !!(biz.location_verified || biz.verified),
  verification_tier: biz.verification_tier || 'none',
+ is_open_now: biz.is_open_now,
  },
  isService: true,
  aspectRatio: Math.random() > 0.5 ? "aspect-[4/5]" : "aspect-square",
@@ -254,10 +259,11 @@ export default function CustomerDiscover() {
  (priceFilter === "under5k" && price !== null && price < 5000) ||
  (priceFilter === "5to20k" && price !== null && price >= 5000 && price <= 20000) ||
  (priceFilter === "20kplus" && price !== null && price > 20000);
+ const matchesOpenNow = !openNowFilter || (openNowFilter && item.business.is_open_now);
 
- return matchesSearch && matchesType && matchesCategory && matchesPrice;
+ return matchesSearch && matchesType && matchesCategory && matchesPrice && matchesOpenNow;
  });
- }, [items, search, itemTypeFilter, categoryFilter, priceFilter]);
+ }, [items, search, itemTypeFilter, categoryFilter, priceFilter, openNowFilter]);
 
  const handleContactBusiness = async (item: DiscoverItem, e?: React.MouseEvent) => {
  if (e) e.stopPropagation();
@@ -374,6 +380,16 @@ export default function CustomerDiscover() {
  {label}
  </button>
  ))}
+ <button
+    type="button"
+    onClick={() => setOpenNowFilter(!openNowFilter)}
+    className={cn(
+      "h-7 rounded-full border px-3 text-[11px] font-bold transition-colors shrink-0",
+      openNowFilter ? "border-green-500 bg-green-500 text-white" : "border-border/20 bg-muted/20 text-muted-foreground hover:text-foreground"
+    )}
+  >
+    Open Now
+  </button>
  <select
  value={categoryFilter}
  onChange={(e) => setCategoryFilter(e.target.value)}

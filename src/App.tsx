@@ -225,7 +225,7 @@ const App = () => (
                   <Route path="/business/:id" element={<BusinessPublicProfile />} />
 
                   {/* Dedicated Product & Service Details Pages - Public for Google Indexing */}
-                  <Route path="/product/:id" element={<ProductDetailPage />} />
+                  <Route path="/product" element={<CustomerDiscover />} />`n                  <Route path="/product/:id" element={<ProductDetailPage />} />
                   <Route path="/service/:id" element={<ServiceDetailPage />} />
                   <Route path="/customer/discover/product/:id" element={<ProductDetailPage />} />
                   <Route path="/business/discover/product/:id" element={<ProductDetailPage />} />

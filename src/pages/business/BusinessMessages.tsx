@@ -13,7 +13,7 @@ import {
   MessageCircle, Send, ArrowLeft, Plus, Mic, 
   Square, Image as ImageIcon, MoreVertical, 
   ChevronLeft, ShieldCheck, User, Loader2,
-  X, Reply, Forward
+  X, Reply, Forward, MapPin
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -54,8 +54,17 @@ export default function BusinessMessages() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const targetProduct = searchParams.get("product") || searchParams.get("service");
+  const targetLandmark = searchParams.get("landmark");
+  const targetTime = searchParams.get("time");
+
   const [messages, setMessages] = useState<MessageData[]>([]);
-  const [newMessage, setNewMessage] = useState("");
+  const [newMessage, setNewMessage] = useState(() => {
+    if (targetLandmark && targetTime) {
+      return `Hi, I want to buy ${targetProduct || 'this'}. Let's meet at ${targetLandmark} at ${targetTime}.`;
+    }
+    return targetProduct ? `Hello! I am interested in: ${targetProduct}` : "";
+  });
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -69,6 +78,26 @@ export default function BusinessMessages() {
   const [replyingTo, setReplyingTo] = useState<MessageData | null>(null);
   const [forwardModalOpen, setForwardModalOpen] = useState(false);
   const [messageToForward, setMessageToForward] = useState<MessageData | null>(null);
+  const [activeStatus, setActiveStatus] = useState(false);
+
+  useEffect(() => {
+    if (!selectedConversation?.customer_id) return;
+    const checkStatus = async () => {
+      const { data: cData } = await supabase.from('customers').select('user_id').eq('id', selectedConversation.customer_id).maybeSingle();
+      if (cData?.user_id) {
+        const { data: pData } = await supabase.from('profiles').select('last_seen_at').eq('id', cData.user_id).maybeSingle();
+        if (pData?.last_seen_at) {
+          const diff = Date.now() - new Date(pData.last_seen_at).getTime();
+          setActiveStatus(diff < 5 * 60 * 1000);
+        } else {
+          setActiveStatus(false);
+        }
+      }
+    };
+    checkStatus();
+    const interval = setInterval(checkStatus, 60000);
+    return () => clearInterval(interval);
+  }, [selectedConversation?.customer_id]);
 
   // Dynamic Floating Date Pill state
   const [floatingDate, setFloatingDate] = useState<string>("Today");
@@ -355,6 +384,53 @@ export default function BusinessMessages() {
         description: err.message || "Please try again.",
       });
     }
+  };
+
+  const handleVerifySale = () => {
+    if (!navigator.geolocation) {
+      toast({ title: "Geolocation not supported", variant: "destructive" });
+      return;
+    }
+    
+    if (!selectedConversation || !user?.id) return;
+
+    setSending(true);
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      try {
+        const { latitude, longitude } = position.coords;
+        const toolPayload = {
+          seller_lat: latitude,
+          seller_lng: longitude,
+          status: 'pending',
+          product_id: targetProduct || 'general'
+        };
+
+        const { error } = await supabase.from("messages").insert({
+          conversation_id: selectedConversation.id,
+          sender_id: user.id,
+          sender_type: "business",
+          content: `[SALE_CONFIRMATION]:${JSON.stringify(toolPayload)}`,
+          message_type: 'sale_confirmation',
+          tool_payload: toolPayload
+        });
+
+        if (error) throw error;
+        
+        await supabase.from("conversations").update({
+          last_message: "Sale verification requested",
+          last_message_at: new Date().toISOString(),
+        }).eq("id", selectedConversation.id);
+        
+        toast({ title: "Verification requested" });
+      } catch (err: any) {
+        toast({ title: "Failed to request verification", description: err.message, variant: "destructive" });
+      } finally {
+        setSending(false);
+      }
+    }, (error) => {
+      setSending(false);
+      toast({ title: "Failed to get location", description: error.message, variant: "destructive" });
+    });
   };
 
   useEffect(() => {
@@ -775,6 +851,11 @@ export default function BusinessMessages() {
                       <ShieldCheck className="h-3.5 w-3.5 text-primary fill-primary/10 shrink-0" />
                     )}
                   </h2>
+                  {activeStatus && (
+                    <span className="text-[11px] font-medium text-muted-foreground mt-0.5">
+                      Active
+                    </span>
+                  )}
                   <p className="text-[10px] text-muted-foreground font-medium">
                     Verified Shopper
                   </p>
@@ -893,6 +974,16 @@ export default function BusinessMessages() {
                   title="Send photo"
                 >
                   <ImageIcon className="h-5 w-5 stroke-[1.8]" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleVerifySale}
+                  disabled={sending || isRecording}
+                  className="h-10 w-10 rounded-full hover:bg-muted flex items-center justify-center text-emerald-600 dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors cursor-pointer shrink-0 disabled:opacity-50 bg-emerald-500/10"
+                  title="Verify Sale (Proximity)"
+                >
+                  <MapPin className="h-5 w-5 stroke-[1.8]" />
                 </button>
 
                 <div className="flex-1 relative">
