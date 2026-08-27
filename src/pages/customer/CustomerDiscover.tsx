@@ -53,6 +53,7 @@ interface DiscoverItem {
  id: string;
  name: string;
  price: number | string;
+  compare_at_price?: number | null;
  image_url: string | null;
  images?: string[] | null;
  description: string | null;
@@ -125,7 +126,7 @@ export default function CustomerDiscover() {
     const { data: directProducts, error: productsError } = await supabase
       .from("products")
       .select(`
-        id, name, business_id, price, image_url, images, description, category, tags, is_orderable, stock_quantity,
+        id, name, business_id, price, compare_at_price, image_url, images, description, category, tags, is_orderable, stock_quantity,
         businesses (id, company_name, logo_url, location_verified, verified, is_active, verification_tier, is_open_now)
       `)
       .eq("in_stock", true)

@@ -324,8 +324,9 @@ export default function ProductDetailPage() {
               )}
 
               {discountPercent && (
-                <div className="absolute top-3 right-3 bg-red-500 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-md">
-                  -{discountPercent}% OFF
+                <div className="absolute top-3 right-3 bg-background/80 backdrop-blur-md text-foreground border border-border/10 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                  <span className="text-red-500 font-extrabold">-{discountPercent}%</span>
+                  <span className="text-muted-foreground font-medium text-[9px] uppercase tracking-widest">Awoof</span>
                 </div>
               )}
 
@@ -401,8 +402,8 @@ export default function ProductDetailPage() {
                   </span>
                 )}
                 {discountPercent && (
-                  <span className="text-xs font-semibold bg-red-500/10 text-red-600 px-2 py-0.5 rounded ml-1">
-                    -{discountPercent}%
+                  <span className="text-[10px] font-semibold bg-red-500/10 text-red-600 px-1.5 py-0.5 rounded ml-1.5 uppercase tracking-wide">
+                    -{discountPercent}% Awoof
                   </span>
                 )}
               </div>
