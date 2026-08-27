@@ -358,7 +358,7 @@ export default function CustomerDiscover() {
 
  return (
     <DashboardLayout hideHeader={isMobile}>
-      <div className="min-h-screen bg-background pb-20 pt-0 md:pt-16 animate-fade-in max-w-7xl mx-auto">
+      <div className="min-h-screen bg-background pb-20 pt-0 animate-fade-in max-w-7xl mx-auto">
         
         {/* Sleek Mobile-First Sticky Header */}
         <div className="sticky md:top-16 top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border/5 px-4 md:pt-4 pt-4 pb-3 flex flex-col gap-3">
@@ -460,16 +460,6 @@ export default function CustomerDiscover() {
                 </DrawerContent>
               </Drawer>
             </div>
-          </div>
-          
-          {/* Trending Searches Pill row */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
-             <span className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase shrink-0 mr-1">Trending Searches</span>
-             {["gowns for ladies", "textbooks", "food", "kitchen utensils", "earbuds"].map(t => (
-               <button key={t} onClick={() => setSearch(t)} className="h-7 px-3 bg-muted/40 hover:bg-muted text-xs font-medium rounded-full shrink-0 text-muted-foreground hover:text-foreground transition-colors border border-border/5">
-                 {t}
-               </button>
-             ))}
           </div>
         </div>
 
