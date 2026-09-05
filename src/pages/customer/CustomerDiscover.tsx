@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { PremiumHome } from "@/components/ui/custom-icons";
+import { PremiumHome, PremiumSearch } from "@/components/ui/custom-icons";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerTrigger, DrawerHeader, DrawerTitle, DrawerFooter, DrawerClose } from "@/components/ui/drawer";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -79,7 +79,8 @@ export default function CustomerDiscover() {
  
  const [businesses, setBusinesses] = useState<any[]>([]);
  const [items, setItems] = useState<DiscoverItem[]>([]);
- const [search, setSearch] = useState(() => sessionStorage.getItem("string_discover_search") || "");
+ const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const [search, setSearch] = useState(() => sessionStorage.getItem("string_discover_search") || "");
  const [itemTypeFilter, setItemTypeFilter] = useState<"all" | "products" | "services">(() => (sessionStorage.getItem("string_discover_type") as any) || "all");
  const [categoryFilter, setCategoryFilter] = useState(() => sessionStorage.getItem("string_discover_category") || "all");
  const [priceFilter, setPriceFilter] = useState(() => sessionStorage.getItem("string_discover_price") || "all");
@@ -368,21 +369,32 @@ export default function CustomerDiscover() {
               <ArrowLeft className="w-5 h-5" />
             </Button>
             
-            <div className="relative flex-1 group">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-              <Input
-                placeholder="Search products, brands and categories..."
-                className="h-11 rounded-full border-border/10 bg-muted/30 pl-10 pr-12 text-sm font-medium shadow-none transition-all duration-300 focus-visible:bg-card focus-visible:ring-1 focus-visible:ring-primary/20"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <Drawer>
-                <DrawerTrigger asChild>
-                  <Button variant="ghost" size="icon" className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full text-muted-foreground hover:bg-muted/50 hover:text-foreground">
-                    <SlidersHorizontal className="w-4 h-4" />
+                          <div className="relative flex-1 flex justify-end items-center group min-h-[44px]">
+                {!isSearchExpanded ? (
+                  <Button variant="ghost" size="icon" onClick={() => setIsSearchExpanded(true)} className="rounded-full text-foreground hover:bg-muted/50 transition-all duration-300">
+                    <PremiumSearch className="w-5 h-5" />
                   </Button>
-                </DrawerTrigger>
-                <DrawerContent className="px-4 pb-6 outline-none">
+                ) : (
+                  <div className="relative w-full flex items-center animate-in slide-in-from-right-8 fade-in duration-300">
+                    <PremiumSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                    <Input
+                      autoFocus
+                      placeholder="Search products, brands and categories..."
+                      className="h-11 w-full rounded-full border-border/10 bg-muted/30 pl-10 pr-[5.5rem] text-sm font-medium shadow-none transition-all duration-300 focus-visible:bg-card focus-visible:ring-1 focus-visible:ring-primary/20"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                    <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                      <Button variant="ghost" size="icon" onClick={() => { setSearch(""); setIsSearchExpanded(false); }} className="w-8 h-8 rounded-full text-muted-foreground hover:bg-muted/50 hover:text-foreground">
+                        <X className="w-4 h-4" />
+                      </Button>
+                      <Drawer>
+                        <DrawerTrigger asChild>
+                          <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full text-muted-foreground hover:bg-muted/50 hover:text-foreground">
+                            <SlidersHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DrawerTrigger>
+                        <DrawerContent className="px-4 pb-6 outline-none">
                   <DrawerHeader className="px-0 text-left">
                     <DrawerTitle className="text-xl font-semibold">Filter</DrawerTitle>
                   </DrawerHeader>

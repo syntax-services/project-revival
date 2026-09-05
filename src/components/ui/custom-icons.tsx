@@ -542,3 +542,21 @@ export const PremiumStandardBadge = ({ className, ...props }: React.SVGProps<SVG
   </svg>
 );
 
+
+export const PremiumSearch = ({ className, active = false, ...props }: IconProps) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={active ? 1.5 : 1.25}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={cn("w-5 h-5 transition-all duration-300", className)}
+    {...props}
+  >
+    <circle cx="10" cy="10" r="4.5" />
+    <circle cx="12" cy="10" r="4.5" opacity={0.6} />
+    <line x1="14.5" y1="14.5" x2="20" y2="20" strokeWidth={active ? 1.75 : 1.5} />
+  </svg>
+);
