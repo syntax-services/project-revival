@@ -359,11 +359,11 @@ export default function CustomerDiscover() {
  };
 
  return (
-    <DashboardLayout hideHeader={isMobile}>
+    <DashboardLayout>
       <div className="min-h-screen bg-background pb-20 pt-0 animate-fade-in max-w-7xl mx-auto">
         
         {/* Sleek Mobile-First Sticky Header */}
-        <div className="sticky md:top-16 top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border/5 px-4 md:pt-4 pt-4 pb-3 flex flex-col gap-3">
+        <div className={`sticky z-40 bg-background/95 backdrop-blur-xl border-b border-border/5 px-4 pb-3 flex flex-col gap-3 transition-all duration-300 ${isScrolled ? "top-[3.25rem] pt-3" : "top-16 pt-4"}`}>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="shrink-0 -ml-2 rounded-full">
               <ArrowLeft className="w-5 h-5" />
@@ -474,7 +474,10 @@ export default function CustomerDiscover() {
               </Drawer>
             </div>
           </div>
-        </div>
+        )}
+      </div>
+    </div>
+  </div>
 
         {/* Masonry Feed */}
         <div className="px-4 md:px-6 pt-4">
