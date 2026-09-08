@@ -7,6 +7,7 @@ import { TikTokIcon } from "@/components/atoms/TikTokIcon";
 import { toast } from "sonner";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getEdgeFunctionErrorMessage } from "@/lib/edgeFunctionErrors";
 
 export default function TikTokCallback() {
   const [searchParams] = useSearchParams();
@@ -80,13 +81,8 @@ export default function TikTokCallback() {
 
         if (error) {
           console.error("TikTok OAuth exchange function error:", error);
-          throw new Error(
-            error instanceof Error
-              ? error.message
-              : typeof error === "object" && error !== null && "message" in error
-                ? String((error as { message: unknown }).message)
-                : "Could not link TikTok account"
-          );
+          const serverError = await getEdgeFunctionErrorMessage(error, "Could not reach TikTok OAuth service.");
+          throw new Error(serverError);
         }
 
         if (data?.error) {
@@ -98,14 +94,9 @@ export default function TikTokCallback() {
       } catch (err: unknown) {
         console.error("TikTok callback exchange failed:", err);
         const errMsg = err instanceof Error ? err.message : String(err);
-        const userFriendly =
-          errMsg.includes("re-authorize") || errMsg.includes("invalid")
-            ? "TikTok authorization session expired or was revoked. Please try connecting again."
-            : "We couldn't connect your TikTok account. Please check your permissions and try again.";
-
-        setErrorMessage(userFriendly);
+        setErrorMessage(errMsg);
         setIsProcessing(false);
-        toast.error(userFriendly);
+        toast.error(errMsg);
       }
     }
 
