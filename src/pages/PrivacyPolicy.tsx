@@ -112,8 +112,37 @@ export default function PrivacyPolicy() {
 
           <section className="space-y-4">
             <div className="flex items-center gap-3 text-foreground mb-6">
+              <ShieldCheck className="w-6 h-6 text-primary" />
+              <h2 className="text-2xl font-bold">6. TikTok API & User Data Policy (Content Posting API)</h2>
+            </div>
+            <p>Our platform integrates with the official TikTok for Developers API (including the Content Posting API) to provide automated, user-authorized video scheduling and publishing. We adhere strictly to the <a href="https://developers.tiktok.com/doc/overview" target="_blank" rel="noopener noreferrer" className="text-primary underline">TikTok Developer Terms of Service</a> and TikTok's Privacy Principles.</p>
+            
+            <h3 className="text-foreground font-semibold">6.1 TikTok Data We Access</h3>
+            <p>When you connect your TikTok account via OAuth 2.0, we request minimal required scopes:</p>
+            <ul className="list-disc pl-6 space-y-1">
+              <li><code>user.info.basic</code>: To verify your TikTok identity, display name, and profile avatar within your dashboard.</li>
+              <li><code>video.upload</code> and <code>video.publish</code>: To upload, publish, and schedule your approved video assets, captions, and tags to your TikTok account.</li>
+            </ul>
+            <p className="mt-2">We <strong>never</strong> access your private messages, contacts, browsing history, financial accounts, or TikTok login passwords.</p>
+
+            <h3 className="text-foreground font-semibold mt-4">6.2 How We Store and Protect TikTok Data</h3>
+            <p>All TikTok OAuth access tokens and refresh tokens are encrypted at rest using AES-256 encryption. Tokens are stored securely and used exclusively to authenticate API calls made on your behalf for video publishing operations.</p>
+
+            <h3 className="text-foreground font-semibold mt-4">6.3 No Sale or Sharing of TikTok Data</h3>
+            <p>We <strong>do not sell, rent, monetize, or disclose</strong> your TikTok user data, tokens, or profile identifiers to third-party data brokers, ad networks, or analytics aggregators under any circumstances.</p>
+
+            <h3 className="text-foreground font-semibold mt-4">6.4 User Control, Revocation &amp; Data Deletion</h3>
+            <p>You have full control over your TikTok data at all times:</p>
+            <ul className="list-disc pl-6 space-y-2">
+              <li><strong>Instant Revocation:</strong> You can disconnect your TikTok account at any time via the TikTok mobile app by visiting: <em>Profile &gt; Settings and Privacy &gt; Security &gt; Manage app permissions &gt; Remove access</em>.</li>
+              <li><strong>Complete Data Deletion:</strong> Upon account disconnection or upon submitting a written request to <a href="mailto:support@string.com.ng" className="text-primary underline">support@string.com.ng</a>, all stored TikTok tokens, IDs, and cached media metadata are permanently deleted from our databases within 48 hours.</li>
+            </ul>
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex items-center gap-3 text-foreground mb-6">
               <AlertTriangle className="w-6 h-6 text-primary" />
-              <h2 className="text-2xl font-bold">6. Changes to this Privacy Policy</h2>
+              <h2 className="text-2xl font-bold">7. Changes to this Privacy Policy</h2>
             </div>
             <p>String has the discretion to update this privacy policy at any time. When we do, we will post a notification on the main page of our Site and revise the updated date at the bottom of this page. We encourage Users to frequently check this page for any changes to stay informed about how we are helping to protect the personal information we collect.</p>
           </section>

@@ -111,8 +111,23 @@ export default function TermsOfService() {
 
           <section className="space-y-4">
             <div className="flex items-center gap-3 text-foreground mb-6">
+              <CheckCircle2 className="w-6 h-6 text-primary" />
+              <h2 className="text-2xl font-bold">5. TikTok Integration & Automated Content Posting</h2>
+            </div>
+            <p>Our platform enables automated and scheduled media distribution to TikTok using the official TikTok for Developers Content Posting API and developer tooling. By connecting your TikTok account to our services, you acknowledge and agree to the following:</p>
+            <ul className="list-disc pl-6 space-y-2">
+              <li><strong>Authorization:</strong> You grant us permission to upload, publish, and schedule videos and multimedia content to your connected TikTok account strictly based on the schedules, media files, and prompts configured by you or your account workflows.</li>
+              <li><strong>Content Ownership & Compliance:</strong> You retain full ownership and intellectual property rights of all videos, audio, and materials uploaded through our platform. You represent and warrant that all published content complies with the <a href="https://www.tiktok.com/community-guidelines" target="_blank" rel="noopener noreferrer" className="text-primary underline">TikTok Community Guidelines</a> and <a href="https://www.tiktok.com/legal/terms-of-service" target="_blank" rel="noopener noreferrer" className="text-primary underline">TikTok Terms of Service</a>.</li>
+              <li><strong>Prohibited Content:</strong> You may not use our TikTok publishing tools to post hateful, violent, harassing, infringing, sexually explicit, or fraudulent media. Any violation will result in immediate termination of API connectivity.</li>
+              <li><strong>Revocation of Access:</strong> You may revoke our platform's access to your TikTok account at any time either directly within your TikTok account settings (Settings and Privacy &gt; Security &gt; Manage app permissions) or by disconnecting your profile within our platform dashboard.</li>
+              <li><strong>Service Availability:</strong> While we aim for continuous automation, we are not responsible for delays or failed posts resulting from TikTok API rate limits, temporary downtime, or third-party network interruptions.</li>
+            </ul>
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex items-center gap-3 text-foreground mb-6">
               <FileText className="w-6 h-6 text-primary" />
-              <h2 className="text-2xl font-bold">5. Governing Law</h2>
+              <h2 className="text-2xl font-bold">6. Governing Law</h2>
             </div>
             <p>These Terms shall be governed by and construed in accordance with the laws of the Federal Republic of Nigeria. Any disputes arising out of these terms shall be subject to the exclusive jurisdiction of the Nigerian courts.</p>
           </section>

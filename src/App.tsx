@@ -112,6 +112,7 @@ const BusinessReviews = lazyWithRetry(() => import("./pages/business/BusinessRev
 const BusinessUpload = lazyWithRetry(() => import("./pages/business/BusinessUpload"));
 const BusinessVerify = lazyWithRetry(() => import("./pages/business/BusinessVerify"));
 const BusinessBoost = lazyWithRetry(() => import("./pages/business/BusinessBoost"));
+const TikTokCallback = lazyWithRetry(() => import("./pages/business/TikTokCallback"));
 
 // Discover product & service detail pages
 const ProductDetailPage = lazyWithRetry(() => import("./pages/discover/ProductDetailPage"));
@@ -225,10 +226,14 @@ const App = () => (
                   <Route path="/business/:id" element={<BusinessPublicProfile />} />
 
                   {/* Dedicated Product & Service Details Pages - Public for Google Indexing */}
-                  <Route path="/product" element={<CustomerDiscover />} />`n                  <Route path="/product/:id" element={<ProductDetailPage />} />
+                  <Route path="/product" element={<CustomerDiscover />} />
+                  <Route path="/product/:id" element={<ProductDetailPage />} />
                   <Route path="/service/:id" element={<ServiceDetailPage />} />
                   <Route path="/customer/discover/product/:id" element={<ProductDetailPage />} />
                   <Route path="/business/discover/product/:id" element={<ProductDetailPage />} />
+
+                  {/* TikTok Social Commerce OAuth Callback */}
+                  <Route path="/callback" element={<TikTokCallback />} />
 
                   {/* Admin Routes */}
                   <Route

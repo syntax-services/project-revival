@@ -1274,6 +1274,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      connect_or_update_business_tiktok: {
+        Args: {
+          p_business_id: string
+          p_tiktok_open_id: string
+          p_tiktok_username: string
+          p_tiktok_display_name: string
+          p_tiktok_avatar_url: string
+          p_access_token: string
+          p_refresh_token: string
+          p_expires_in: number
+          p_refresh_expires_in: number
+          p_scope: string
+        }
+        Returns: Json
+      }
+      disconnect_business_tiktok: {
+        Args: {
+          p_business_id: string
+        }
+        Returns: Json
+      }
       complete_onboarding_setup: {
         Args: {
           p_business_data: Json | null

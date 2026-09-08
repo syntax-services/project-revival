@@ -1,15 +1,24 @@
 # Project Tasks & Active State
 
 ## Completed Deliverables
+- [x] **String TikTok Merchant Auto-Boost & Social Commerce Hub**:
+  - **Database Migration**:
+    - Created [`20260908150000_tiktok_merchant_social_commerce.sql`](file:///c:/Users/Administrator/Documents/String/supabase/migrations/20260908150000_tiktok_merchant_social_commerce.sql) with `public.business_tiktok_connections` (OAuth tokens, auto-boost preferences, cadence, views/likes aggregation) and `public.tiktok_product_promotions` (campaign logs, backlinks, view/like counters, statuses).
+    - Hardened RLS policies ensuring secure access scoped to authenticated business ownership (`user_id = auth.uid() OR owner_id = auth.uid()`).
+    - Added atomic Security Definer RPCs: `connect_or_update_business_tiktok` and `disconnect_business_tiktok`.
+  - **Server-Side Edge Function**:
+    - Implemented [`tiktok-oauth-exchange/index.ts`](file:///c:/Users/Administrator/Documents/String/supabase/functions/tiktok-oauth-exchange/index.ts) with TikTok v2 token exchange, user profile extraction, authenticated RPC execution, and zero-leakage defensive error handling.
+  - **Callback Route & Architecture**:
+    - Created [`TikTokCallback.tsx`](file:///c:/Users/Administrator/Documents/String/src/pages/business/TikTokCallback.tsx) with liquid glass loading state, OAuth code/state resolution, edge function invocation, and friendly error toasts.
+    - Registered `/callback` route in [`App.tsx`](file:///c:/Users/Administrator/Documents/String/src/App.tsx).
+  - **Liquid Glass UI & Bento Grid**:
+    - Created [`TikTokBoostHub.tsx`](file:///c:/Users/Administrator/Documents/String/src/components/business/growth/TikTokBoostHub.tsx) with Deep Monochrome (`#0A0A0A`) liquid glass aesthetics, custom SVG TikTok atom icon ([`TikTokIcon.tsx`](file:///c:/Users/Administrator/Documents/String/src/components/atoms/TikTokIcon.tsx)), performance bento metrics (Views, Likes, Campaigns), auto-boost toggle, cadence dropdown, test boost trigger, and disconnect confirmation dialog.
+    - Integrated seamlessly into [`BusinessGrowth.tsx`](file:///c:/Users/Administrator/Documents/String/src/pages/business/BusinessGrowth.tsx).
+  - **Centralized TypeScript Types**:
+    - Added domain models in [`src/types/tiktok.ts`](file:///c:/Users/Administrator/Documents/String/src/types/tiktok.ts) and synchronized Supabase schema in [`src/integrations/supabase/types.ts`](file:///c:/Users/Administrator/Documents/String/src/integrations/supabase/types.ts).
+  - **Verification**:
+    - `npm run typecheck` (`tsc --noEmit`): Passed with **0 errors**.
 - [x] **Resolved "Reply Null" Leaks in Conversations & Reply Lists**:
-  - Updated [`messageUtils.ts`](file:///c:/Users/Administrator/Documents/String/src/lib/messageUtils.ts) and [`src/components/messages/messageUtils.ts`](file:///c:/Users/Administrator/Documents/String/src/components/messages/messageUtils.ts) so that `extractCleanSnippet` and `formatLastMessage` gracefully strip any unparsed `[REPLY:...]` tags, prevent `"null"`, `"undefined"`, or empty snippets from ever reaching conversation previews, reply quotes, or chat items, and fallback cleanly to `"Message"`.
-  - Cleaned reply preview bars in [`CustomerMessages.tsx`](file:///c:/Users/Administrator/Documents/String/src/pages/customer/CustomerMessages.tsx) and [`BusinessMessages.tsx`](file:///c:/Users/Administrator/Documents/String/src/pages/business/BusinessMessages.tsx).
+  - Updated [`messageUtils.ts`](file:///c:/Users/Administrator/Documents/String/src/lib/messageUtils.ts) and [`src/components/messages/messageUtils.ts`](file:///c:/Users/Administrator/Documents/String/src/components/messages/messageUtils.ts).
 - [x] **Full In-App Immersive Image Viewer (No Storage URLs)**:
-  - Removed all external bucket links and `<ExternalLink />` redirects.
-  - Built full-screen in-app image viewer modal in [`ChatMessageBubble.tsx`](file:///c:/Users/Administrator/Documents/String/src/components/messages/ChatMessageBubble.tsx) without navigation bars or header clutter.
-  - Added clean top toolbar with Close button and a prominent 3-dots action menu (**Reply, Forward, Copy Image, Delete**).
-  - Added floating bottom action pills for 1-tap **Reply**, **Forward**, and **Copy Image**.
-- [x] **Visible 3-Dots Button Styling**:
-  - Changed message bubble 3-dots trigger button from hidden/hover-only (`opacity-0`) to always visibly accessible on both mobile and desktop with a sleek glassmorphic pill style.
-- [x] **Verification**:
-  - `tsc --noEmit`: Passed with **0 errors**.
+  - Built full-screen in-app image viewer modal in [`ChatMessageBubble.tsx`](file:///c:/Users/Administrator/Documents/String/src/components/messages/ChatMessageBubble.tsx).
