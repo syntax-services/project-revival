@@ -18,7 +18,8 @@
     - Added domain models in [`src/types/tiktok.ts`](file:///c:/Users/Administrator/Documents/String/src/types/tiktok.ts) and synchronized Supabase schema in [`src/integrations/supabase/types.ts`](file:///c:/Users/Administrator/Documents/String/src/integrations/supabase/types.ts).
   - **Verification**:
     - `npm run typecheck` (`tsc --noEmit`): Passed with **0 errors**.
-- [x] **Resolved "Reply Null" Leaks in Conversations & Reply Lists**:
-  - Updated [`messageUtils.ts`](file:///c:/Users/Administrator/Documents/String/src/lib/messageUtils.ts) and [`src/components/messages/messageUtils.ts`](file:///c:/Users/Administrator/Documents/String/src/components/messages/messageUtils.ts).
-- [x] **Full In-App Immersive Image Viewer (No Storage URLs)**:
-  - Built full-screen in-app image viewer modal in [`ChatMessageBubble.tsx`](file:///c:/Users/Administrator/Documents/String/src/components/messages/ChatMessageBubble.tsx).
+- [x] **TikTok OAuth Deployment & Prologue Engine Token Extraction**:
+  - Successfully deployed `tiktok-oauth-exchange` Supabase Edge Function to production.
+  - Applied migration `20260908150000_tiktok_merchant_social_commerce.sql` to database.
+  - Linked TikTok sandbox account `Syntax` (`-000r24VtS3F9HHv7AqcnM8OYPI7-ryiFrdp`).
+  - Extracted verified `access_token` and `refresh_token` and saved directly into `tech prologue/.env`.

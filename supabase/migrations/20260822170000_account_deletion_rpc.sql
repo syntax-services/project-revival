@@ -2,6 +2,8 @@
 -- SECURE USER ACCOUNT DELETION RPC
 -- ============================================================================
 
+DROP FUNCTION IF EXISTS public.delete_user_account();
+
 CREATE OR REPLACE FUNCTION public.delete_user_account()
 RETURNS void
 LANGUAGE plpgsql
