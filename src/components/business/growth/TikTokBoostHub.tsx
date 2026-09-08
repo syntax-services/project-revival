@@ -175,9 +175,10 @@ export function TikTokBoostHub() {
       ? `${currentOrigin}/callback`
       : "https://www.string.com.ng/callback";
     const redirectUri = encodeURIComponent(targetRedirectBase);
-    const scope = encodeURIComponent("user.info.basic,video.upload,video.publish");
+    const rawScopes = (import.meta.env.VITE_TIKTOK_SCOPES || "user.info.basic,video.upload,video.publish").trim();
+    const scopeParam = rawScopes.split(",").map(s => s.trim()).filter(Boolean).join(",");
     const state = encodeURIComponent(business.id);
-    const authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&scope=${scope}&response_type=code&redirect_uri=${redirectUri}&state=${state}`;
+    const authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&scope=${scopeParam}&response_type=code&redirect_uri=${redirectUri}&state=${state}`;
 
     window.location.assign(authUrl);
   };
