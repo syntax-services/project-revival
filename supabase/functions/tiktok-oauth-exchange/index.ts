@@ -42,9 +42,9 @@ serve(async (req) => {
       return jsonResponse({ error: "Missing business profile identifier." }, 400);
     }
 
-    const clientKey = Deno.env.get("TIKTOK_CLIENT_KEY");
-    const clientSecret = Deno.env.get("TIKTOK_CLIENT_SECRET");
-    const redirectUri = redirect_uri || Deno.env.get("TIKTOK_REDIRECT_URI") || "https://www.string.com.ng/callback";
+    const clientKey = Deno.env.get("TIKTOK_CLIENT_KEY")?.trim();
+    const clientSecret = Deno.env.get("TIKTOK_CLIENT_SECRET")?.trim();
+    const redirectUri = (redirect_uri || Deno.env.get("TIKTOK_REDIRECT_URI") || "https://www.string.com.ng/callback").trim();
 
     if (!clientKey || !clientSecret) {
       console.error("Missing TIKTOK_CLIENT_KEY or TIKTOK_CLIENT_SECRET environment variables");

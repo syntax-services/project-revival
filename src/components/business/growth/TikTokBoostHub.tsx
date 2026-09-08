@@ -165,7 +165,7 @@ export function TikTokBoostHub() {
       toast.error("Please ensure your business store profile is set up.");
       return;
     }
-    const clientKey = import.meta.env.VITE_TIKTOK_CLIENT_KEY;
+    const clientKey = (import.meta.env.VITE_TIKTOK_CLIENT_KEY || "").trim();
     if (!clientKey) {
       toast.error("TikTok Client Key is not configured in environment variables.");
       return;
